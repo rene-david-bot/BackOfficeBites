@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "date": "2026-02-17",
+    "day": 1,
+    "slug": "2026-02-17-access-request-wizard",
+    "name": "Access Request Wizard",
+    "description": "Multi-step access request flow with approvals and audit trail.",
+    "category": "IT Ops",
+    "pattern": "Wizard",
+    "tags": [
+      "approval workflow",
+      "audit trail",
+      "access",
+      "wizard"
+    ],
+    "thumb": ""
+  }
+]

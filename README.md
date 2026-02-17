@@ -8,6 +8,9 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 ## Who is Dave?
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
+## Today's Daily Special
+**Access Request Wizard** — multi-step access request flow with approvals and audit trail.
+
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
 - https://rene-david-bot.github.io/BackOfficeBites/

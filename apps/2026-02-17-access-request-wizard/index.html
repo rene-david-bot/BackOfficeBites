@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Access Request Wizard — BackOfficeBites</title>
+  <meta name="description" content="Multi-step access request wizard with approvals and audit trail." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <header class="max-w-6xl mx-auto px-6 py-8">
+    <div class="text-sm text-slate-400">BackOfficeBites 🍔</div>
+    <h1 class="text-3xl font-bold mt-2">Access Request Wizard</h1>
+    <p class="text-slate-300 mt-2 max-w-2xl">
+      A clean, multi-step flow for requesting system access with approvals, audit trail, and role-based views.
+    </p>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left: Requests list -->
+    <section class="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <div class="text-lg font-semibold">Requests</div>
+        <div class="flex gap-2">
+          <button class="filter-btn" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="pending">Pending</button>
+          <button class="filter-btn" data-filter="approved">Approved</button>
+          <button class="filter-btn" data-filter="rejected">Rejected</button>
+        </div>
+      </div>
+
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-slate-400">
+            <tr>
+              <th class="text-left py-2">Requester</th>
+              <th class="text-left py-2">System</th>
+              <th class="text-left py-2">Role</th>
+              <th class="text-left py-2">Risk</th>
+              <th class="text-left py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody id="requestTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Right: Wizard + Audit -->
+    <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
+      <div class="flex items-center justify-between">
+        <div class="text-lg font-semibold">New Request</div>
+        <div class="text-xs text-slate-400">Step <span id="stepNum">1</span>/3</div>
+      </div>
+
+      <div id="wizard" class="mt-4">
+        <div class="step" data-step="1">
+          <label class="block text-sm text-slate-400">Requester</label>
+          <input id="reqName" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2" placeholder="e.g., Lena Müller" />
+          <label class="block text-sm text-slate-400 mt-4">Department</label>
+          <select id="reqDept" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option>IT Ops</option>
+            <option>Finance</option>
+            <option>HR</option>
+            <option>Sales</option>
+            <option>Legal</option>
+          </select>
+        </div>
+
+        <div class="step hidden" data-step="2">
+          <label class="block text-sm text-slate-400">System</label>
+          <select id="reqSystem" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option>Snowflake</option>
+            <option>Salesforce</option>
+            <option>Jira</option>
+            <option>NetSuite</option>
+            <option>Okta Admin</option>
+          </select>
+          <label class="block text-sm text-slate-400 mt-4">Role</label>
+          <select id="reqRole" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option>Read-only</option>
+            <option>Analyst</option>
+            <option>Approver</option>
+            <option>Admin (temporary)</option>
+          </select>
+          <label class="block text-sm text-slate-400 mt-4">Justification</label>
+          <textarea id="reqJust" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2" rows="3" placeholder="Why do you need this access?"></textarea>
+        </div>
+
+        <div class="step hidden" data-step="3">
+          <div class="text-sm text-slate-400">Summary</div>
+          <div id="summary" class="mt-3 text-sm bg-slate-950/70 border border-slate-800 rounded-lg p-3"></div>
+          <label class="block text-sm text-slate-400 mt-4">Approver</label>
+          <select id="reqApprover" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option>Team Lead</option>
+            <option>Security</option>
+            <option>Data Owner</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-between">
+        <button id="prevBtn" class="px-3 py-2 text-sm rounded-lg bg-slate-800">Back</button>
+        <button id="nextBtn" class="px-3 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-500">Next</button>
+      </div>
+
+      <div class="mt-6">
+        <div class="text-sm text-slate-400">Audit Trail</div>
+        <ul id="audit" class="mt-2 text-xs text-slate-300 space-y-2"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-800">
+    <div class="max-w-6xl mx-auto px-6 py-6 text-slate-400">
+      Cooked fresh daily by Dave 🍔 — Powered by OpenClaw 🦞
+    </div>
+  </footer>
+
+  <script>
+    const requests = [
+      { name: 'Lena Müller', system: 'Snowflake', role: 'Analyst', risk: 'Medium', status: 'pending' },
+      { name: 'Omar Idris', system: 'Jira', role: 'Admin (temporary)', risk: 'High', status: 'approved' },
+      { name: 'Sofia Romano', system: 'NetSuite', role: 'Read-only', risk: 'Low', status: 'rejected' },
+    ];
+
+    const table = document.getElementById('requestTable');
+    const audit = document.getElementById('audit');
+    const stepNum = document.getElementById('stepNum');
+    const steps = Array.from(document.querySelectorAll('.step'));
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    let currentStep = 1;
+
+    function renderTable(filter = 'all') {
+      table.innerHTML = '';
+      const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+      for (const r of filtered) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-slate-800';
+        tr.innerHTML = `
+          <td class="py-2">${r.name}</td>
+          <td class="py-2">${r.system}</td>
+          <td class="py-2">${r.role}</td>
+          <td class="py-2">${r.risk}</td>
+          <td class="py-2 capitalize">${r.status}</td>
+        `;
+        table.appendChild(tr);
+      }
+    }
+
+    function logAudit(text) {
+      const li = document.createElement('li');
+      li.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
+      audit.prepend(li);
+    }
+
+    function showStep(n) {
+      steps.forEach(step => step.classList.add('hidden'));
+      steps[n-1].classList.remove('hidden');
+      stepNum.textContent = n;
+      prevBtn.disabled = n === 1;
+      nextBtn.textContent = n === steps.length ? 'Submit' : 'Next';
+    }
+
+    function updateSummary() {
+      const name = document.getElementById('reqName').value || '—';
+      const dept = document.getElementById('reqDept').value;
+      const system = document.getElementById('reqSystem').value;
+      const role = document.getElementById('reqRole').value;
+      const just = document.getElementById('reqJust').value || '—';
+      document.getElementById('summary').innerHTML = `
+        <div><strong>${name}</strong> (${dept})</div>
+        <div>System: ${system}</div>
+        <div>Role: ${role}</div>
+        <div>Justification: ${just}</div>
+      `;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (currentStep < steps.length) {
+        currentStep += 1;
+        if (currentStep === 3) updateSummary();
+        showStep(currentStep);
+        logAudit(`Advanced to step ${currentStep}`);
+      } else {
+        const name = document.getElementById('reqName').value || 'Unnamed';
+        const system = document.getElementById('reqSystem').value;
+        const role = document.getElementById('reqRole').value;
+        requests.unshift({ name, system, role, risk: 'Medium', status: 'pending' });
+        renderTable();
+        logAudit(`Submitted request for ${name}`);
+        currentStep = 1;
+        showStep(currentStep);
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 1) {
+        currentStep -= 1;
+        showStep(currentStep);
+        logAudit(`Returned to step ${currentStep}`);
+      }
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.className = 'filter-btn px-3 py-1 rounded-full border border-slate-700 text-xs text-slate-300';
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-slate-800'));
+        btn.classList.add('bg-slate-800');
+        renderTable(btn.dataset.filter);
+      });
+    });
+
+    renderTable();
+    showStep(currentStep);
+    logAudit('Wizard initialized');
+  </script>
+</body>
+</html>
