@@ -82,7 +82,7 @@
 
     function populateFilters(apps) {
       const categories = unique(apps.map(a => a.category));
-      const patterns = unique(apps.flatMap(a => a.patterns || []));
+      const patterns = unique(apps.flatMap(a => a.patterns || (a.pattern ? [a.pattern] : [])));
 
       for (const c of categories) {
         const opt = document.createElement('option');
@@ -104,8 +104,11 @@
 
       const filtered = state.apps.filter(app => {
         if (cat !== 'all' && app.category !== cat) return false;
-        if (pat !== 'all' && !(app.patterns || []).includes(pat)) return false;
-        if (q && !(`${app.title} ${app.description}`.toLowerCase().includes(q))) return false;
+        const pats = app.patterns || (app.pattern ? [app.pattern] : []);
+        if (pat !== 'all' && !pats.includes(pat)) return false;
+        const title = app.title || app.name || '';
+        const desc = app.description || '';
+        if (q && !(`${title} ${desc}`.toLowerCase().includes(q))) return false;
         return true;
       });
 
@@ -117,10 +120,13 @@
       setStatus(`${filtered.length} app${filtered.length === 1 ? '' : 's'} available`);
       for (const app of filtered) {
         const card = cardTemplate.content.firstElementChild.cloneNode(true);
-        card.href = app.url || '#';
-        card.querySelector('div:nth-child(1)').textContent = app.title || 'Untitled';
-        card.querySelector('div:nth-child(2)').textContent = app.description || '';
-        card.querySelector('div:nth-child(3)').textContent = [app.category, app.date].filter(Boolean).join(' · ');
+        const title = app.title || app.name || 'Untitled';
+        const desc = app.description || '';
+        const url = app.url || (app.slug ? `apps/${app.slug}/` : '#');
+        card.href = url;
+        card.querySelector('div:nth-child(1)').textContent = title;
+        card.querySelector('div:nth-child(2)').textContent = desc;
+        card.querySelector('div:nth-child(3)').textContent = [app.category, app.pattern || (app.patterns ? app.patterns.join(', ') : ''), app.date].filter(Boolean).join(' · ');
         grid.appendChild(card);
       }
     }
