@@ -20,8 +20,8 @@
           Monitor 3-way invoice matches, catch exceptions, and clear the queue with policy-driven actions.
         </p>
       </div>
-      <button id="modeToggle" class="px-3 py-2 rounded-lg border border-slate-700 text-xs uppercase tracking-widest">
-        Toggle Dark Mode
+      <button id="themeToggle" class="px-3 py-2 rounded-lg border border-slate-700 text-xs uppercase tracking-widest">
+        Toggle Dark
       </button>
     </div>
 
@@ -255,8 +255,6 @@
     const statRate = document.getElementById('statRate');
     const statVariance = document.getElementById('statVariance');
 
-    const modeToggle = document.getElementById('modeToggle');
-
     const state = { selected: null };
 
     function toCurrency(value) {
@@ -448,21 +446,9 @@
       }
     }
 
-    function initDarkMode() {
-      const saved = localStorage.getItem('bob-dark');
-      if (saved === 'light') {
-        document.documentElement.classList.remove('dark');
-      }
-      modeToggle.addEventListener('click', () => {
-        document.documentElement.classList.toggle('dark');
-        const isDark = document.documentElement.classList.contains('dark');
-        localStorage.setItem('bob-dark', isDark ? 'dark' : 'light');
-      });
-    }
-
     populateFilters();
     renderAll();
-    initDarkMode();
+
 
     statusFilter.addEventListener('change', renderAll);
     vendorFilter.addEventListener('change', renderAll);
@@ -483,5 +469,27 @@
       renderAll();
     });
   </script>
+  
+  <script>
+    (function() {
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggle');
+      const stored = localStorage.getItem('bob-theme');
+      if (stored) {
+        root.classList.toggle('dark', stored === 'dark');
+      }
+      if (!btn) return;
+      function syncLabel() {
+        btn.textContent = root.classList.contains('dark') ? 'Toggle Light' : 'Toggle Dark';
+      }
+      btn.addEventListener('click', () => {
+        const isDark = root.classList.toggle('dark');
+        localStorage.setItem('bob-theme', isDark ? 'dark' : 'light');
+        syncLabel();
+      });
+      syncLabel();
+    })();
+  </script>
+
 </body>
 </html>
