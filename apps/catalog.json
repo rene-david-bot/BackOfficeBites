@@ -68,5 +68,24 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 5,
+    "slug": "2026-02-18-legal-hold-dashboard",
+    "name": "Legal Hold Compliance Dashboard",
+    "description": "Monitor legal holds with approval workflow, custodian coverage, and audit trails.",
+    "category": "Legal",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "legal hold",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "csv export",
+      "search"
+    ],
+    "thumb": ""
   }
 ]

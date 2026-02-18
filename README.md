@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Risk Register Timeline** — track enterprise risks with milestone timelines, approvals, and mitigation status.
+**Legal Hold Compliance Dashboard** — monitor legal holds with approval workflow, custodian coverage, and audit trails.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

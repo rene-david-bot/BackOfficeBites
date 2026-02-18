@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legal Hold Compliance Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: #0b1220; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">Legal Hold Compliance Dashboard</h1>
+        <p class="text-slate-400 mt-1">Monitor legal holds, custodian coverage, and approvals across active matters.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Role view</div>
+          <select id="roleSelect" class="mt-2 w-44 rounded-lg bg-slate-950 border border-slate-800 px-2 py-1 text-sm">
+            <option>Legal Ops</option>
+            <option>Outside Counsel</option>
+            <option>Executive</option>
+          </select>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Sync status</div>
+          <div class="mt-2 text-sm"><span class="text-emerald-400">●</span> Live · 2 min ago</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Total Matters</div>
+        <div id="statTotal" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-slate-400">Across 4 regions</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Active Holds</div>
+        <div id="statActive" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-slate-400">+2 this week</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Overdue</div>
+        <div id="statOverdue" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-amber-300">Needs escalation</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Compliance Rate</div>
+        <div id="statCompliance" class="mt-2 text-3xl font-semibold">0%</div>
+        <div class="mt-2 h-2 w-full rounded-full bg-slate-800">
+          <div id="statComplianceBar" class="h-2 rounded-full bg-emerald-400" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Status Mix</div>
+        <div class="mt-4 space-y-3 text-xs text-slate-400" id="statusMix"></div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Risk Distribution</div>
+        <div class="mt-4 space-y-3 text-xs text-slate-400" id="riskMix"></div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Policy Signals</div>
+        <div class="mt-3 space-y-2 text-sm text-slate-300">
+          <div class="flex items-center justify-between">
+            <span>Retention policy coverage</span>
+            <span class="text-emerald-300">92%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Custodians missing training</span>
+            <span class="text-amber-300">3</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Outside counsel SLA</span>
+            <span class="text-emerald-300">On track</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>Audit ready matters</span>
+            <span class="text-emerald-300">6/8</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap gap-3">
+          <input id="searchInput" placeholder="Search matter, custodian, or ID" class="w-64 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+          <select id="statusFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All status</option>
+            <option value="Pending">Pending</option>
+            <option value="Active">Active</option>
+            <option value="Escalated">Escalated</option>
+            <option value="Released">Released</option>
+          </select>
+          <select id="riskFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All risk</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+          <select id="regionFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All regions</option>
+            <option value="US">US</option>
+            <option value="EU">EU</option>
+            <option value="APAC">APAC</option>
+            <option value="LATAM">LATAM</option>
+          </select>
+          <select id="sortSelect" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="due-asc">Due date ↑</option>
+            <option value="due-desc">Due date ↓</option>
+            <option value="risk-desc">Risk high → low</option>
+            <option value="matter-asc">Matter A → Z</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="exportBtn" class="rounded-lg bg-amber-400/20 border border-amber-300/40 px-4 py-2 text-sm text-amber-200 hover:bg-amber-400/30">Export CSV</button>
+          <div id="toast" class="hidden rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-12">
+      <div class="lg:col-span-8">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 text-sm font-semibold">Hold Portfolio</div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-950/60 text-slate-400">
+                <tr>
+                  <th class="px-4 py-3 text-left">Matter</th>
+                  <th class="px-4 py-3 text-left">Custodian</th>
+                  <th class="px-4 py-3 text-left">Region</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                  <th class="px-4 py-3 text-left">Risk</th>
+                  <th class="px-4 py-3 text-left">Due</th>
+                  <th class="px-4 py-3 text-left">Owner</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="holdsBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-4">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div class="text-sm font-semibold">Hold Detail</div>
+          <div id="detailCard" class="mt-3 space-y-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const holds = [
+      {
+        id: "LH-1023",
+        matter: "Acme v. Triad",
+        custodian: "A. Brewer",
+        custodians: ["A. Brewer", "M. Choi"],
+        region: "US",
+        status: "Pending",
+        risk: "High",
+        due: "2026-03-05",
+        owner: "J. Lam",
+        last: "2026-02-16",
+        notes: [
+          { time: "2026-02-16 09:12", by: "J. Lam", text: "Hold issued to finance group." },
+          { time: "2026-02-17 14:31", by: "A. Brewer", text: "Awaiting counsel approval for APAC scope." }
+        ]
+      },
+      {
+        id: "LH-1048",
+        matter: "NovaCorp IP Audit",
+        custodian: "S. Ortiz",
+        custodians: ["S. Ortiz", "L. Wu", "D. Young"],
+        region: "EU",
+        status: "Active",
+        risk: "Medium",
+        due: "2026-02-22",
+        owner: "R. Patel",
+        last: "2026-02-17",
+        notes: [
+          { time: "2026-02-14 08:22", by: "R. Patel", text: "Reviewed data mapping for R&D shares." },
+          { time: "2026-02-17 12:08", by: "S. Ortiz", text: "Custodian notices confirmed." }
+        ]
+      },
+      {
+        id: "LH-1077",
+        matter: "BlueSky Compliance Review",
+        custodian: "E. Jones",
+        custodians: ["E. Jones"],
+        region: "APAC",
+        status: "Escalated",
+        risk: "High",
+        due: "2026-02-19",
+        owner: "K. Meyer",
+        last: "2026-02-18",
+        notes: [
+          { time: "2026-02-15 11:02", by: "K. Meyer", text: "Missing policy acknowledgement from two teams." }
+        ]
+      },
+      {
+        id: "LH-1091",
+        matter: "Helios Partner Dispute",
+        custodian: "C. Ito",
+        custodians: ["C. Ito", "B. Stein"],
+        region: "LATAM",
+        status: "Pending",
+        risk: "Low",
+        due: "2026-03-10",
+        owner: "M. Rossi",
+        last: "2026-02-15",
+        notes: [
+          { time: "2026-02-12 10:44", by: "M. Rossi", text: "Preliminary hold drafted." }
+        ]
+      },
+      {
+        id: "LH-1104",
+        matter: "Orion Data Retention",
+        custodian: "N. Gupta",
+        custodians: ["N. Gupta", "T. Reed", "H. Salem"],
+        region: "US",
+        status: "Active",
+        risk: "High",
+        due: "2026-02-20",
+        owner: "J. Lam",
+        last: "2026-02-18",
+        notes: [
+          { time: "2026-02-13 09:17", by: "J. Lam", text: "High-risk hold triggered by regulator inquiry." },
+          { time: "2026-02-18 08:10", by: "N. Gupta", text: "Updated custodian roster with HR sign-off." }
+        ]
+      },
+      {
+        id: "LH-1129",
+        matter: "Summit Pricing Review",
+        custodian: "P. Novak",
+        custodians: ["P. Novak", "G. Diaz"],
+        region: "EU",
+        status: "Released",
+        risk: "Low",
+        due: "2026-01-28",
+        owner: "A. Keller",
+        last: "2026-02-01",
+        notes: [
+          { time: "2026-02-01 15:50", by: "A. Keller", text: "Hold released after settlement." }
+        ]
+      },
+      {
+        id: "LH-1142",
+        matter: "Vertex Vendor Review",
+        custodian: "M. Chi",
+        custodians: ["M. Chi"],
+        region: "APAC",
+        status: "Pending",
+        risk: "Medium",
+        due: "2026-02-26",
+        owner: "T. Gray",
+        last: "2026-02-17",
+        notes: [
+          { time: "2026-02-17 16:22", by: "T. Gray", text: "Awaiting custodian confirmation from APAC." }
+        ]
+      },
+      {
+        id: "LH-1160",
+        matter: "Zenith Insider Inquiry",
+        custodian: "L. Park",
+        custodians: ["L. Park", "J. Silva", "R. Amin"],
+        region: "US",
+        status: "Active",
+        risk: "High",
+        due: "2026-02-24",
+        owner: "M. Rossi",
+        last: "2026-02-17",
+        notes: [
+          { time: "2026-02-10 13:35", by: "M. Rossi", text: "Legal hold approved by outside counsel." }
+        ]
+      }
+    ];
+
+    const riskOrder = { High: 3, Medium: 2, Low: 1 };
+    const filters = { search: "", status: "All", risk: "All", region: "All", sort: "due-asc" };
+    let currentRole = "Legal Ops";
+    let selectedId = holds[0].id;
+
+    const toast = document.getElementById("toast");
+    const formatDate = (value) => new Date(value + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    const today = () => new Date();
+
+    const getDaysRemaining = (value) => {
+      const diff = new Date(value + "T00:00:00") - today();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    };
+
+    const isOverdue = (hold) => hold.status !== "Released" && getDaysRemaining(hold.due) < 0;
+
+    const showToast = (message, tone = "info") => {
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      toast.classList.toggle("border-amber-400/50", tone === "warn");
+      toast.classList.toggle("border-emerald-400/50", tone === "success");
+      toast.classList.toggle("border-rose-400/50", tone === "error");
+      setTimeout(() => toast.classList.add("hidden"), 2500);
+    };
+
+    const addAudit = (hold, text) => {
+      hold.notes.unshift({ time: new Date().toLocaleString("en-GB"), by: currentRole, text });
+    };
+
+    const applyFilters = () => {
+      return holds.filter((hold) => {
+        const term = filters.search.toLowerCase();
+        const matchesSearch = !term || [hold.matter, hold.custodian, hold.id].some((field) => field.toLowerCase().includes(term));
+        const matchesStatus = filters.status === "All" || hold.status === filters.status;
+        const matchesRisk = filters.risk === "All" || hold.risk === filters.risk;
+        const matchesRegion = filters.region === "All" || hold.region === filters.region;
+        return matchesSearch && matchesStatus && matchesRisk && matchesRegion;
+      }).sort((a, b) => {
+        if (filters.sort === "due-asc") return new Date(a.due) - new Date(b.due);
+        if (filters.sort === "due-desc") return new Date(b.due) - new Date(a.due);
+        if (filters.sort === "risk-desc") return riskOrder[b.risk] - riskOrder[a.risk];
+        return a.matter.localeCompare(b.matter);
+      });
+    };
+
+    const renderMix = (filtered) => {
+      const statusCounts = filtered.reduce((acc, hold) => {
+        acc[hold.status] = (acc[hold.status] || 0) + 1;
+        return acc;
+      }, {});
+      const riskCounts = filtered.reduce((acc, hold) => {
+        acc[hold.risk] = (acc[hold.risk] || 0) + 1;
+        return acc;
+      }, {});
+      const statusMix = document.getElementById("statusMix");
+      statusMix.innerHTML = Object.entries({ Pending: 0, Active: 0, Escalated: 0, Released: 0, ...statusCounts }).map(([status, count]) => {
+        const width = filtered.length ? (count / filtered.length) * 100 : 0;
+        return `
+          <div>
+            <div class="flex items-center justify-between">
+              <span>${status}</span>
+              <span>${count}</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded-full bg-slate-800">
+              <div class="h-2 rounded-full bg-sky-400" style="width: ${width}%"></div>
+            </div>
+          </div>`;
+      }).join("");
+
+      const riskMix = document.getElementById("riskMix");
+      riskMix.innerHTML = Object.entries({ High: 0, Medium: 0, Low: 0, ...riskCounts }).map(([risk, count]) => {
+        const width = filtered.length ? (count / filtered.length) * 100 : 0;
+        const color = risk === "High" ? "bg-rose-400" : risk === "Medium" ? "bg-amber-300" : "bg-emerald-400";
+        return `
+          <div>
+            <div class="flex items-center justify-between">
+              <span>${risk}</span>
+              <span>${count}</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded-full bg-slate-800">
+              <div class="h-2 rounded-full ${color}" style="width: ${width}%"></div>
+            </div>
+          </div>`;
+      }).join("");
+    };
+
+    const renderStats = (filtered) => {
+      const total = filtered.length;
+      const active = filtered.filter((hold) => hold.status === "Active").length;
+      const overdue = filtered.filter((hold) => isOverdue(hold)).length;
+      const compliant = total ? Math.round(((total - overdue) / total) * 100) : 0;
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statActive").textContent = active;
+      document.getElementById("statOverdue").textContent = overdue;
+      document.getElementById("statCompliance").textContent = `${compliant}%`;
+      document.getElementById("statComplianceBar").style.width = `${compliant}%`;
+    };
+
+    const renderTable = () => {
+      const filtered = applyFilters();
+      renderStats(filtered);
+      renderMix(filtered);
+
+      const body = document.getElementById("holdsBody");
+      body.innerHTML = filtered.map((hold) => {
+        const overdueFlag = isOverdue(hold) ? "<span class='ml-2 text-xs text-rose-400'>Overdue</span>" : "";
+        const statusColor = hold.status === "Active" ? "bg-emerald-500/20 text-emerald-300" : hold.status === "Pending" ? "bg-amber-500/20 text-amber-300" : hold.status === "Escalated" ? "bg-rose-500/20 text-rose-300" : "bg-slate-700/40 text-slate-300";
+        const riskColor = hold.risk === "High" ? "text-rose-300" : hold.risk === "Medium" ? "text-amber-300" : "text-emerald-300";
+        const selectedRow = hold.id === selectedId ? "bg-slate-900/80" : "";
+        const actions = currentRole === "Legal Ops" ? (() => {
+          if (hold.status === "Pending" || hold.status === "Escalated") {
+            return `
+              <div class="flex gap-2">
+                <button data-action="approve" data-id="${hold.id}" class="rounded-md bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200">Approve</button>
+                <button data-action="escalate" data-id="${hold.id}" class="rounded-md bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Escalate</button>
+              </div>`;
+          }
+          if (hold.status === "Active") {
+            return `
+              <div class="flex gap-2">
+                <button data-action="release" data-id="${hold.id}" class="rounded-md bg-slate-700/60 px-2 py-1 text-xs text-slate-200">Release</button>
+              </div>`;
+          }
+          return "<span class='text-xs text-slate-500'>No action</span>";
+        })() : "<span class='text-xs text-slate-500'>View only</span>";
+
+        return `
+          <tr data-id="${hold.id}" class="cursor-pointer ${selectedRow} hover:bg-slate-900/70">
+            <td class="px-4 py-3">
+              <div class="font-semibold">${hold.matter}</div>
+              <div class="text-xs text-slate-400">${hold.id} · ${hold.last}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div>${hold.custodian}</div>
+              <div class="text-xs text-slate-400">${hold.custodians.length} custodians</div>
+            </td>
+            <td class="px-4 py-3">${hold.region}</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs ${statusColor}">${hold.status}</span>${overdueFlag}</td>
+            <td class="px-4 py-3"><span class="${riskColor}">${hold.risk}</span></td>
+            <td class="px-4 py-3">${formatDate(hold.due)}</td>
+            <td class="px-4 py-3">${hold.owner}</td>
+            <td class="px-4 py-3">${actions}</td>
+          </tr>`;
+      }).join("");
+
+      if (!filtered.find((hold) => hold.id === selectedId) && filtered.length) {
+        selectedId = filtered[0].id;
+      }
+      renderDetail();
+    };
+
+    const renderDetail = () => {
+      const hold = holds.find((item) => item.id === selectedId);
+      if (!hold) return;
+
+      const days = getDaysRemaining(hold.due);
+      const daysLabel = days >= 0 ? `${days} days remaining` : `${Math.abs(days)} days overdue`;
+      const approvalStep = hold.status === "Pending" ? 2 : hold.status === "Escalated" ? 2 : hold.status === "Active" ? 3 : 4;
+
+      document.getElementById("detailCard").innerHTML = `
+        <div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-lg font-semibold">${hold.matter}</div>
+              <div class="text-xs text-slate-400">${hold.id} · Owner ${hold.owner}</div>
+            </div>
+            <span class="rounded-full bg-slate-800 px-3 py-1 text-xs">${hold.region}</span>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-400">
+            <div>
+              <div class="uppercase tracking-wide">Risk</div>
+              <div class="text-sm text-slate-200">${hold.risk}</div>
+            </div>
+            <div>
+              <div class="uppercase tracking-wide">Due</div>
+              <div class="text-sm text-slate-200">${formatDate(hold.due)}</div>
+              <div class="text-xs ${days < 0 ? "text-rose-300" : "text-emerald-300"}">${daysLabel}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Custodians</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            ${hold.custodians.map((name) => `<span class='rounded-full bg-slate-800 px-3 py-1 text-xs'>${name}</span>`).join("")}
+          </div>
+          <form id="custodianForm" class="mt-3 space-y-2">
+            <input id="custodianName" placeholder="Custodian name" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs" />
+            <input id="custodianEmail" placeholder="Email" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs" />
+            <button class="w-full rounded-lg bg-sky-500/20 border border-sky-400/40 px-3 py-2 text-xs text-sky-200">Add custodian</button>
+          </form>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Approval Workflow</div>
+          <div class="mt-3 space-y-2 text-xs">
+            ${["Request Logged", "Legal Ops Review", "Counsel Approval", "Hold Active"].map((step, index) => {
+              const active = index + 1 <= approvalStep;
+              return `<div class='flex items-center gap-2'><span class='h-2 w-2 rounded-full ${active ? "bg-emerald-400" : "bg-slate-700"}'></span><span class='${active ? "text-slate-200" : "text-slate-500"}'>${step}</span></div>`;
+            }).join("")}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Audit Trail</div>
+          <div class="mt-3 max-h-40 space-y-3 overflow-y-auto text-xs">
+            ${hold.notes.map((note) => `
+              <div>
+                <div class="text-slate-400">${note.time} · ${note.by}</div>
+                <div class="text-slate-200">${note.text}</div>
+              </div>
+            `).join("")}
+          </div>
+          <form id="noteForm" class="mt-3">
+            <textarea id="noteText" placeholder="Add audit note" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs" rows="2"></textarea>
+            <button class="mt-2 w-full rounded-lg bg-emerald-500/20 border border-emerald-400/40 px-3 py-2 text-xs text-emerald-200">Log note</button>
+          </form>
+        </div>
+      `;
+
+      document.getElementById("custodianForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const name = document.getElementById("custodianName").value.trim();
+        const email = document.getElementById("custodianEmail").value.trim();
+        const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+        if (!name || !emailOk) {
+          showToast("Enter a name and valid email.", "error");
+          return;
+        }
+        hold.custodians.push(name);
+        hold.custodian = name;
+        addAudit(hold, `Custodian added: ${name}`);
+        document.getElementById("custodianName").value = "";
+        document.getElementById("custodianEmail").value = "";
+        showToast("Custodian added.", "success");
+        renderTable();
+      });
+
+      document.getElementById("noteForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = document.getElementById("noteText").value.trim();
+        if (text.length < 5) {
+          showToast("Note must be at least 5 characters.", "error");
+          return;
+        }
+        addAudit(hold, text);
+        document.getElementById("noteText").value = "";
+        showToast("Audit note logged.", "success");
+        renderDetail();
+      });
+    };
+
+    document.getElementById("holdsBody").addEventListener("click", (event) => {
+      const actionButton = event.target.closest("button[data-action]");
+      if (actionButton) {
+        const action = actionButton.dataset.action;
+        const id = actionButton.dataset.id;
+        const hold = holds.find((item) => item.id === id);
+        if (!hold) return;
+
+        if (action === "approve") {
+          if (hold.risk === "High" && hold.custodians.length < 3) {
+            showToast("Approval blocked: high-risk hold needs 3+ custodians.", "error");
+            return;
+          }
+          hold.status = "Active";
+          addAudit(hold, "Hold approved and activated.");
+          hold.last = new Date().toISOString().slice(0, 10);
+          showToast("Hold approved.", "success");
+        }
+        if (action === "escalate") {
+          hold.status = "Escalated";
+          addAudit(hold, "Escalation sent to counsel.");
+          hold.last = new Date().toISOString().slice(0, 10);
+          showToast("Escalation sent.", "warn");
+        }
+        if (action === "release") {
+          hold.status = "Released";
+          addAudit(hold, "Hold released after review.");
+          hold.last = new Date().toISOString().slice(0, 10);
+          showToast("Hold released.", "success");
+        }
+        renderTable();
+        return;
+      }
+
+      const row = event.target.closest("tr[data-id]");
+      if (row) {
+        selectedId = row.dataset.id;
+        renderTable();
+      }
+    });
+
+    document.getElementById("searchInput").addEventListener("input", (event) => {
+      filters.search = event.target.value;
+      renderTable();
+    });
+    document.getElementById("statusFilter").addEventListener("change", (event) => {
+      filters.status = event.target.value;
+      renderTable();
+    });
+    document.getElementById("riskFilter").addEventListener("change", (event) => {
+      filters.risk = event.target.value;
+      renderTable();
+    });
+    document.getElementById("regionFilter").addEventListener("change", (event) => {
+      filters.region = event.target.value;
+      renderTable();
+    });
+    document.getElementById("sortSelect").addEventListener("change", (event) => {
+      filters.sort = event.target.value;
+      renderTable();
+    });
+    document.getElementById("roleSelect").addEventListener("change", (event) => {
+      currentRole = event.target.value;
+      renderTable();
+      showToast(`Switched to ${currentRole} view.`, "success");
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const rows = applyFilters().map((hold) => [
+        hold.id,
+        hold.matter,
+        hold.custodian,
+        hold.region,
+        hold.status,
+        hold.risk,
+        hold.due,
+        hold.owner
+      ]);
+      const header = ["ID", "Matter", "Custodian", "Region", "Status", "Risk", "Due", "Owner"];
+      const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "legal-holds.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("CSV exported.", "success");
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>
