@@ -9,66 +9,82 @@
   <script>
     tailwind.config = { darkMode: 'class' }
   </script>
+
+  <style>
+    :root:not(.dark) body { background:#f8fafc; color:#0f172a; }
+    :root:not(.dark) .bg-slate-950,
+    :root:not(.dark) .bg-slate-900,
+    :root:not(.dark) .bg-slate-900\/70,
+    :root:not(.dark) .bg-slate-900\/60 { background:#ffffff !important; }
+    :root:not(.dark) .text-slate-100 { color:#0f172a !important; }
+    :root:not(.dark) .text-slate-300 { color:#475569 !important; }
+    :root:not(.dark) .text-slate-400,
+    :root:not(.dark) .text-slate-500 { color:#64748b !important; }
+    :root:not(.dark) .border-slate-800,
+    :root:not(.dark) .border-slate-700 { border-color:#e2e8f0 !important; }
+    :root:not(.dark) .text-white { color:#0f172a !important; }
+  </style>
+
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
   <div class="max-w-7xl mx-auto px-6 py-8">
     <a href="../../index.html" class="text-xs uppercase tracking-[0.3em] text-amber-400">BackOfficeBites 🍔</a>
     <div class="mt-3 flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl md:text-4xl font-bold">Risk Register Timeline</h1>
-        <p class="text-slate-300 mt-2 max-w-2xl">
+        <p class="text-slate-600 dark:text-slate-300 mt-2 max-w-2xl">
           Surface enterprise risks, line up mitigation milestones, and shepherd approvals before deadlines slip.
         </p>
       </div>
-      <button id="themeToggle" class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Toggle Dark</button>
+      <button id="themeToggle" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">Toggle Dark</button>
     </div>
 
     <section class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase text-slate-400">Total risks</div>
+      <div class="bg-white/80 dark:bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Total risks</div>
         <div id="statTotal" class="text-2xl font-semibold mt-2">0</div>
       </div>
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase text-slate-400">High / Critical</div>
+      <div class="bg-white/80 dark:bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">High / Critical</div>
         <div id="statHigh" class="text-2xl font-semibold mt-2 text-rose-300">0</div>
       </div>
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase text-slate-400">Awaiting approval</div>
+      <div class="bg-white/80 dark:bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Awaiting approval</div>
         <div id="statApproval" class="text-2xl font-semibold mt-2 text-amber-300">0</div>
       </div>
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase text-slate-400">Overdue reviews</div>
+      <div class="bg-white/80 dark:bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Overdue reviews</div>
         <div id="statOverdue" class="text-2xl font-semibold mt-2 text-cyan-300">0</div>
       </div>
     </section>
 
-    <section class="mt-8 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+    <section class="mt-8 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
       <div class="flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[220px]">
-          <label class="text-xs uppercase text-slate-400" for="searchInput">Search</label>
-          <input id="searchInput" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2" placeholder="risk, owner, department" />
+          <label class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400" for="searchInput">Search</label>
+          <input id="searchInput" class="mt-2 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2" placeholder="risk, owner, department" />
         </div>
         <div>
-          <label class="text-xs uppercase text-slate-400" for="ownerFilter">Owner</label>
-          <select id="ownerFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <label class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400" for="ownerFilter">Owner</label>
+          <select id="ownerFilter" class="mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2">
             <option value="all">All</option>
           </select>
         </div>
         <div>
-          <label class="text-xs uppercase text-slate-400" for="statusFilter">Status</label>
-          <select id="statusFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <label class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400" for="statusFilter">Status</label>
+          <select id="statusFilter" class="mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2">
             <option value="all">All</option>
           </select>
         </div>
         <div>
-          <label class="text-xs uppercase text-slate-400" for="levelFilter">Level</label>
-          <select id="levelFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <label class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400" for="levelFilter">Level</label>
+          <select id="levelFilter" class="mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2">
             <option value="all">All</option>
           </select>
         </div>
         <div>
-          <label class="text-xs uppercase text-slate-400" for="sortSelect">Sort</label>
-          <select id="sortSelect" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <label class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400" for="sortSelect">Sort</label>
+          <select id="sortSelect" class="mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2">
             <option value="score-desc">Risk score ↓</option>
             <option value="score-asc">Risk score ↑</option>
             <option value="due-asc">Next review ↑</option>
@@ -76,31 +92,31 @@
             <option value="level-desc">Level (Critical→Low)</option>
           </select>
         </div>
-        <label class="flex items-center gap-2 text-xs uppercase text-slate-400">
+        <label class="flex items-center gap-2 text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">
           <input id="overdueOnly" type="checkbox" class="rounded" />
           Overdue only
         </label>
       </div>
       <div class="mt-4 flex flex-wrap gap-3 items-center">
-        <button id="exportBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm">Export CSV</button>
-        <button id="resetBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <button id="exportBtn" class="px-3 py-2 bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm">Export CSV</button>
+        <button id="resetBtn" class="px-3 py-2 bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm">Reset filters</button>
         <div id="toast" class="text-sm text-amber-300"></div>
       </div>
     </section>
 
     <section class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+      <div class="lg:col-span-2 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
         <div class="flex items-center justify-between">
-          <div class="text-xs uppercase text-slate-400">Mitigation timeline</div>
-          <div class="text-xs text-slate-500" id="timelineCount">0 risks</div>
+          <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Mitigation timeline</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400" id="timelineCount">0 risks</div>
         </div>
         <div id="timeline" class="mt-6 space-y-6"></div>
       </div>
 
-      <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-        <div class="text-xs uppercase text-slate-400">Selected risk</div>
+      <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Selected risk</div>
         <div id="detailCard" class="mt-3 space-y-4 text-sm text-slate-200">
-          <div class="text-slate-500">Select a risk from the timeline.</div>
+          <div class="text-slate-500 dark:text-slate-400">Select a risk from the timeline.</div>
         </div>
       </div>
     </section>
@@ -342,9 +358,9 @@
     function renderTimeline(list) {
       timeline.innerHTML = '';
       if (!list.length) {
-        timeline.innerHTML = '<div class="text-slate-500">No risks match these filters.</div>';
+        timeline.innerHTML = '<div class="text-slate-500 dark:text-slate-400">No risks match these filters.</div>';
         timelineCount.textContent = '0 risks';
-        detailCard.innerHTML = '<div class="text-slate-500">Select a risk from the timeline.</div>';
+        detailCard.innerHTML = '<div class="text-slate-500 dark:text-slate-400">Select a risk from the timeline.</div>';
         return;
       }
 
@@ -356,17 +372,17 @@
 
         const card = document.createElement('button');
         card.type = 'button';
-        card.className = `w-full text-left relative pl-8 pb-6 ${isSelected ? 'border-l-2 border-amber-400' : 'border-l border-slate-800'} focus:outline-none`;
+        card.className = `w-full text-left relative pl-8 pb-6 ${isSelected ? 'border-l-2 border-amber-400' : 'border-l border-slate-200 dark:border-slate-800'} focus:outline-none`;
         card.innerHTML = `
           <span class="absolute left-[-7px] top-2 h-3 w-3 rounded-full ${risk.level === 'Critical' ? 'bg-rose-500' : risk.level === 'High' ? 'bg-amber-400' : 'bg-cyan-400'}"></span>
           <div class="flex flex-wrap items-center gap-2">
-            <div class="text-xs uppercase text-slate-500">${milestone.date}</div>
-            <span class="text-xs px-2 py-0.5 rounded-full ${risk.status === 'Awaiting Approval' ? 'bg-amber-500/20 text-amber-200' : risk.status === 'Escalated' ? 'bg-rose-500/20 text-rose-200' : risk.status === 'Mitigating' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700/60 text-slate-300'}">${risk.status}</span>
+            <div class="text-xs uppercase text-slate-500 dark:text-slate-400">${milestone.date}</div>
+            <span class="text-xs px-2 py-0.5 rounded-full ${risk.status === 'Awaiting Approval' ? 'bg-amber-500/20 text-amber-200' : risk.status === 'Escalated' ? 'bg-rose-500/20 text-rose-200' : risk.status === 'Mitigating' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700/60 text-slate-600 dark:text-slate-300'}">${risk.status}</span>
             ${isOverdue(risk) ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200">Overdue</span>' : ''}
           </div>
           <div class="mt-2 text-lg font-semibold">${risk.name}</div>
-          <div class="mt-1 text-sm text-slate-400">${risk.department} · Owner ${risk.owner} · Score ${riskScore(risk)}</div>
-          <div class="mt-2 text-sm text-slate-300">Next: ${milestone.label}</div>
+          <div class="mt-1 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">${risk.department} · Owner ${risk.owner} · Score ${riskScore(risk)}</div>
+          <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">Next: ${milestone.label}</div>
         `;
         card.addEventListener('click', () => {
           state.selectedId = risk.id;
@@ -384,9 +400,9 @@
       detailCard.innerHTML = `
         <div>
           <div class="text-xl font-semibold">${risk.name}</div>
-          <div class="mt-2 text-sm text-slate-400">${risk.department} · Owner ${risk.owner}</div>
+          <div class="mt-2 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">${risk.department} · Owner ${risk.owner}</div>
         </div>
-        <div class="grid grid-cols-2 gap-3 text-xs uppercase text-slate-400">
+        <div class="grid grid-cols-2 gap-3 text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">
           <div>Level <div class="text-sm text-slate-200">${risk.level}</div></div>
           <div>Status <div class="text-sm text-slate-200">${risk.status}</div></div>
           <div>Impact <div class="text-sm text-slate-200">${risk.impact}</div></div>
@@ -395,18 +411,18 @@
           <div>Next review <div class="text-sm text-slate-200">${milestone.date}</div></div>
         </div>
         <div>
-          <div class="text-xs uppercase text-slate-400">Mitigation plan</div>
+          <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Mitigation plan</div>
           <div class="mt-2 text-sm text-slate-200">${risk.mitigation}</div>
         </div>
         <div>
-          <div class="text-xs uppercase text-slate-400">Milestones</div>
+          <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Milestones</div>
           <ul class="mt-2 space-y-2 text-sm text-slate-200">
-            ${risk.milestones.map(m => `<li class="flex items-center gap-2"><span class="text-slate-500">${m.date}</span><span>${m.label}</span></li>`).join('')}
+            ${risk.milestones.map(m => `<li class="flex items-center gap-2"><span class="text-slate-500 dark:text-slate-400">${m.date}</span><span>${m.label}</span></li>`).join('')}
           </ul>
         </div>
         <div>
-          <div class="text-xs uppercase text-slate-400">Audit trail</div>
-          <ul class="mt-2 space-y-1 text-sm text-slate-300">
+          <div class="text-xs uppercase text-slate-500 dark:text-slate-400 dark:text-slate-400">Audit trail</div>
+          <ul class="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
             ${risk.audit.map(entry => `<li>• ${entry}</li>`).join('')}
           </ul>
         </div>
@@ -414,7 +430,7 @@
           <button id="requestBtn" class="px-3 py-2 bg-amber-500/20 text-amber-200 border border-amber-500/40 rounded-lg text-xs uppercase tracking-widest">Request approval</button>
           <button id="approveBtn" class="px-3 py-2 bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 rounded-lg text-xs uppercase tracking-widest">Approve mitigation</button>
           <button id="escalateBtn" class="px-3 py-2 bg-rose-500/20 text-rose-200 border border-rose-500/40 rounded-lg text-xs uppercase tracking-widest">Escalate</button>
-          <button id="closeBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs uppercase tracking-widest">Close</button>
+          <button id="closeBtn" class="px-3 py-2 bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs uppercase tracking-widest">Close</button>
         </div>
       `;
 
