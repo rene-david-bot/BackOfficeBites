@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Request Command Center</title>
+  <meta name="description" content="Review leave requests, validate policy, and protect team coverage." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: #0b1220; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">Leave Request Command Center</h1>
+        <p class="text-slate-400 mt-1">Review leave requests, validate policy, and protect team coverage.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Role view</div>
+          <select id="roleSelect" class="mt-2 w-44 rounded-lg bg-slate-950 border border-slate-800 px-2 py-1 text-sm">
+            <option>Manager</option>
+            <option>HR</option>
+            <option>Payroll</option>
+          </select>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Period</div>
+          <select id="periodSelect" class="mt-2 w-44 rounded-lg bg-slate-950 border border-slate-800 px-2 py-1 text-sm">
+            <option value="14">Next 14 days</option>
+            <option value="30" selected>Next 30 days</option>
+            <option value="90">Next 90 days</option>
+            <option value="all">All requests</option>
+          </select>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Sync status</div>
+          <div class="mt-2 text-sm"><span class="text-emerald-400">●</span> Live · 5 min ago</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Pending queue</div>
+        <div id="statPending" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-slate-400">Awaiting manager action</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Approved this period</div>
+        <div id="statApproved" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-slate-400">Includes validated & scheduled</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Coverage risk</div>
+        <div id="statCoverage" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-amber-300">Teams below 70%</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Avg PTO balance</div>
+        <div id="statBalance" class="mt-2 text-3xl font-semibold">0</div>
+        <div class="mt-2 text-xs text-slate-400">Across active requests</div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Coverage Outlook</div>
+        <div class="mt-4 space-y-3 text-xs text-slate-400" id="coverageOutlook"></div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Status Mix</div>
+        <div class="mt-4 space-y-3 text-xs text-slate-400" id="statusMix"></div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="text-sm font-semibold">Policy Alerts</div>
+        <div class="mt-3 space-y-2 text-sm text-slate-300" id="policyAlerts"></div>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap gap-3">
+          <input id="searchInput" placeholder="Search employee, ID, or team" class="w-64 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+          <select id="statusFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All status</option>
+          </select>
+          <select id="teamFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All teams</option>
+          </select>
+          <select id="typeFilter" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="All">All leave types</option>
+          </select>
+          <select id="sortSelect" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="start-asc">Start date ↑</option>
+            <option value="start-desc">Start date ↓</option>
+            <option value="coverage-asc">Coverage low → high</option>
+            <option value="days-desc">Days high → low</option>
+            <option value="balance-asc">Balance low → high</option>
+          </select>
+          <label class="flex items-center gap-2 text-xs text-slate-400">
+            <input id="flaggedOnly" type="checkbox" class="rounded" />
+            Flagged only
+          </label>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="exportBtn" class="rounded-lg bg-amber-400/20 border border-amber-300/40 px-4 py-2 text-sm text-amber-200 hover:bg-amber-400/30">Export CSV</button>
+          <div id="toast" class="hidden rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-12">
+      <div class="lg:col-span-8">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 text-sm font-semibold">Leave Requests</div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-950/60 text-slate-400">
+                <tr>
+                  <th class="px-4 py-3 text-left">Employee</th>
+                  <th class="px-4 py-3 text-left">Team</th>
+                  <th class="px-4 py-3 text-left">Type</th>
+                  <th class="px-4 py-3 text-left">Dates</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                  <th class="px-4 py-3 text-left">Coverage</th>
+                  <th class="px-4 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="requestsBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-4">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div class="text-sm font-semibold">Request Detail</div>
+          <div id="detailCard" class="mt-3 space-y-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const today = new Date('2026-02-18T09:00:00Z');
+    const blackoutWindows = [
+      { start: '2026-03-10', end: '2026-03-14', label: 'Quarter close' },
+      { start: '2026-02-27', end: '2026-03-02', label: 'Customer summit' }
+    ];
+
+    const typeRules = {
+      PTO: { minNotice: 5 },
+      Training: { minNotice: 10 },
+      Parental: { minNotice: 30 },
+      Unpaid: { minNotice: 14 },
+      Sick: { minNotice: 0 }
+    };
+
+    const requests = [
+      {
+        id: 'LR-1204',
+        employee: 'N. Weber',
+        team: 'Design',
+        type: 'PTO',
+        status: 'Pending',
+        start: '2026-03-03',
+        end: '2026-03-07',
+        submitted: '2026-02-16',
+        balance: 6,
+        coverage: 0.64,
+        manager: 'S. Koch',
+        location: 'DE',
+        reason: 'Wedding travel + recovery day.',
+        handoff: 'Brand refresh QA handed to S. Patel; typography audit scheduled for 03/08.',
+        delegate: 'S. Patel',
+        notes: [
+          { time: '2026-02-16 09:12', by: 'N. Weber', text: 'Uploaded PTO request and handoff list.' },
+          { time: '2026-02-17 13:40', by: 'S. Koch', text: 'Reviewing coverage for the design pod.' }
+        ]
+      },
+      {
+        id: 'LR-1211',
+        employee: 'M. Khan',
+        team: 'Engineering',
+        type: 'Training',
+        status: 'Needs Info',
+        start: '2026-02-25',
+        end: '2026-02-28',
+        submitted: '2026-02-18',
+        balance: 9,
+        coverage: 0.58,
+        manager: 'T. Velas',
+        location: 'UK',
+        reason: 'On-site Kubernetes workshop.',
+        handoff: 'Release monitoring to be covered by J. Okafor; on-call swap pending.',
+        delegate: 'J. Okafor',
+        notes: [
+          { time: '2026-02-18 08:18', by: 'M. Khan', text: 'Added training agenda; waiting on on-call swap.' }
+        ]
+      },
+      {
+        id: 'LR-1217',
+        employee: 'A. Garcia',
+        team: 'Customer Support',
+        type: 'Sick',
+        status: 'Approved',
+        start: '2026-02-17',
+        end: '2026-02-19',
+        submitted: '2026-02-17',
+        balance: 12,
+        coverage: 0.79,
+        manager: 'L. Frost',
+        location: 'US',
+        reason: 'Medical leave (doctor note submitted).',
+        handoff: 'Ticket backlog coverage assigned to M. Bello and T. Moss.',
+        delegate: 'M. Bello',
+        notes: [
+          { time: '2026-02-17 07:55', by: 'L. Frost', text: 'Approved sick leave; routing changes applied.' }
+        ]
+      },
+      {
+        id: 'LR-1222',
+        employee: 'E. Rossi',
+        team: 'Finance',
+        type: 'PTO',
+        status: 'Validated',
+        start: '2026-03-11',
+        end: '2026-03-15',
+        submitted: '2026-02-05',
+        balance: 10,
+        coverage: 0.66,
+        manager: 'V. Hart',
+        location: 'DE',
+        reason: 'Family travel abroad.',
+        handoff: 'Close books handoff to J. Kim; cashflow dashboard automation scheduled.',
+        delegate: 'J. Kim',
+        notes: [
+          { time: '2026-02-06 10:21', by: 'V. Hart', text: 'Approved with quarter-close guardrails.' },
+          { time: '2026-02-10 15:40', by: 'HR', text: 'Validated documentation and compliance.' }
+        ]
+      },
+      {
+        id: 'LR-1229',
+        employee: 'L. Zhao',
+        team: 'HR',
+        type: 'Parental',
+        status: 'Approved',
+        start: '2026-04-01',
+        end: '2026-04-30',
+        submitted: '2026-01-20',
+        balance: 28,
+        coverage: 0.91,
+        manager: 'M. Ober',
+        location: 'DE',
+        reason: 'Parental leave block.',
+        handoff: 'HR onboarding pipeline covered by S. Laurent; policy updates parked until return.',
+        delegate: 'S. Laurent',
+        notes: [
+          { time: '2026-01-20 11:30', by: 'L. Zhao', text: 'Submitted parental leave request with plan.' },
+          { time: '2026-01-24 09:08', by: 'M. Ober', text: 'Approved; HR handoff confirmed.' }
+        ]
+      },
+      {
+        id: 'LR-1235',
+        employee: 'T. Muller',
+        team: 'Sales',
+        type: 'Unpaid',
+        status: 'Pending',
+        start: '2026-03-12',
+        end: '2026-03-14',
+        submitted: '2026-02-10',
+        balance: 0,
+        coverage: 0.74,
+        manager: 'C. Brandt',
+        location: 'DE',
+        reason: 'Caregiving leave (unpaid).',
+        handoff: 'Enterprise renewal calls shifted to A. Voss; pipeline notes updated.',
+        delegate: 'A. Voss',
+        notes: [
+          { time: '2026-02-10 12:44', by: 'T. Muller', text: 'Shared updated pipeline notes and call list.' }
+        ]
+      },
+      {
+        id: 'LR-1241',
+        employee: 'J. Okafor',
+        team: 'Engineering',
+        type: 'PTO',
+        status: 'Declined',
+        start: '2026-02-20',
+        end: '2026-02-22',
+        submitted: '2026-02-15',
+        balance: 2,
+        coverage: 0.52,
+        manager: 'T. Velas',
+        location: 'UK',
+        reason: 'Short PTO request.',
+        handoff: 'No coverage plan submitted.',
+        delegate: '—',
+        notes: [
+          { time: '2026-02-16 09:11', by: 'T. Velas', text: 'Declined due to low balance + coverage.' }
+        ]
+      },
+      {
+        id: 'LR-1246',
+        employee: 'S. Laurent',
+        team: 'Marketing',
+        type: 'PTO',
+        status: 'Scheduled',
+        start: '2026-03-18',
+        end: '2026-03-20',
+        submitted: '2026-02-02',
+        balance: 14,
+        coverage: 0.86,
+        manager: 'M. Ober',
+        location: 'FR',
+        reason: 'Conference attendance + PTO.',
+        handoff: 'Campaign launch monitoring delegated to R. Steele.',
+        delegate: 'R. Steele',
+        notes: [
+          { time: '2026-02-03 10:05', by: 'M. Ober', text: 'Approved and passed to payroll.' },
+          { time: '2026-02-08 15:22', by: 'Payroll', text: 'Scheduled in payroll system.' }
+        ]
+      },
+      {
+        id: 'LR-1253',
+        employee: 'D. Novak',
+        team: 'Product',
+        type: 'PTO',
+        status: 'Pending',
+        start: '2026-02-28',
+        end: '2026-03-02',
+        submitted: '2026-02-14',
+        balance: 5,
+        coverage: 0.69,
+        manager: 'E. Brand',
+        location: 'DE',
+        reason: 'Family commitment during school break.',
+        handoff: 'Roadmap review delegated to P. Hassan; sprint planning notes updated.',
+        delegate: 'P. Hassan',
+        notes: [
+          { time: '2026-02-14 16:31', by: 'D. Novak', text: 'Added sprint plan notes and milestones.' }
+        ]
+      }
+    ];
+
+    const filters = { search: '', status: 'All', team: 'All', type: 'All', sort: 'start-asc', flagged: false, period: '30' };
+    let currentRole = 'Manager';
+    let selectedId = requests[0].id;
+
+    const toast = document.getElementById('toast');
+
+    const parseDate = (value) => new Date(value + 'T00:00:00Z');
+    const formatDate = (value) => new Date(value + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const calcDays = (start, end) => Math.round((parseDate(end) - parseDate(start)) / (1000 * 60 * 60 * 24)) + 1;
+    const noticeDays = (request) => Math.round((parseDate(request.start) - parseDate(request.submitted)) / (1000 * 60 * 60 * 24));
+    const overlaps = (start, end, bStart, bEnd) => parseDate(start) <= parseDate(bEnd) && parseDate(end) >= parseDate(bStart);
+
+    const showToast = (message, tone = 'info') => {
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      toast.classList.toggle('border-amber-400/50', tone === 'warn');
+      toast.classList.toggle('border-emerald-400/50', tone === 'success');
+      toast.classList.toggle('border-rose-400/50', tone === 'error');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    };
+
+    const policyFlags = (request) => {
+      const flags = [];
+      const notice = noticeDays(request);
+      const minNotice = typeRules[request.type]?.minNotice ?? 5;
+      if (notice < minNotice) {
+        flags.push({ label: `Short notice (${notice}d)`, tone: 'warn' });
+      }
+      const days = calcDays(request.start, request.end);
+      if (['PTO', 'Unpaid', 'Training', 'Parental'].includes(request.type) && request.balance < days) {
+        flags.push({ label: `Balance short (${days - request.balance}d)`, tone: 'error' });
+      }
+      const blackout = blackoutWindows.find(window => overlaps(request.start, request.end, window.start, window.end));
+      if (blackout) {
+        flags.push({ label: `Blackout: ${blackout.label}`, tone: 'error' });
+      }
+      if (request.coverage < 0.7) {
+        flags.push({ label: `Low coverage (${Math.round(request.coverage * 100)}%)`, tone: 'warn' });
+      }
+      if (!request.handoff || request.handoff.length < 12) {
+        flags.push({ label: 'Missing handoff plan', tone: 'warn' });
+      }
+      return flags;
+    };
+
+    const addAudit = (request, text) => {
+      request.notes.unshift({ time: new Date().toLocaleString('en-GB'), by: currentRole, text });
+    };
+
+    const applyFilters = () => {
+      return requests.filter((request) => {
+        const term = filters.search.toLowerCase();
+        const matchesSearch = !term || [request.employee, request.id, request.team].some((field) => field.toLowerCase().includes(term));
+        const matchesStatus = filters.status === 'All' || request.status === filters.status;
+        const matchesTeam = filters.team === 'All' || request.team === filters.team;
+        const matchesType = filters.type === 'All' || request.type === filters.type;
+        const flags = policyFlags(request);
+        const matchesFlagged = !filters.flagged || flags.length > 0;
+        const periodDays = filters.period === 'all' ? null : Number(filters.period);
+        const inPeriod = periodDays === null || parseDate(request.start) <= new Date(today.getTime() + periodDays * 24 * 60 * 60 * 1000);
+        return matchesSearch && matchesStatus && matchesTeam && matchesType && matchesFlagged && inPeriod;
+      }).sort((a, b) => {
+        if (filters.sort === 'start-asc') return parseDate(a.start) - parseDate(b.start);
+        if (filters.sort === 'start-desc') return parseDate(b.start) - parseDate(a.start);
+        if (filters.sort === 'coverage-asc') return a.coverage - b.coverage;
+        if (filters.sort === 'days-desc') return calcDays(b.start, b.end) - calcDays(a.start, a.end);
+        if (filters.sort === 'balance-asc') return a.balance - b.balance;
+        return 0;
+      });
+    };
+
+    const renderStats = (filtered) => {
+      const pending = filtered.filter((req) => req.status === 'Pending' || req.status === 'Needs Info').length;
+      const approved = filtered.filter((req) => ['Approved', 'Validated', 'Scheduled'].includes(req.status)).length;
+      const coverageRisk = filtered.filter((req) => req.coverage < 0.7 && !['Declined', 'Withdrawn'].includes(req.status)).length;
+      const avgBalance = filtered.length ? Math.round(filtered.reduce((sum, req) => sum + req.balance, 0) / filtered.length) : 0;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statApproved').textContent = approved;
+      document.getElementById('statCoverage').textContent = coverageRisk;
+      document.getElementById('statBalance').textContent = avgBalance;
+    };
+
+    const renderCoverageOutlook = () => {
+      const teamStats = {};
+      requests.forEach((req) => {
+        if (!teamStats[req.team]) {
+          teamStats[req.team] = { team: req.team, coverage: 1, open: 0 };
+        }
+        if (!['Declined', 'Withdrawn'].includes(req.status)) {
+          teamStats[req.team].coverage = Math.min(teamStats[req.team].coverage, req.coverage);
+          teamStats[req.team].open += 1;
+        }
+      });
+      const outlook = Object.values(teamStats).sort((a, b) => a.coverage - b.coverage).slice(0, 5);
+      const container = document.getElementById('coverageOutlook');
+      container.innerHTML = outlook.map((team) => {
+        const percent = Math.round(team.coverage * 100);
+        const color = percent < 70 ? 'bg-rose-400' : percent < 80 ? 'bg-amber-300' : 'bg-emerald-400';
+        return `
+          <div>
+            <div class="flex items-center justify-between">
+              <span>${team.team}</span>
+              <span>${percent}% · ${team.open} active</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded-full bg-slate-800">
+              <div class="h-2 rounded-full ${color}" style="width: ${percent}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    const renderMix = (filtered) => {
+      const statusCounts = filtered.reduce((acc, req) => {
+        acc[req.status] = (acc[req.status] || 0) + 1;
+        return acc;
+      }, {});
+      const statusMix = document.getElementById('statusMix');
+      statusMix.innerHTML = Object.entries({ Pending: 0, 'Needs Info': 0, Approved: 0, Validated: 0, Scheduled: 0, Declined: 0, ...statusCounts }).map(([status, count]) => {
+        const width = filtered.length ? (count / filtered.length) * 100 : 0;
+        return `
+          <div>
+            <div class="flex items-center justify-between">
+              <span>${status}</span>
+              <span>${count}</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded-full bg-slate-800">
+              <div class="h-2 rounded-full bg-sky-400" style="width: ${width}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    const renderPolicyAlerts = (filtered) => {
+      const flags = filtered.flatMap(policyFlags);
+      const count = (text) => flags.filter(flag => flag.label.includes(text)).length;
+      const alerts = [
+        { label: 'Short notice requests', value: count('Short notice') },
+        { label: 'Blackout overlaps', value: count('Blackout') },
+        { label: 'Balance shortfall', value: count('Balance') },
+        { label: 'Low coverage risk', value: count('Low coverage') }
+      ];
+      const container = document.getElementById('policyAlerts');
+      container.innerHTML = alerts.map((alert) => {
+        const tone = alert.value > 0 ? 'text-amber-300' : 'text-emerald-300';
+        return `
+          <div class="flex items-center justify-between">
+            <span>${alert.label}</span>
+            <span class="${tone}">${alert.value}</span>
+          </div>`;
+      }).join('');
+    };
+
+    const renderTable = () => {
+      const filtered = applyFilters();
+      renderStats(filtered);
+      renderMix(filtered);
+      renderCoverageOutlook();
+      renderPolicyAlerts(filtered);
+
+      const body = document.getElementById('requestsBody');
+      body.innerHTML = filtered.map((request) => {
+        const flags = policyFlags(request);
+        const selectedRow = request.id === selectedId ? 'bg-slate-900/80' : '';
+        const statusColor = request.status === 'Approved' || request.status === 'Validated' || request.status === 'Scheduled'
+          ? 'bg-emerald-500/20 text-emerald-300'
+          : request.status === 'Pending'
+          ? 'bg-amber-500/20 text-amber-300'
+          : request.status === 'Needs Info'
+          ? 'bg-sky-500/20 text-sky-300'
+          : request.status === 'Declined'
+          ? 'bg-rose-500/20 text-rose-300'
+          : 'bg-slate-700/40 text-slate-300';
+        const coveragePercent = Math.round(request.coverage * 100);
+        const coverageColor = coveragePercent < 70 ? 'text-rose-300' : coveragePercent < 80 ? 'text-amber-300' : 'text-emerald-300';
+        const actions = (() => {
+          if (currentRole === 'Manager' && ['Pending', 'Needs Info'].includes(request.status)) {
+            return `
+              <div class="flex gap-2">
+                <button data-action="approve" data-id="${request.id}" class="rounded-md bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200">Approve</button>
+                <button data-action="info" data-id="${request.id}" class="rounded-md bg-sky-500/20 px-2 py-1 text-xs text-sky-200">Request info</button>
+                <button data-action="decline" data-id="${request.id}" class="rounded-md bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Decline</button>
+              </div>`;
+          }
+          if (currentRole === 'HR' && request.status === 'Approved') {
+            return `
+              <div class="flex gap-2">
+                <button data-action="validate" data-id="${request.id}" class="rounded-md bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200">Validate</button>
+                <button data-action="return" data-id="${request.id}" class="rounded-md bg-sky-500/20 px-2 py-1 text-xs text-sky-200">Return</button>
+              </div>`;
+          }
+          if (currentRole === 'Payroll' && request.status === 'Validated') {
+            return `
+              <button data-action="schedule" data-id="${request.id}" class="rounded-md bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200">Schedule</button>`;
+          }
+          return '<span class="text-xs text-slate-500">View only</span>';
+        })();
+
+        return `
+          <tr data-id="${request.id}" class="cursor-pointer ${selectedRow} hover:bg-slate-900/70">
+            <td class="px-4 py-3">
+              <div class="font-semibold">${request.employee}</div>
+              <div class="text-xs text-slate-400">${request.id} · ${request.manager}</div>
+              ${flags.length ? `<div class="mt-1 flex flex-wrap gap-1">${flags.map(flag => `<span class='rounded-full px-2 py-0.5 text-[10px] ${flag.tone === 'error' ? 'bg-rose-500/20 text-rose-200' : 'bg-amber-500/20 text-amber-200'}'>${flag.label}</span>`).join('')}</div>` : ''}
+            </td>
+            <td class="px-4 py-3">${request.team}</td>
+            <td class="px-4 py-3">${request.type}</td>
+            <td class="px-4 py-3">
+              <div>${formatDate(request.start)} → ${formatDate(request.end)}</div>
+              <div class="text-xs text-slate-400">${calcDays(request.start, request.end)} days</div>
+            </td>
+            <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs ${statusColor}">${request.status}</span></td>
+            <td class="px-4 py-3">
+              <div class="text-xs ${coverageColor}">${coveragePercent}%</div>
+              <div class="mt-1 h-1.5 w-20 rounded-full bg-slate-800">
+                <div class="h-1.5 rounded-full ${coveragePercent < 70 ? 'bg-rose-400' : coveragePercent < 80 ? 'bg-amber-300' : 'bg-emerald-400'}" style="width: ${coveragePercent}%"></div>
+              </div>
+            </td>
+            <td class="px-4 py-3">${actions}</td>
+          </tr>`;
+      }).join('');
+
+      if (!filtered.find((req) => req.id === selectedId) && filtered.length) {
+        selectedId = filtered[0].id;
+      }
+      renderDetail();
+    };
+
+    const renderDetail = () => {
+      const request = requests.find((item) => item.id === selectedId);
+      if (!request) return;
+
+      const flags = policyFlags(request);
+      const days = calcDays(request.start, request.end);
+      const notice = noticeDays(request);
+      const stepMap = { Pending: 2, 'Needs Info': 2, Approved: 3, Validated: 4, Scheduled: 5, Declined: 2, Withdrawn: 2 };
+      const activeStep = stepMap[request.status] || 1;
+
+      document.getElementById('detailCard').innerHTML = `
+        <div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-lg font-semibold">${request.employee}</div>
+              <div class="text-xs text-slate-400">${request.id} · Manager ${request.manager}</div>
+            </div>
+            <span class="rounded-full bg-slate-800 px-3 py-1 text-xs">${request.team}</span>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-400">
+            <div>
+              <div class="uppercase tracking-wide">Type</div>
+              <div class="text-sm text-slate-200">${request.type}</div>
+            </div>
+            <div>
+              <div class="uppercase tracking-wide">Location</div>
+              <div class="text-sm text-slate-200">${request.location}</div>
+            </div>
+            <div>
+              <div class="uppercase tracking-wide">Dates</div>
+              <div class="text-sm text-slate-200">${formatDate(request.start)} → ${formatDate(request.end)}</div>
+              <div class="text-xs text-slate-400">${days} days · ${notice} day notice</div>
+            </div>
+            <div>
+              <div class="uppercase tracking-wide">Balance</div>
+              <div class="text-sm text-slate-200">${request.balance} days</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Policy checks</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            ${flags.length ? flags.map(flag => `<span class='rounded-full px-2 py-1 text-[11px] ${flag.tone === 'error' ? 'bg-rose-500/20 text-rose-200' : 'bg-amber-500/20 text-amber-200'}'>${flag.label}</span>`).join('') : '<span class="text-xs text-emerald-300">All checks passed</span>'}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Coverage plan</div>
+          <div class="mt-2 text-sm text-slate-200">${request.handoff || 'Coverage plan needed.'}</div>
+          <div class="mt-2 text-xs text-slate-400">Delegate: ${request.delegate}</div>
+          <button id="coverageBtn" class="mt-3 w-full rounded-lg bg-sky-500/20 border border-sky-400/40 px-3 py-2 text-xs text-sky-200">Confirm coverage handoff</button>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Approval workflow</div>
+          <div class="mt-3 space-y-2 text-xs">
+            ${['Submitted', 'Manager Review', 'HR Validation', 'Scheduling', 'Finalised'].map((step, index) => {
+              const active = index + 1 <= activeStep;
+              return `<div class='flex items-center gap-2'><span class='h-2 w-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-700'}'></span><span class='${active ? 'text-slate-200' : 'text-slate-500'}'>${step}</span></div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Audit Trail</div>
+          <div class="mt-3 max-h-40 space-y-3 overflow-y-auto text-xs">
+            ${request.notes.map((note) => `
+              <div>
+                <div class="text-slate-400">${note.time} · ${note.by}</div>
+                <div class="text-slate-200">${note.text}</div>
+              </div>
+            `).join('')}
+          </div>
+          <form id="noteForm" class="mt-3">
+            <textarea id="noteText" placeholder="Add audit note" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs" rows="2"></textarea>
+            <button class="mt-2 w-full rounded-lg bg-emerald-500/20 border border-emerald-400/40 px-3 py-2 text-xs text-emerald-200">Log note</button>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('coverageBtn').addEventListener('click', () => {
+        addAudit(request, 'Coverage handoff confirmed.');
+        showToast('Coverage confirmed.', 'success');
+        renderDetail();
+      });
+
+      document.getElementById('noteForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const text = document.getElementById('noteText').value.trim();
+        if (text.length < 5) {
+          showToast('Note must be at least 5 characters.', 'error');
+          return;
+        }
+        addAudit(request, text);
+        document.getElementById('noteText').value = '';
+        showToast('Audit note logged.', 'success');
+        renderDetail();
+      });
+    };
+
+    document.getElementById('requestsBody').addEventListener('click', (event) => {
+      const actionButton = event.target.closest('button[data-action]');
+      if (actionButton) {
+        const action = actionButton.dataset.action;
+        const id = actionButton.dataset.id;
+        const request = requests.find((item) => item.id === id);
+        if (!request) return;
+
+        const flags = policyFlags(request);
+        const hasBlocking = flags.some(flag => flag.tone === 'error');
+
+        if (action === 'approve') {
+          if (hasBlocking) {
+            showToast('Approval blocked: resolve policy violations.', 'error');
+            return;
+          }
+          request.status = 'Approved';
+          addAudit(request, 'Approved by manager.');
+          showToast('Request approved.', 'success');
+        }
+        if (action === 'decline') {
+          request.status = 'Declined';
+          addAudit(request, 'Declined by manager.');
+          showToast('Request declined.', 'warn');
+        }
+        if (action === 'info') {
+          request.status = 'Needs Info';
+          addAudit(request, 'Requested more information.');
+          showToast('Info request sent.', 'warn');
+        }
+        if (action === 'validate') {
+          request.status = 'Validated';
+          addAudit(request, 'HR validation completed.');
+          showToast('Validated by HR.', 'success');
+        }
+        if (action === 'return') {
+          request.status = 'Needs Info';
+          addAudit(request, 'HR requested clarification.');
+          showToast('Returned to manager.', 'warn');
+        }
+        if (action === 'schedule') {
+          request.status = 'Scheduled';
+          addAudit(request, 'Payroll scheduled leave.');
+          showToast('Scheduled in payroll.', 'success');
+        }
+        renderTable();
+        return;
+      }
+
+      const row = event.target.closest('tr[data-id]');
+      if (row) {
+        selectedId = row.dataset.id;
+        renderTable();
+      }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (event) => {
+      filters.search = event.target.value;
+      renderTable();
+    });
+    document.getElementById('statusFilter').addEventListener('change', (event) => {
+      filters.status = event.target.value;
+      renderTable();
+    });
+    document.getElementById('teamFilter').addEventListener('change', (event) => {
+      filters.team = event.target.value;
+      renderTable();
+    });
+    document.getElementById('typeFilter').addEventListener('change', (event) => {
+      filters.type = event.target.value;
+      renderTable();
+    });
+    document.getElementById('sortSelect').addEventListener('change', (event) => {
+      filters.sort = event.target.value;
+      renderTable();
+    });
+    document.getElementById('flaggedOnly').addEventListener('change', (event) => {
+      filters.flagged = event.target.checked;
+      renderTable();
+    });
+    document.getElementById('periodSelect').addEventListener('change', (event) => {
+      filters.period = event.target.value;
+      renderTable();
+    });
+
+    document.getElementById('roleSelect').addEventListener('change', (event) => {
+      currentRole = event.target.value;
+      renderTable();
+      showToast(`Switched to ${currentRole} view.`, 'success');
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = applyFilters().map((request) => [
+        request.id,
+        request.employee,
+        request.team,
+        request.type,
+        request.start,
+        request.end,
+        calcDays(request.start, request.end),
+        request.status,
+        request.manager,
+        request.balance,
+        Math.round(request.coverage * 100) + '%'
+      ]);
+      const header = ['ID', 'Employee', 'Team', 'Type', 'Start', 'End', 'Days', 'Status', 'Manager', 'Balance', 'Coverage'];
+      const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'leave-requests.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast('CSV exported.', 'success');
+    });
+
+    const populateFilters = () => {
+      const statusFilter = document.getElementById('statusFilter');
+      const teamFilter = document.getElementById('teamFilter');
+      const typeFilter = document.getElementById('typeFilter');
+      const statuses = [...new Set(requests.map((req) => req.status))];
+      const teams = [...new Set(requests.map((req) => req.team))];
+      const types = [...new Set(requests.map((req) => req.type))];
+
+      statuses.forEach((status) => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusFilter.appendChild(option);
+      });
+      teams.forEach((team) => {
+        const option = document.createElement('option');
+        option.value = team;
+        option.textContent = team;
+        teamFilter.appendChild(option);
+      });
+      types.forEach((type) => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        typeFilter.appendChild(option);
+      });
+    };
+
+    populateFilters();
+    renderTable();
+  </script>
+</body>
+</html>

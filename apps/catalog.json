@@ -87,5 +87,24 @@
       "search"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 6,
+    "slug": "2026-02-18-leave-request-command-center",
+    "name": "Leave Request Command Center",
+    "description": "Review leave requests with policy checks, approvals, and coverage impact.",
+    "category": "HR",
+    "pattern": "Queue+Detail",
+    "tags": [
+      "leave requests",
+      "pto",
+      "approvals",
+      "coverage",
+      "policy checks",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
