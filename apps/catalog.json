@@ -14,5 +14,23 @@
       "wizard"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 2,
+    "slug": "2026-02-18-asset-checkout-console",
+    "name": "Asset Checkout Console",
+    "description": "Track asset checkouts with policy validation, approvals, and audit trail.",
+    "category": "Supply Chain",
+    "pattern": "Master-Detail",
+    "tags": [
+      "asset checkout",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "search",
+      "master-detail"
+    ],
+    "thumb": ""
   }
 ]

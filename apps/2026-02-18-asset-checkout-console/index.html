@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asset Checkout Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: '0 10px 30px -20px rgba(15, 23, 42, 0.45)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-200/70 dark:border-slate-800">
+      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Supply Chain · Master-Detail</p>
+          <h1 class="text-2xl sm:text-3xl font-semibold">Asset Checkout Console</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Track high-value assets, enforce checkout policy, and keep a pristine audit trail.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="exportBtn" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">Export CSV</button>
+          <button id="themeToggle" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Toggle Dark</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <section class="grid gap-4 md:grid-cols-4">
+        <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-slate-900">
+          <p class="text-xs uppercase tracking-widest text-slate-500">Total Assets</p>
+          <p id="kpiTotal" class="mt-2 text-2xl font-semibold">0</p>
+          <p class="text-xs text-slate-500">Active inventory in scope</p>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-slate-900">
+          <p class="text-xs uppercase tracking-widest text-slate-500">Checked Out</p>
+          <p id="kpiCheckedOut" class="mt-2 text-2xl font-semibold">0</p>
+          <p class="text-xs text-slate-500">Currently assigned to staff</p>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-slate-900">
+          <p class="text-xs uppercase tracking-widest text-slate-500">Overdue</p>
+          <p id="kpiOverdue" class="mt-2 text-2xl font-semibold">0</p>
+          <p class="text-xs text-slate-500">Past the return policy</p>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-slate-900">
+          <p class="text-xs uppercase tracking-widest text-slate-500">Approval Needed</p>
+          <p id="kpiApproval" class="mt-2 text-2xl font-semibold">0</p>
+          <p class="text-xs text-slate-500">High-value or long-term</p>
+        </div>
+      </section>
+
+      <section class="grid gap-6 lg:grid-cols-5">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-slate-900">
+            <div class="flex flex-col gap-3">
+              <label class="text-sm font-medium">Search assets</label>
+              <input id="searchInput" type="text" placeholder="Name, serial, assignee..." class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-950" />
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="text-xs uppercase tracking-widest text-slate-500">Status</label>
+                  <select id="statusFilter" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950">
+                    <option>All</option>
+                    <option>Available</option>
+                    <option>Checked Out</option>
+                    <option>Reserved</option>
+                    <option>Maintenance</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs uppercase tracking-widest text-slate-500">Sort by</label>
+                  <select id="sortSelect" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950">
+                    <option value="name">Name</option>
+                    <option value="value">Value</option>
+                    <option value="nextDue">Next Due</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="assetList" class="space-y-3"></div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+          <div id="messageBanner" class="hidden rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-soft dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></div>
+
+          <div class="rounded-2xl bg-white p-6 shadow-soft dark:bg-slate-900">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-widest text-slate-500">Asset Detail</p>
+                <h2 id="detailName" class="mt-2 text-2xl font-semibold"></h2>
+                <p id="detailMeta" class="text-sm text-slate-500"></p>
+              </div>
+              <span id="detailStatus" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"></span>
+            </div>
+
+            <div class="mt-6 grid gap-4 sm:grid-cols-2">
+              <div class="rounded-xl border border-slate-200/70 p-4 dark:border-slate-700">
+                <p class="text-xs uppercase tracking-widest text-slate-500">Assignment</p>
+                <p id="detailAssigned" class="mt-2 text-sm font-medium"></p>
+                <p id="detailDue" class="text-xs text-slate-500"></p>
+              </div>
+              <div class="rounded-xl border border-slate-200/70 p-4 dark:border-slate-700">
+                <p class="text-xs uppercase tracking-widest text-slate-500">Asset Info</p>
+                <p id="detailInfo" class="mt-2 text-sm font-medium"></p>
+                <p id="detailValue" class="text-xs text-slate-500"></p>
+              </div>
+            </div>
+
+            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
+              <p class="font-semibold text-slate-800 dark:text-slate-100">Policy validation</p>
+              <p class="mt-1">Manager approval required for checkouts longer than 14 days or asset value ≥ €5,000.</p>
+              <p id="policyHint" class="mt-2 text-xs font-semibold text-amber-600 dark:text-amber-400"></p>
+            </div>
+
+            <form id="checkoutForm" class="mt-6 grid gap-4">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="text-xs uppercase tracking-widest text-slate-500">Assign to</label>
+                  <input id="assignInput" type="text" placeholder="Employee name" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+                </div>
+                <div>
+                  <label class="text-xs uppercase tracking-widest text-slate-500">Due date</label>
+                  <input id="dueInput" type="date" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+                </div>
+              </div>
+              <div>
+                <label class="text-xs uppercase tracking-widest text-slate-500">Purpose</label>
+                <input id="purposeInput" type="text" placeholder="Project, travel, customer visit..." class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" />
+              </div>
+              <div id="approvalField" class="hidden">
+                <label class="text-xs uppercase tracking-widest text-slate-500">Manager approval ID</label>
+                <input id="approvalInput" type="text" placeholder="APR-00042" class="mt-1 w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-amber-500 dark:bg-amber-900/40 dark:text-amber-100" />
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button type="submit" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Check Out</button>
+                <button type="button" id="checkInBtn" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:text-slate-100">Check In</button>
+                <button type="button" id="reserveBtn" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:text-slate-100">Reserve</button>
+                <button type="button" id="maintenanceBtn" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:text-slate-100">Mark Maintenance</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="rounded-2xl bg-white p-6 shadow-soft dark:bg-slate-900">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-widest text-slate-500">Audit Trail</p>
+                <h3 class="mt-2 text-lg font-semibold">Recent activity</h3>
+              </div>
+              <span class="text-xs text-slate-500">Immutable log</span>
+            </div>
+            <div id="auditTrail" class="mt-4 space-y-3"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const assets = [
+      {
+        id: 'A-1001',
+        name: 'Dell Latitude 7440',
+        category: 'Laptop',
+        status: 'Checked Out',
+        location: 'Dresden HQ · Locker 4',
+        assignedTo: 'M. Krüger',
+        value: 1600,
+        serial: 'DL-7440-991',
+        lastCheckout: '2026-02-05',
+        nextDue: '2026-02-20',
+        condition: 'Good',
+        approval: 'Not Required'
+      },
+      {
+        id: 'A-1002',
+        name: 'iPad Pro 12.9',
+        category: 'Tablet',
+        status: 'Available',
+        location: 'Dresden HQ · Locker 2',
+        assignedTo: '',
+        value: 1400,
+        serial: 'IP-129-223',
+        lastCheckout: '2026-01-28',
+        nextDue: '',
+        condition: 'Excellent',
+        approval: 'Not Required'
+      },
+      {
+        id: 'A-1003',
+        name: 'Canon R6 Kit',
+        category: 'Camera',
+        status: 'Reserved',
+        location: 'Media Lab · Shelf 3',
+        assignedTo: 'Product Marketing',
+        value: 3600,
+        serial: 'CR6-4431',
+        lastCheckout: '2026-02-10',
+        nextDue: '2026-02-25',
+        condition: 'Good',
+        approval: 'Approved'
+      },
+      {
+        id: 'A-1004',
+        name: 'Surface Studio 2+',
+        category: 'Workstation',
+        status: 'Checked Out',
+        location: 'Innovation Lab',
+        assignedTo: 'R. Dutt',
+        value: 5200,
+        serial: 'SS2-8811',
+        lastCheckout: '2026-01-30',
+        nextDue: '2026-02-18',
+        condition: 'Fair',
+        approval: 'Approved'
+      },
+      {
+        id: 'A-1005',
+        name: 'Logitech Rally Bar',
+        category: 'AV Equipment',
+        status: 'Maintenance',
+        location: 'Meeting Room 7',
+        assignedTo: 'AV Support',
+        value: 4100,
+        serial: 'LRB-5530',
+        lastCheckout: '2026-02-01',
+        nextDue: '',
+        condition: 'Repair',
+        approval: 'Not Required'
+      },
+      {
+        id: 'A-1006',
+        name: 'DJI Mavic 3',
+        category: 'Drone',
+        status: 'Available',
+        location: 'Field Ops · Locker 1',
+        assignedTo: '',
+        value: 2600,
+        serial: 'DJI-3389',
+        lastCheckout: '2026-01-22',
+        nextDue: '',
+        condition: 'Excellent',
+        approval: 'Not Required'
+      },
+      {
+        id: 'A-1007',
+        name: 'MacBook Pro 16"',
+        category: 'Laptop',
+        status: 'Checked Out',
+        location: 'Dresden HQ · Locker 6',
+        assignedTo: 'S. Patel',
+        value: 3200,
+        serial: 'MBP-160-707',
+        lastCheckout: '2026-02-01',
+        nextDue: '2026-02-10',
+        condition: 'Good',
+        approval: 'Not Required'
+      },
+      {
+        id: 'A-1008',
+        name: 'Zebra TC57',
+        category: 'Scanner',
+        status: 'Available',
+        location: 'Warehouse Dock',
+        assignedTo: '',
+        value: 1150,
+        serial: 'ZB-5704',
+        lastCheckout: '2026-02-12',
+        nextDue: '',
+        condition: 'Good',
+        approval: 'Not Required'
+      }
+    ]
+
+    const auditLog = {
+      'A-1001': [
+        { time: '2026-02-05 09:10', action: 'Checked Out', by: 'M. Krüger', note: 'Client demo kit' },
+        { time: '2026-02-05 09:12', action: 'Policy OK', by: 'Auto', note: 'Duration 15 days' }
+      ],
+      'A-1002': [
+        { time: '2026-01-28 13:22', action: 'Checked In', by: 'N. Schulz', note: 'Returned from offsite' }
+      ],
+      'A-1003': [
+        { time: '2026-02-10 10:45', action: 'Reserved', by: 'Product Marketing', note: 'Launch video shoot' },
+        { time: '2026-02-10 10:50', action: 'Approval', by: 'L. Meyer', note: 'APR-00412' }
+      ],
+      'A-1004': [
+        { time: '2026-01-30 14:05', action: 'Checked Out', by: 'R. Dutt', note: 'Workshop build-out' },
+        { time: '2026-01-30 14:10', action: 'Approval', by: 'C. Reuter', note: 'APR-00388' }
+      ],
+      'A-1005': [
+        { time: '2026-02-14 08:20', action: 'Maintenance', by: 'AV Support', note: 'Firmware issue' }
+      ],
+      'A-1006': [
+        { time: '2026-01-22 16:10', action: 'Checked In', by: 'Ops Team', note: 'Battery swap' }
+      ],
+      'A-1007': [
+        { time: '2026-02-01 09:30', action: 'Checked Out', by: 'S. Patel', note: 'New hire setup' }
+      ],
+      'A-1008': [
+        { time: '2026-02-12 11:05', action: 'Checked In', by: 'Warehouse', note: 'Cycle count complete' }
+      ]
+    }
+
+    const state = {
+      search: '',
+      status: 'All',
+      sort: 'name',
+      selectedId: assets[0].id
+    }
+
+    const ui = {
+      list: document.getElementById('assetList'),
+      search: document.getElementById('searchInput'),
+      status: document.getElementById('statusFilter'),
+      sort: document.getElementById('sortSelect'),
+      message: document.getElementById('messageBanner'),
+      detailName: document.getElementById('detailName'),
+      detailMeta: document.getElementById('detailMeta'),
+      detailStatus: document.getElementById('detailStatus'),
+      detailAssigned: document.getElementById('detailAssigned'),
+      detailDue: document.getElementById('detailDue'),
+      detailInfo: document.getElementById('detailInfo'),
+      detailValue: document.getElementById('detailValue'),
+      policyHint: document.getElementById('policyHint'),
+      audit: document.getElementById('auditTrail'),
+      assignInput: document.getElementById('assignInput'),
+      dueInput: document.getElementById('dueInput'),
+      purposeInput: document.getElementById('purposeInput'),
+      approvalField: document.getElementById('approvalField'),
+      approvalInput: document.getElementById('approvalInput'),
+      checkInBtn: document.getElementById('checkInBtn'),
+      reserveBtn: document.getElementById('reserveBtn'),
+      maintenanceBtn: document.getElementById('maintenanceBtn')
+    }
+
+    const today = new Date()
+    const todayIso = today.toISOString().slice(0, 10)
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
+    }
+
+    function setMessage(text, tone = 'info') {
+      ui.message.textContent = text
+      ui.message.classList.remove('hidden')
+      ui.message.classList.remove('border-emerald-400', 'border-amber-400', 'border-rose-400')
+      if (tone === 'success') ui.message.classList.add('border-emerald-400')
+      if (tone === 'warn') ui.message.classList.add('border-amber-400')
+      if (tone === 'error') ui.message.classList.add('border-rose-400')
+      clearTimeout(window.__msgTimer)
+      window.__msgTimer = setTimeout(() => ui.message.classList.add('hidden'), 4000)
+    }
+
+    function isOverdue(asset) {
+      if (asset.status !== 'Checked Out' || !asset.nextDue) return false
+      return new Date(asset.nextDue) < new Date(todayIso)
+    }
+
+    function approvalRequired(asset, dueDate) {
+      if (!dueDate) return asset.value >= 5000
+      const diffDays = Math.ceil((new Date(dueDate) - new Date(todayIso)) / (1000 * 60 * 60 * 24))
+      return asset.value >= 5000 || diffDays > 14
+    }
+
+    function getFilteredAssets() {
+      return assets
+        .filter(asset => {
+          const term = state.search.toLowerCase()
+          const matchesTerm =
+            asset.name.toLowerCase().includes(term) ||
+            asset.serial.toLowerCase().includes(term) ||
+            asset.assignedTo.toLowerCase().includes(term) ||
+            asset.category.toLowerCase().includes(term)
+          const matchesStatus = state.status === 'All' || asset.status === state.status
+          return matchesTerm && matchesStatus
+        })
+        .sort((a, b) => {
+          if (state.sort === 'value') return b.value - a.value
+          if (state.sort === 'nextDue') return (a.nextDue || '').localeCompare(b.nextDue || '')
+          if (state.sort === 'status') return a.status.localeCompare(b.status)
+          return a.name.localeCompare(b.name)
+        })
+    }
+
+    function renderKPIs() {
+      const total = assets.length
+      const checkedOut = assets.filter(a => a.status === 'Checked Out').length
+      const overdue = assets.filter(isOverdue).length
+      const approvals = assets.filter(a => a.value >= 5000 && a.status === 'Checked Out').length
+
+      document.getElementById('kpiTotal').textContent = total
+      document.getElementById('kpiCheckedOut').textContent = checkedOut
+      document.getElementById('kpiOverdue').textContent = overdue
+      document.getElementById('kpiApproval').textContent = approvals
+    }
+
+    function renderList() {
+      const list = getFilteredAssets()
+      ui.list.innerHTML = ''
+
+      list.forEach(asset => {
+        const card = document.createElement('button')
+        card.type = 'button'
+        card.className = `w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 ${state.selectedId === asset.id ? 'ring-2 ring-slate-400' : ''}`
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold">${asset.name}</p>
+              <p class="text-xs text-slate-500">${asset.category} · ${asset.serial}</p>
+            </div>
+            <span class="rounded-full px-3 py-1 text-xs font-semibold ${statusClasses(asset.status)}">${asset.status}</span>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <span>${asset.location}</span>
+            <span>Value ${formatCurrency(asset.value)}</span>
+            <span>${asset.assignedTo ? 'Assigned to ' + asset.assignedTo : 'Unassigned'}</span>
+          </div>
+          <div class="mt-2 text-xs ${isOverdue(asset) ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500'}">
+            ${isOverdue(asset) ? 'Overdue since ' + asset.nextDue : asset.nextDue ? 'Due ' + asset.nextDue : 'No due date'}
+          </div>
+        `
+        card.addEventListener('click', () => {
+          state.selectedId = asset.id
+          renderDetails()
+          renderList()
+        })
+        ui.list.appendChild(card)
+      })
+    }
+
+    function statusClasses(status) {
+      if (status === 'Available') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
+      if (status === 'Checked Out') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'
+      if (status === 'Reserved') return 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
+      return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200'
+    }
+
+    function renderDetails() {
+      const asset = assets.find(a => a.id === state.selectedId)
+      if (!asset) return
+
+      ui.detailName.textContent = asset.name
+      ui.detailMeta.textContent = `${asset.id} · ${asset.category} · ${asset.serial}`
+      ui.detailStatus.textContent = asset.status
+      ui.detailStatus.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusClasses(asset.status)}`
+      ui.detailAssigned.textContent = asset.assignedTo ? asset.assignedTo : 'Unassigned'
+      ui.detailDue.textContent = asset.nextDue ? `Due ${asset.nextDue}` : 'No due date set'
+      ui.detailInfo.textContent = `${asset.location} · Condition: ${asset.condition}`
+      ui.detailValue.textContent = `Asset value: ${formatCurrency(asset.value)} · Approval: ${asset.approval}`
+
+      ui.assignInput.value = asset.assignedTo || ''
+      ui.dueInput.value = asset.nextDue || ''
+      ui.purposeInput.value = ''
+      ui.approvalInput.value = ''
+
+      const needsApproval = approvalRequired(asset, ui.dueInput.value)
+      ui.policyHint.textContent = needsApproval ? 'Approval required for this checkout.' : 'No approval required for this checkout.'
+      ui.approvalField.classList.toggle('hidden', !needsApproval)
+
+      renderAudit(asset.id)
+    }
+
+    function renderAudit(assetId) {
+      const entries = auditLog[assetId] || []
+      ui.audit.innerHTML = ''
+      entries.slice().reverse().forEach(entry => {
+        const row = document.createElement('div')
+        row.className = 'rounded-xl border border-slate-200/70 p-3 text-sm dark:border-slate-700'
+        row.innerHTML = `
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">${entry.action}</p>
+            <span class="text-xs text-slate-500">${entry.time}</span>
+          </div>
+          <p class="text-xs text-slate-500">${entry.by}</p>
+          <p class="mt-1 text-xs">${entry.note}</p>
+        `
+        ui.audit.appendChild(row)
+      })
+      if (!entries.length) {
+        ui.audit.innerHTML = '<p class="text-sm text-slate-500">No activity yet.</p>'
+      }
+    }
+
+    function appendAudit(assetId, action, by, note) {
+      if (!auditLog[assetId]) auditLog[assetId] = []
+      const time = new Date().toISOString().slice(0, 16).replace('T', ' ')
+      auditLog[assetId].push({ time, action, by, note })
+      renderAudit(assetId)
+    }
+
+    function exportCSV() {
+      const rows = getFilteredAssets()
+      const headers = ['ID', 'Name', 'Category', 'Status', 'Assigned To', 'Location', 'Value', 'Next Due', 'Approval']
+      const data = rows.map(asset => [
+        asset.id,
+        asset.name,
+        asset.category,
+        asset.status,
+        asset.assignedTo || '',
+        asset.location,
+        asset.value,
+        asset.nextDue || '',
+        asset.approval
+      ])
+
+      const csv = [headers, ...data]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `asset_checkout_${todayIso}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setMessage('CSV export ready.', 'success')
+    }
+
+    function handleCheckout(event) {
+      event.preventDefault()
+      const asset = assets.find(a => a.id === state.selectedId)
+      if (!asset) return
+
+      const assignee = ui.assignInput.value.trim()
+      const dueDate = ui.dueInput.value
+      const purpose = ui.purposeInput.value.trim()
+      const requiresApproval = approvalRequired(asset, dueDate)
+      const approvalId = ui.approvalInput.value.trim()
+
+      if (!assignee || !dueDate || !purpose) {
+        setMessage('Please complete assignee, due date, and purpose.', 'warn')
+        return
+      }
+
+      if (requiresApproval && !approvalId) {
+        setMessage('Manager approval ID required for this checkout.', 'error')
+        ui.approvalField.classList.remove('hidden')
+        return
+      }
+
+      asset.status = 'Checked Out'
+      asset.assignedTo = assignee
+      asset.nextDue = dueDate
+      asset.lastCheckout = todayIso
+      asset.approval = requiresApproval ? 'Approved' : 'Not Required'
+
+      appendAudit(asset.id, 'Checked Out', assignee, purpose)
+      if (requiresApproval) appendAudit(asset.id, 'Approval', 'Manager', approvalId)
+      renderKPIs()
+      renderList()
+      renderDetails()
+      setMessage('Checkout recorded and audit trail updated.', 'success')
+    }
+
+    function handleCheckIn() {
+      const asset = assets.find(a => a.id === state.selectedId)
+      if (!asset) return
+      asset.status = 'Available'
+      asset.assignedTo = ''
+      asset.nextDue = ''
+      asset.approval = 'Not Required'
+      appendAudit(asset.id, 'Checked In', 'Asset Desk', 'Returned to storage')
+      renderKPIs()
+      renderList()
+      renderDetails()
+      setMessage('Asset checked in successfully.', 'success')
+    }
+
+    function handleReserve() {
+      const asset = assets.find(a => a.id === state.selectedId)
+      if (!asset) return
+      asset.status = 'Reserved'
+      asset.assignedTo = 'Pending assignment'
+      asset.nextDue = ''
+      asset.approval = 'Not Required'
+      appendAudit(asset.id, 'Reserved', 'Asset Desk', 'Reserved for upcoming request')
+      renderKPIs()
+      renderList()
+      renderDetails()
+      setMessage('Asset reserved for upcoming request.', 'success')
+    }
+
+    function handleMaintenance() {
+      const asset = assets.find(a => a.id === state.selectedId)
+      if (!asset) return
+      asset.status = 'Maintenance'
+      asset.assignedTo = 'Asset Care'
+      asset.nextDue = ''
+      asset.approval = 'Not Required'
+      appendAudit(asset.id, 'Maintenance', 'Asset Care', 'Scheduled maintenance')
+      renderKPIs()
+      renderList()
+      renderDetails()
+      setMessage('Maintenance status applied.', 'success')
+    }
+
+    function initTheme() {
+      const stored = localStorage.getItem('bob-theme')
+      if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      }
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark')
+      const mode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+      localStorage.setItem('bob-theme', mode)
+    }
+
+    function bindEvents() {
+      ui.search.addEventListener('input', (e) => {
+        state.search = e.target.value
+        renderList()
+      })
+      ui.status.addEventListener('change', (e) => {
+        state.status = e.target.value
+        renderList()
+      })
+      ui.sort.addEventListener('change', (e) => {
+        state.sort = e.target.value
+        renderList()
+      })
+      ui.dueInput.addEventListener('change', () => {
+        const asset = assets.find(a => a.id === state.selectedId)
+        if (!asset) return
+        const needsApproval = approvalRequired(asset, ui.dueInput.value)
+        ui.policyHint.textContent = needsApproval ? 'Approval required for this checkout.' : 'No approval required for this checkout.'
+        ui.approvalField.classList.toggle('hidden', !needsApproval)
+      })
+      document.getElementById('checkoutForm').addEventListener('submit', handleCheckout)
+      ui.checkInBtn.addEventListener('click', handleCheckIn)
+      ui.reserveBtn.addEventListener('click', handleReserve)
+      ui.maintenanceBtn.addEventListener('click', handleMaintenance)
+      document.getElementById('themeToggle').addEventListener('click', toggleTheme)
+      document.getElementById('exportBtn').addEventListener('click', exportCSV)
+    }
+
+    initTheme()
+    bindEvents()
+    renderKPIs()
+    renderList()
+    renderDetails()
+  </script>
+</body>
+</html>
