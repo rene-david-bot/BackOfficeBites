@@ -20,10 +20,7 @@
           Monitor 3-way invoice matches, catch exceptions, and clear the queue with policy-driven actions.
         </p>
       </div>
-      <button id="modeToggle" class="px-3 py-2 rounded-lg border border-slate-700 text-xs uppercase tracking-widest">
-        Toggle Dark Mode
-      </button>
-    </div>
+          </div>
 
     <section class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
@@ -254,9 +251,6 @@
     const statExceptions = document.getElementById('statExceptions');
     const statRate = document.getElementById('statRate');
     const statVariance = document.getElementById('statVariance');
-
-    const modeToggle = document.getElementById('modeToggle');
-
     const state = { selected: null };
 
     function toCurrency(value) {
@@ -446,16 +440,7 @@
       if (state.selected) {
         selectRow(state.selected);
       }
-    }
-
-    function initDarkMode() {
-      const saved = localStorage.getItem('bob-dark');
-      if (saved === 'light') {
-        document.documentElement.classList.remove('dark');
-      }
-      modeToggle.addEventListener('click', () => {
-        document.documentElement.classList.toggle('dark');
-        const isDark = document.documentElement.classList.contains('dark');
+    }        const isDark = document.documentElement.classList.contains('dark');
         localStorage.setItem('bob-dark', isDark ? 'dark' : 'light');
       });
     }
