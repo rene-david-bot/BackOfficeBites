@@ -228,6 +228,49 @@
       request.notes.unshift({ time: new Date().toLocaleString('en-GB'), by: currentRole, text });
     };
 
+    const executeAction = (request, action) => {
+      const flags = policyFlags(request);
+      const hasBlocking = flags.some(flag => flag.tone === 'error');
+
+      if (action === 'approve') {
+        if (hasBlocking) {
+          showToast('Approval blocked: resolve policy violations.', 'error');
+          return;
+        }
+        request.status = 'Approved';
+        addAudit(request, 'Approved by manager.');
+        showToast('Request approved.', 'success');
+      }
+      if (action === 'decline') {
+        request.status = 'Declined';
+        addAudit(request, 'Declined by manager.');
+        showToast('Request declined.', 'warn');
+      }
+      if (action === 'info') {
+        request.status = 'Needs Info';
+        addAudit(request, 'Requested more information.');
+        showToast('Info request sent.', 'warn');
+      }
+      if (action === 'validate') {
+        request.status = 'Validated';
+        addAudit(request, 'HR validation completed.');
+        showToast('Validated by HR.', 'success');
+      }
+      if (action === 'return') {
+        request.status = 'Needs Info';
+        addAudit(request, 'HR requested clarification.');
+        showToast('Returned to manager.', 'warn');
+      }
+      if (action === 'schedule') {
+        request.status = 'Scheduled';
+        addAudit(request, 'Payroll scheduled leave.');
+        showToast('Scheduled in payroll.', 'success');
+      }
+      persist();
+      renderTable();
+    };
+
+
     const applyFilters = () => {
       return requests.filter((request) => {
         const term = filters.search.toLowerCase();
@@ -474,6 +517,36 @@
         </div>
 
         <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <div class="text-xs uppercase tracking-wide text-slate-500">Role actions (${currentRole})</div>
+          <div id="detailActions" class="mt-2">
+            ${(() => {
+              if (currentRole === 'Manager' && ['Pending', 'Needs Info'].includes(request.status)) {
+                return `
+                  <div class=\"flex flex-wrap gap-2\">
+                    <button data-action=\"approve\" class=\"rounded-md bg-emerald-500/20 px-3 py-2 text-xs text-emerald-200\">Approve</button>
+                    <button data-action=\"info\" class=\"rounded-md bg-sky-500/20 px-3 py-2 text-xs text-sky-200\">Request info</button>
+                    <button data-action=\"decline\" class=\"rounded-md bg-rose-500/20 px-3 py-2 text-xs text-rose-200\">Decline</button>
+                  </div>`;
+              }
+              if (currentRole === 'HR' && request.status === 'Approved') {
+                return `
+                  <div class=\"flex flex-wrap gap-2\">
+                    <button data-action=\"validate\" class=\"rounded-md bg-emerald-500/20 px-3 py-2 text-xs text-emerald-200\">Validate</button>
+                    <button data-action=\"return\" class=\"rounded-md bg-sky-500/20 px-3 py-2 text-xs text-sky-200\">Return</button>
+                  </div>`;
+              }
+              if (currentRole === 'Payroll' && request.status === 'Validated') {
+                return `
+                  <div class=\"flex flex-wrap gap-2\">
+                    <button data-action=\"schedule\" class=\"rounded-md bg-emerald-500/20 px-3 py-2 text-xs text-emerald-200\">Schedule</button>
+                  </div>`;
+              }
+              return '<div class=\"text-xs text-slate-500\">No actions for the current role.</div>';
+            })()}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
           <div class="text-xs uppercase tracking-wide text-slate-500">Audit Trail</div>
           <div class="mt-3 max-h-40 space-y-3 overflow-y-auto text-xs">
             ${request.notes.map((note) => `
@@ -489,6 +562,11 @@
           </form>
         </div>
       `;
+
+      const actionButtons = document.querySelectorAll('#detailActions button[data-action]');
+      actionButtons.forEach((button) => {
+        button.addEventListener('click', () => executeAction(request, button.dataset.action));
+      });
 
       document.getElementById('coverageBtn').addEventListener('click', () => {
         addAudit(request, 'Coverage handoff confirmed.');
@@ -520,45 +598,7 @@
         const request = requests.find((item) => item.id === id);
         if (!request) return;
 
-        const flags = policyFlags(request);
-        const hasBlocking = flags.some(flag => flag.tone === 'error');
-
-        if (action === 'approve') {
-          if (hasBlocking) {
-            showToast('Approval blocked: resolve policy violations.', 'error');
-            return;
-          }
-          request.status = 'Approved';
-          addAudit(request, 'Approved by manager.');
-          showToast('Request approved.', 'success');
-        }
-        if (action === 'decline') {
-          request.status = 'Declined';
-          addAudit(request, 'Declined by manager.');
-          showToast('Request declined.', 'warn');
-        }
-        if (action === 'info') {
-          request.status = 'Needs Info';
-          addAudit(request, 'Requested more information.');
-          showToast('Info request sent.', 'warn');
-        }
-        if (action === 'validate') {
-          request.status = 'Validated';
-          addAudit(request, 'HR validation completed.');
-          showToast('Validated by HR.', 'success');
-        }
-        if (action === 'return') {
-          request.status = 'Needs Info';
-          addAudit(request, 'HR requested clarification.');
-          showToast('Returned to manager.', 'warn');
-        }
-        if (action === 'schedule') {
-          request.status = 'Scheduled';
-          addAudit(request, 'Payroll scheduled leave.');
-          showToast('Scheduled in payroll.', 'success');
-        }
-        persist();
-        renderTable();
+        executeAction(request, action);
         return;
       }
 
