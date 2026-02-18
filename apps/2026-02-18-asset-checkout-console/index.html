@@ -30,7 +30,7 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <button id="exportBtn" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">Export CSV</button>
-          <button id="themeToggle" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Toggle Dark</button>
+          <button id="themeToggle" class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Toggle Dark</button>
         </div>
       </div>
     </header>
@@ -656,5 +656,27 @@
     renderList()
     renderDetails()
   </script>
+
+  <script>
+    (function() {
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggle');
+      const stored = localStorage.getItem('bob-theme');
+      if (stored) {
+        root.classList.toggle('dark', stored === 'dark');
+      }
+      if (!btn) return;
+      function syncLabel() {
+        btn.textContent = root.classList.contains('dark') ? 'Toggle Light' : 'Toggle Dark';
+      }
+      btn.addEventListener('click', () => {
+        const isDark = root.classList.toggle('dark');
+        localStorage.setItem('bob-theme', isDark ? 'dark' : 'light');
+        syncLabel();
+      });
+      syncLabel();
+    })();
+  </script>
+
 </body>
 </html>
