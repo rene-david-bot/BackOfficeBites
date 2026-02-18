@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leave Request Command Center</title>
-  <meta name="description" content="Review leave requests, validate policy, and protect team coverage." />
+  <title>Leave Request Approval Center</title>
+  <meta name="description" content="Review and approve leave requests, validate policy, and protect team coverage." />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
   <style>
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
@@ -17,8 +18,8 @@
     <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
     <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <h1 class="text-3xl font-semibold">Leave Request Command Center</h1>
-        <p class="text-slate-400 mt-1">Review leave requests, validate policy, and protect team coverage.</p>
+        <h1 class="text-3xl font-semibold">Leave Request Approval Center</h1>
+        <p class="text-slate-400 mt-1">Review and approve leave requests, validate policy, and protect team coverage.</p>
       </div>
       <div class="flex flex-wrap gap-3">
         <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
@@ -160,197 +161,13 @@
       Unpaid: { minNotice: 14 },
       Sick: { minNotice: 0 }
     };
-
-    const requests = [
-      {
-        id: 'LR-1204',
-        employee: 'N. Weber',
-        team: 'Design',
-        type: 'PTO',
-        status: 'Pending',
-        start: '2026-03-03',
-        end: '2026-03-07',
-        submitted: '2026-02-16',
-        balance: 6,
-        coverage: 0.64,
-        manager: 'S. Koch',
-        location: 'DE',
-        reason: 'Wedding travel + recovery day.',
-        handoff: 'Brand refresh QA handed to S. Patel; typography audit scheduled for 03/08.',
-        delegate: 'S. Patel',
-        notes: [
-          { time: '2026-02-16 09:12', by: 'N. Weber', text: 'Uploaded PTO request and handoff list.' },
-          { time: '2026-02-17 13:40', by: 'S. Koch', text: 'Reviewing coverage for the design pod.' }
-        ]
-      },
-      {
-        id: 'LR-1211',
-        employee: 'M. Khan',
-        team: 'Engineering',
-        type: 'Training',
-        status: 'Needs Info',
-        start: '2026-02-25',
-        end: '2026-02-28',
-        submitted: '2026-02-18',
-        balance: 9,
-        coverage: 0.58,
-        manager: 'T. Velas',
-        location: 'UK',
-        reason: 'On-site Kubernetes workshop.',
-        handoff: 'Release monitoring to be covered by J. Okafor; on-call swap pending.',
-        delegate: 'J. Okafor',
-        notes: [
-          { time: '2026-02-18 08:18', by: 'M. Khan', text: 'Added training agenda; waiting on on-call swap.' }
-        ]
-      },
-      {
-        id: 'LR-1217',
-        employee: 'A. Garcia',
-        team: 'Customer Support',
-        type: 'Sick',
-        status: 'Approved',
-        start: '2026-02-17',
-        end: '2026-02-19',
-        submitted: '2026-02-17',
-        balance: 12,
-        coverage: 0.79,
-        manager: 'L. Frost',
-        location: 'US',
-        reason: 'Medical leave (doctor note submitted).',
-        handoff: 'Ticket backlog coverage assigned to M. Bello and T. Moss.',
-        delegate: 'M. Bello',
-        notes: [
-          { time: '2026-02-17 07:55', by: 'L. Frost', text: 'Approved sick leave; routing changes applied.' }
-        ]
-      },
-      {
-        id: 'LR-1222',
-        employee: 'E. Rossi',
-        team: 'Finance',
-        type: 'PTO',
-        status: 'Validated',
-        start: '2026-03-11',
-        end: '2026-03-15',
-        submitted: '2026-02-05',
-        balance: 10,
-        coverage: 0.66,
-        manager: 'V. Hart',
-        location: 'DE',
-        reason: 'Family travel abroad.',
-        handoff: 'Close books handoff to J. Kim; cashflow dashboard automation scheduled.',
-        delegate: 'J. Kim',
-        notes: [
-          { time: '2026-02-06 10:21', by: 'V. Hart', text: 'Approved with quarter-close guardrails.' },
-          { time: '2026-02-10 15:40', by: 'HR', text: 'Validated documentation and compliance.' }
-        ]
-      },
-      {
-        id: 'LR-1229',
-        employee: 'L. Zhao',
-        team: 'HR',
-        type: 'Parental',
-        status: 'Approved',
-        start: '2026-04-01',
-        end: '2026-04-30',
-        submitted: '2026-01-20',
-        balance: 28,
-        coverage: 0.91,
-        manager: 'M. Ober',
-        location: 'DE',
-        reason: 'Parental leave block.',
-        handoff: 'HR onboarding pipeline covered by S. Laurent; policy updates parked until return.',
-        delegate: 'S. Laurent',
-        notes: [
-          { time: '2026-01-20 11:30', by: 'L. Zhao', text: 'Submitted parental leave request with plan.' },
-          { time: '2026-01-24 09:08', by: 'M. Ober', text: 'Approved; HR handoff confirmed.' }
-        ]
-      },
-      {
-        id: 'LR-1235',
-        employee: 'T. Muller',
-        team: 'Sales',
-        type: 'Unpaid',
-        status: 'Pending',
-        start: '2026-03-12',
-        end: '2026-03-14',
-        submitted: '2026-02-10',
-        balance: 0,
-        coverage: 0.74,
-        manager: 'C. Brandt',
-        location: 'DE',
-        reason: 'Caregiving leave (unpaid).',
-        handoff: 'Enterprise renewal calls shifted to A. Voss; pipeline notes updated.',
-        delegate: 'A. Voss',
-        notes: [
-          { time: '2026-02-10 12:44', by: 'T. Muller', text: 'Shared updated pipeline notes and call list.' }
-        ]
-      },
-      {
-        id: 'LR-1241',
-        employee: 'J. Okafor',
-        team: 'Engineering',
-        type: 'PTO',
-        status: 'Declined',
-        start: '2026-02-20',
-        end: '2026-02-22',
-        submitted: '2026-02-15',
-        balance: 2,
-        coverage: 0.52,
-        manager: 'T. Velas',
-        location: 'UK',
-        reason: 'Short PTO request.',
-        handoff: 'No coverage plan submitted.',
-        delegate: '—',
-        notes: [
-          { time: '2026-02-16 09:11', by: 'T. Velas', text: 'Declined due to low balance + coverage.' }
-        ]
-      },
-      {
-        id: 'LR-1246',
-        employee: 'S. Laurent',
-        team: 'Marketing',
-        type: 'PTO',
-        status: 'Scheduled',
-        start: '2026-03-18',
-        end: '2026-03-20',
-        submitted: '2026-02-02',
-        balance: 14,
-        coverage: 0.86,
-        manager: 'M. Ober',
-        location: 'FR',
-        reason: 'Conference attendance + PTO.',
-        handoff: 'Campaign launch monitoring delegated to R. Steele.',
-        delegate: 'R. Steele',
-        notes: [
-          { time: '2026-02-03 10:05', by: 'M. Ober', text: 'Approved and passed to payroll.' },
-          { time: '2026-02-08 15:22', by: 'Payroll', text: 'Scheduled in payroll system.' }
-        ]
-      },
-      {
-        id: 'LR-1253',
-        employee: 'D. Novak',
-        team: 'Product',
-        type: 'PTO',
-        status: 'Pending',
-        start: '2026-02-28',
-        end: '2026-03-02',
-        submitted: '2026-02-14',
-        balance: 5,
-        coverage: 0.69,
-        manager: 'E. Brand',
-        location: 'DE',
-        reason: 'Family commitment during school break.',
-        handoff: 'Roadmap review delegated to P. Hassan; sprint planning notes updated.',
-        delegate: 'P. Hassan',
-        notes: [
-          { time: '2026-02-14 16:31', by: 'D. Novak', text: 'Added sprint plan notes and milestones.' }
-        ]
-      }
-    ];
+    const store = window.BackOfficeStore;
+    let data = store.load();
+    let requests = data.leaveRequests || [];
 
     const filters = { search: '', status: 'All', team: 'All', type: 'All', sort: 'start-asc', flagged: false, period: '30' };
     let currentRole = 'Manager';
-    let selectedId = requests[0].id;
+    let selectedId = requests[0]?.id || '';
 
     const toast = document.getElementById('toast');
 
@@ -391,6 +208,20 @@
         flags.push({ label: 'Missing handoff plan', tone: 'warn' });
       }
       return flags;
+    };
+
+    const persist = () => {
+      data.leaveRequests = requests;
+      data = store.save(data);
+      requests = data.leaveRequests || [];
+    };
+
+    const syncFromStore = () => {
+      data = store.load();
+      requests = data.leaveRequests || [];
+      if (!requests.find((req) => req.id === selectedId) && requests.length) {
+        selectedId = requests[0].id;
+      }
     };
 
     const addAudit = (request, text) => {
@@ -577,7 +408,10 @@
 
     const renderDetail = () => {
       const request = requests.find((item) => item.id === selectedId);
-      if (!request) return;
+      if (!request) {
+        document.getElementById('detailCard').innerHTML = '<div class="text-sm text-slate-500">No request selected.</div>';
+        return;
+      }
 
       const flags = policyFlags(request);
       const days = calcDays(request.start, request.end);
@@ -658,6 +492,7 @@
 
       document.getElementById('coverageBtn').addEventListener('click', () => {
         addAudit(request, 'Coverage handoff confirmed.');
+        persist();
         showToast('Coverage confirmed.', 'success');
         renderDetail();
       });
@@ -670,6 +505,7 @@
           return;
         }
         addAudit(request, text);
+        persist();
         document.getElementById('noteText').value = '';
         showToast('Audit note logged.', 'success');
         renderDetail();
@@ -721,6 +557,7 @@
           addAudit(request, 'Payroll scheduled leave.');
           showToast('Scheduled in payroll.', 'success');
         }
+        persist();
         renderTable();
         return;
       }
@@ -823,6 +660,13 @@
 
     populateFilters();
     renderTable();
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === store.KEY) {
+        syncFromStore();
+        renderTable();
+      }
+    });
   </script>
 </body>
 </html>

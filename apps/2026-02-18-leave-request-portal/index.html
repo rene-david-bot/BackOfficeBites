@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Request Submission</title>
+  <meta name="description" content="Submit leave requests with policy previews, coverage signals, and status tracking." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: #0b1220; }
+  </style>
+</head>
+<body class="min-h-full bg-slate-950 text-slate-100">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">Leave Request Submission</h1>
+        <p class="text-slate-400 mt-1">Submit new leave, preview policy checks, and track status updates in real time.</p>
+      </div>
+      <div id="toast" class="hidden rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs"></div>
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <section class="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+        <div class="text-sm font-semibold">New Leave Request</div>
+        <form id="requestForm" class="mt-4 grid gap-4">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="text-xs uppercase text-slate-400">Employee</label>
+              <input id="employeeInput" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="e.g., Nina Weber" required />
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">Employee ID</label>
+              <input id="employeeIdInput" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="EMP-00312" />
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="text-xs uppercase text-slate-400">Team</label>
+              <select id="teamSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>Design</option>
+                <option>Engineering</option>
+                <option>Customer Support</option>
+                <option>Finance</option>
+                <option>HR</option>
+                <option>Sales</option>
+                <option>Marketing</option>
+                <option>Product</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">Manager</label>
+              <select id="managerSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>S. Koch</option>
+                <option>T. Velas</option>
+                <option>L. Frost</option>
+                <option>V. Hart</option>
+                <option>M. Ober</option>
+                <option>C. Brandt</option>
+                <option>E. Brand</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">Location</label>
+              <select id="locationSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>DE</option>
+                <option>UK</option>
+                <option>US</option>
+                <option>FR</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="text-xs uppercase text-slate-400">Leave type</label>
+              <select id="typeSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>PTO</option>
+                <option>Training</option>
+                <option>Parental</option>
+                <option>Unpaid</option>
+                <option>Sick</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">Start date</label>
+              <input id="startInput" type="date" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" required />
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">End date</label>
+              <input id="endInput" type="date" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" required />
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="text-xs uppercase text-slate-400">PTO balance (days)</label>
+              <input id="balanceInput" type="number" min="0" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" value="10" required />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs uppercase text-slate-400">Coverage estimate</label>
+              <div class="mt-2 flex items-center gap-4">
+                <input id="coverageInput" type="range" min="50" max="100" value="78" class="w-full" />
+                <span id="coverageValue" class="text-sm text-slate-200">78%</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-1">Estimate team coverage during your leave.</div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs uppercase text-slate-400">Coverage handoff</label>
+            <input id="handoffInput" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Handoff plan and delegate" required />
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="text-xs uppercase text-slate-400">Delegate</label>
+              <input id="delegateInput" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Person covering your work" />
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400">Reason</label>
+              <input id="reasonInput" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Short reason for leave" required />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button class="rounded-lg bg-emerald-500/20 border border-emerald-400/40 px-4 py-2 text-sm text-emerald-200">Submit request</button>
+            <div class="text-xs text-slate-400">Requests sync instantly with Leave Request Approval Center.</div>
+          </div>
+        </form>
+      </section>
+
+      <aside class="space-y-4">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div class="text-sm font-semibold">Policy preview</div>
+          <div id="policyPreview" class="mt-3 space-y-2 text-sm text-slate-300"></div>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div class="text-sm font-semibold">My recent requests</div>
+          <div id="myRequests" class="mt-3 space-y-3 text-sm text-slate-300"></div>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div class="text-sm font-semibold">Next steps</div>
+          <ul class="mt-3 space-y-2 text-xs text-slate-400">
+            <li>• Manager review → HR validation → payroll scheduling.</li>
+            <li>• Requests with blocking policy flags may be returned.</li>
+            <li>• Use Leave Request Approval Center for approvals and notes.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const store = window.BackOfficeStore;
+    let storeData = store.load();
+    let requests = storeData.leaveRequests || [];
+
+    const blackoutWindows = [
+      { start: '2026-03-10', end: '2026-03-14', label: 'Quarter close' },
+      { start: '2026-02-27', end: '2026-03-02', label: 'Customer summit' }
+    ];
+
+    const typeRules = {
+      PTO: { minNotice: 5 },
+      Training: { minNotice: 10 },
+      Parental: { minNotice: 30 },
+      Unpaid: { minNotice: 14 },
+      Sick: { minNotice: 0 }
+    };
+
+    const form = document.getElementById('requestForm');
+    const toast = document.getElementById('toast');
+    const policyPreview = document.getElementById('policyPreview');
+    const myRequests = document.getElementById('myRequests');
+
+    const employeeInput = document.getElementById('employeeInput');
+    const teamSelect = document.getElementById('teamSelect');
+    const managerSelect = document.getElementById('managerSelect');
+    const locationSelect = document.getElementById('locationSelect');
+    const typeSelect = document.getElementById('typeSelect');
+    const startInput = document.getElementById('startInput');
+    const endInput = document.getElementById('endInput');
+    const balanceInput = document.getElementById('balanceInput');
+    const coverageInput = document.getElementById('coverageInput');
+    const coverageValue = document.getElementById('coverageValue');
+    const handoffInput = document.getElementById('handoffInput');
+    const delegateInput = document.getElementById('delegateInput');
+    const reasonInput = document.getElementById('reasonInput');
+
+    const parseDate = (value) => new Date(value + 'T00:00:00Z');
+    const formatDate = (value) => new Date(value + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+    const showToast = (message, tone = 'info') => {
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      toast.classList.toggle('border-amber-400/50', tone === 'warn');
+      toast.classList.toggle('border-emerald-400/50', tone === 'success');
+      toast.classList.toggle('border-rose-400/50', tone === 'error');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    };
+
+    const calcDays = (start, end) => Math.round((parseDate(end) - parseDate(start)) / (1000 * 60 * 60 * 24)) + 1;
+    const noticeDays = (start, submitted) => Math.round((parseDate(start) - parseDate(submitted)) / (1000 * 60 * 60 * 24));
+    const overlaps = (start, end, bStart, bEnd) => parseDate(start) <= parseDate(bEnd) && parseDate(end) >= parseDate(bStart);
+
+    function persist() {
+      storeData.leaveRequests = requests;
+      storeData = store.save(storeData);
+      requests = storeData.leaveRequests || [];
+    }
+
+    function syncFromStore() {
+      storeData = store.load();
+      requests = storeData.leaveRequests || [];
+    }
+
+    function policyFlags(payload) {
+      const flags = [];
+      const submitted = payload.submitted;
+      const minNotice = typeRules[payload.type]?.minNotice ?? 5;
+      const notice = noticeDays(payload.start, submitted);
+      if (notice < minNotice) {
+        flags.push({ label: `Short notice (${notice}d)`, tone: 'warn' });
+      }
+      const days = calcDays(payload.start, payload.end);
+      if (['PTO', 'Unpaid', 'Training', 'Parental'].includes(payload.type) && payload.balance < days) {
+        flags.push({ label: `Balance short (${days - payload.balance}d)`, tone: 'error' });
+      }
+      const blackout = blackoutWindows.find(window => overlaps(payload.start, payload.end, window.start, window.end));
+      if (blackout) {
+        flags.push({ label: `Blackout: ${blackout.label}`, tone: 'error' });
+      }
+      if (payload.coverage < 0.7) {
+        flags.push({ label: `Low coverage (${Math.round(payload.coverage * 100)}%)`, tone: 'warn' });
+      }
+      if (!payload.handoff || payload.handoff.length < 12) {
+        flags.push({ label: 'Missing handoff plan', tone: 'warn' });
+      }
+      return flags;
+    }
+
+    function renderPolicyPreview() {
+      const employee = employeeInput.value.trim() || 'Employee';
+      const submitted = new Date().toISOString().slice(0, 10);
+      const payload = {
+        employee,
+        team: teamSelect.value,
+        manager: managerSelect.value,
+        location: locationSelect.value,
+        type: typeSelect.value,
+        start: startInput.value || submitted,
+        end: endInput.value || submitted,
+        submitted,
+        balance: Number(balanceInput.value || 0),
+        coverage: Number(coverageInput.value) / 100,
+        handoff: handoffInput.value.trim(),
+        delegate: delegateInput.value.trim(),
+        reason: reasonInput.value.trim()
+      };
+      const flags = policyFlags(payload);
+      policyPreview.innerHTML = `
+        <div class="text-xs uppercase text-slate-500">${payload.type} · ${payload.team} · ${payload.location}</div>
+        <div class="text-sm text-slate-200 mt-2">${employee} requesting ${formatDate(payload.start)} → ${formatDate(payload.end)} (${calcDays(payload.start, payload.end)} days)</div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          ${flags.length ? flags.map(flag => `<span class='rounded-full px-2 py-1 text-[11px] ${flag.tone === 'error' ? 'bg-rose-500/20 text-rose-200' : 'bg-amber-500/20 text-amber-200'}'>${flag.label}</span>`).join('') : '<span class="text-xs text-emerald-300">All checks passed</span>'}
+        </div>
+      `;
+    }
+
+    function renderMyRequests() {
+      const name = employeeInput.value.trim().toLowerCase();
+      const filtered = requests.filter(req => !name || req.employee.toLowerCase().includes(name));
+      const sorted = filtered.slice().sort((a, b) => b.submitted.localeCompare(a.submitted)).slice(0, 6);
+      if (!sorted.length) {
+        myRequests.innerHTML = '<div class="text-xs text-slate-500">No requests yet. Submit your first leave above.</div>';
+        return;
+      }
+      myRequests.innerHTML = sorted.map(req => {
+        const statusTone = ['Approved', 'Validated', 'Scheduled'].includes(req.status)
+          ? 'bg-emerald-500/20 text-emerald-200'
+          : req.status === 'Pending'
+          ? 'bg-amber-500/20 text-amber-200'
+          : req.status === 'Needs Info'
+          ? 'bg-sky-500/20 text-sky-200'
+          : req.status === 'Declined'
+          ? 'bg-rose-500/20 text-rose-200'
+          : 'bg-slate-700/40 text-slate-300';
+        return `
+          <div class="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold">${req.id} · ${req.type}</div>
+              <span class="rounded-full px-2 py-1 text-xs ${statusTone}">${req.status}</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">${formatDate(req.start)} → ${formatDate(req.end)} · ${req.team}</div>
+            <div class="text-xs text-slate-500 mt-1">Manager: ${req.manager}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function nextId() {
+      const maxId = requests.reduce((max, req) => {
+        const match = req.id && req.id.match(/LR-(\d+)/);
+        if (!match) return max;
+        return Math.max(max, Number(match[1]));
+      }, 0);
+      return `LR-${String(maxId + 1).padStart(4, '0')}`;
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const employee = employeeInput.value.trim();
+      if (!employee) {
+        showToast('Employee name is required.', 'error');
+        return;
+      }
+      if (!startInput.value || !endInput.value) {
+        showToast('Start and end dates are required.', 'error');
+        return;
+      }
+      if (parseDate(endInput.value) < parseDate(startInput.value)) {
+        showToast('End date must be after start date.', 'error');
+        return;
+      }
+
+      const submitted = new Date().toISOString().slice(0, 10);
+      const request = {
+        id: nextId(),
+        employee,
+        team: teamSelect.value,
+        type: typeSelect.value,
+        status: 'Pending',
+        start: startInput.value,
+        end: endInput.value,
+        submitted,
+        balance: Number(balanceInput.value || 0),
+        coverage: Number(coverageInput.value) / 100,
+        manager: managerSelect.value,
+        location: locationSelect.value,
+        reason: reasonInput.value.trim(),
+        handoff: handoffInput.value.trim(),
+        delegate: delegateInput.value.trim() || '—',
+        notes: [
+          { time: new Date().toLocaleString('en-GB'), by: employee, text: 'Submitted leave request via portal.' }
+        ]
+      };
+
+      requests.unshift(request);
+      persist();
+      renderMyRequests();
+      renderPolicyPreview();
+      showToast(`Request ${request.id} submitted.`, 'success');
+    });
+
+    coverageInput.addEventListener('input', () => {
+      coverageValue.textContent = `${coverageInput.value}%`;
+      renderPolicyPreview();
+    });
+
+    [employeeInput, teamSelect, managerSelect, locationSelect, typeSelect, startInput, endInput, balanceInput, handoffInput, delegateInput, reasonInput].forEach((el) => {
+      el.addEventListener('input', renderPolicyPreview);
+    });
+
+    employeeInput.addEventListener('input', renderMyRequests);
+
+    renderPolicyPreview();
+    renderMyRequests();
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === store.KEY) {
+        syncFromStore();
+        renderMyRequests();
+      }
+    });
+  </script>
+</body>
+</html>

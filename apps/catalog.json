@@ -92,8 +92,8 @@
     "date": "2026-02-18",
     "day": 6,
     "slug": "2026-02-18-leave-request-command-center",
-    "name": "Leave Request Command Center",
-    "description": "Review leave requests with policy checks, approvals, and coverage impact.",
+    "name": "Leave Request Approval Center",
+    "description": "Review and approve leave requests with policy checks and coverage impact.",
     "category": "HR",
     "pattern": "Queue+Detail",
     "tags": [
@@ -104,6 +104,24 @@
       "policy checks",
       "audit trail",
       "csv export"
+    ],
+    "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 7,
+    "slug": "2026-02-18-leave-request-portal",
+    "name": "Leave Request Submission",
+    "description": "Employee submission desk with policy preview and live sync.",
+    "category": "HR",
+    "pattern": "Form+Submission",
+    "tags": [
+      "leave requests",
+      "pto",
+      "submission",
+      "policy preview",
+      "live sync",
+      "form"
     ],
     "thumb": ""
   }

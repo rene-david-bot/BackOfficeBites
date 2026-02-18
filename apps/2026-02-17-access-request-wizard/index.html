@@ -6,6 +6,7 @@
   <title>Access Request Wizard — BackOfficeBites</title>
   <meta name="description" content="Multi-step access request wizard with approvals and audit trail." />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -118,11 +119,10 @@
   </footer>
 
   <script>
-    const requests = [
-      { name: 'Lena Müller', system: 'Snowflake', role: 'Analyst', risk: 'Medium', status: 'pending' },
-      { name: 'Omar Idris', system: 'Jira', role: 'Admin (temporary)', risk: 'High', status: 'approved' },
-      { name: 'Sofia Romano', system: 'NetSuite', role: 'Read-only', risk: 'Low', status: 'rejected' },
-    ];
+    const store = window.BackOfficeStore;
+    let data = store.load();
+    let requests = data.accessRequests || [];
+    let auditEntries = data.accessAudit || [];
 
     const table = document.getElementById('requestTable');
     const audit = document.getElementById('audit');
@@ -132,6 +132,20 @@
     const nextBtn = document.getElementById('nextBtn');
 
     let currentStep = 1;
+
+    function persist() {
+      data.accessRequests = requests;
+      data.accessAudit = auditEntries;
+      data = store.save(data);
+      requests = data.accessRequests || [];
+      auditEntries = data.accessAudit || [];
+    }
+
+    function syncFromStore() {
+      data = store.load();
+      requests = data.accessRequests || [];
+      auditEntries = data.accessAudit || [];
+    }
 
     function renderTable(filter = 'all') {
       table.innerHTML = '';
@@ -150,10 +164,19 @@
       }
     }
 
+    function renderAudit() {
+      audit.innerHTML = '';
+      auditEntries.forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = entry;
+        audit.appendChild(li);
+      });
+    }
+
     function logAudit(text) {
-      const li = document.createElement('li');
-      li.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
-      audit.prepend(li);
+      auditEntries.unshift(`${new Date().toLocaleTimeString()} — ${text}`);
+      persist();
+      renderAudit();
     }
 
     function showStep(n) {
@@ -189,6 +212,7 @@
         const system = document.getElementById('reqSystem').value;
         const role = document.getElementById('reqRole').value;
         requests.unshift({ name, system, role, risk: 'Medium', status: 'pending' });
+        persist();
         renderTable();
         logAudit(`Submitted request for ${name}`);
         currentStep = 1;
@@ -213,9 +237,21 @@
       });
     });
 
+    if (!auditEntries.length) {
+      auditEntries = ['Wizard initialized'];
+      persist();
+    }
     renderTable();
+    renderAudit();
     showStep(currentStep);
-    logAudit('Wizard initialized');
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === store.KEY) {
+        syncFromStore();
+        renderTable();
+        renderAudit();
+      }
+    });
   </script>
 </body>
 </html>

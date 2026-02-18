@@ -1,4 +1,4 @@
-# Leave Request Command Center
+# Leave Request Approval Center
 
 ## User Story
 As an HR/People Ops manager, I need a single command center to review leave requests, validate policy compliance, and protect team coverage before approvals go out.

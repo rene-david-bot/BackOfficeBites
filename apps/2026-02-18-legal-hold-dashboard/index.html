@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Legal Hold Compliance Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
   <style>
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
@@ -163,136 +164,14 @@
   </div>
 
   <script>
-    const holds = [
-      {
-        id: "LH-1023",
-        matter: "Acme v. Triad",
-        custodian: "A. Brewer",
-        custodians: ["A. Brewer", "M. Choi"],
-        region: "US",
-        status: "Pending",
-        risk: "High",
-        due: "2026-03-05",
-        owner: "J. Lam",
-        last: "2026-02-16",
-        notes: [
-          { time: "2026-02-16 09:12", by: "J. Lam", text: "Hold issued to finance group." },
-          { time: "2026-02-17 14:31", by: "A. Brewer", text: "Awaiting counsel approval for APAC scope." }
-        ]
-      },
-      {
-        id: "LH-1048",
-        matter: "NovaCorp IP Audit",
-        custodian: "S. Ortiz",
-        custodians: ["S. Ortiz", "L. Wu", "D. Young"],
-        region: "EU",
-        status: "Active",
-        risk: "Medium",
-        due: "2026-02-22",
-        owner: "R. Patel",
-        last: "2026-02-17",
-        notes: [
-          { time: "2026-02-14 08:22", by: "R. Patel", text: "Reviewed data mapping for R&D shares." },
-          { time: "2026-02-17 12:08", by: "S. Ortiz", text: "Custodian notices confirmed." }
-        ]
-      },
-      {
-        id: "LH-1077",
-        matter: "BlueSky Compliance Review",
-        custodian: "E. Jones",
-        custodians: ["E. Jones"],
-        region: "APAC",
-        status: "Escalated",
-        risk: "High",
-        due: "2026-02-19",
-        owner: "K. Meyer",
-        last: "2026-02-18",
-        notes: [
-          { time: "2026-02-15 11:02", by: "K. Meyer", text: "Missing policy acknowledgement from two teams." }
-        ]
-      },
-      {
-        id: "LH-1091",
-        matter: "Helios Partner Dispute",
-        custodian: "C. Ito",
-        custodians: ["C. Ito", "B. Stein"],
-        region: "LATAM",
-        status: "Pending",
-        risk: "Low",
-        due: "2026-03-10",
-        owner: "M. Rossi",
-        last: "2026-02-15",
-        notes: [
-          { time: "2026-02-12 10:44", by: "M. Rossi", text: "Preliminary hold drafted." }
-        ]
-      },
-      {
-        id: "LH-1104",
-        matter: "Orion Data Retention",
-        custodian: "N. Gupta",
-        custodians: ["N. Gupta", "T. Reed", "H. Salem"],
-        region: "US",
-        status: "Active",
-        risk: "High",
-        due: "2026-02-20",
-        owner: "J. Lam",
-        last: "2026-02-18",
-        notes: [
-          { time: "2026-02-13 09:17", by: "J. Lam", text: "High-risk hold triggered by regulator inquiry." },
-          { time: "2026-02-18 08:10", by: "N. Gupta", text: "Updated custodian roster with HR sign-off." }
-        ]
-      },
-      {
-        id: "LH-1129",
-        matter: "Summit Pricing Review",
-        custodian: "P. Novak",
-        custodians: ["P. Novak", "G. Diaz"],
-        region: "EU",
-        status: "Released",
-        risk: "Low",
-        due: "2026-01-28",
-        owner: "A. Keller",
-        last: "2026-02-01",
-        notes: [
-          { time: "2026-02-01 15:50", by: "A. Keller", text: "Hold released after settlement." }
-        ]
-      },
-      {
-        id: "LH-1142",
-        matter: "Vertex Vendor Review",
-        custodian: "M. Chi",
-        custodians: ["M. Chi"],
-        region: "APAC",
-        status: "Pending",
-        risk: "Medium",
-        due: "2026-02-26",
-        owner: "T. Gray",
-        last: "2026-02-17",
-        notes: [
-          { time: "2026-02-17 16:22", by: "T. Gray", text: "Awaiting custodian confirmation from APAC." }
-        ]
-      },
-      {
-        id: "LH-1160",
-        matter: "Zenith Insider Inquiry",
-        custodian: "L. Park",
-        custodians: ["L. Park", "J. Silva", "R. Amin"],
-        region: "US",
-        status: "Active",
-        risk: "High",
-        due: "2026-02-24",
-        owner: "M. Rossi",
-        last: "2026-02-17",
-        notes: [
-          { time: "2026-02-10 13:35", by: "M. Rossi", text: "Legal hold approved by outside counsel." }
-        ]
-      }
-    ];
+    const store = window.BackOfficeStore;
+    let storeData = store.load();
+    let holds = storeData.holds || [];
 
     const riskOrder = { High: 3, Medium: 2, Low: 1 };
     const filters = { search: "", status: "All", risk: "All", region: "All", sort: "due-asc" };
     let currentRole = "Legal Ops";
-    let selectedId = holds[0].id;
+    let selectedId = holds[0]?.id || '';
 
     const toast = document.getElementById("toast");
     const formatDate = (value) => new Date(value + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" });

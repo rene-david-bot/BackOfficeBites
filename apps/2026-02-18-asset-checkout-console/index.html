@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Asset Checkout Console</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -30,7 +31,6 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <button id="exportBtn" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">Export CSV</button>
-          <button id="themeToggle" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-white dark:text-slate-900">Toggle Dark</button>
         </div>
       </div>
     </header>
@@ -168,156 +168,36 @@
   </div>
 
   <script>
-    const assets = [
-      {
-        id: 'A-1001',
-        name: 'Dell Latitude 7440',
-        category: 'Laptop',
-        status: 'Checked Out',
-        location: 'Dresden HQ · Locker 4',
-        assignedTo: 'M. Krüger',
-        value: 1600,
-        serial: 'DL-7440-991',
-        lastCheckout: '2026-02-05',
-        nextDue: '2026-02-20',
-        condition: 'Good',
-        approval: 'Not Required'
-      },
-      {
-        id: 'A-1002',
-        name: 'iPad Pro 12.9',
-        category: 'Tablet',
-        status: 'Available',
-        location: 'Dresden HQ · Locker 2',
-        assignedTo: '',
-        value: 1400,
-        serial: 'IP-129-223',
-        lastCheckout: '2026-01-28',
-        nextDue: '',
-        condition: 'Excellent',
-        approval: 'Not Required'
-      },
-      {
-        id: 'A-1003',
-        name: 'Canon R6 Kit',
-        category: 'Camera',
-        status: 'Reserved',
-        location: 'Media Lab · Shelf 3',
-        assignedTo: 'Product Marketing',
-        value: 3600,
-        serial: 'CR6-4431',
-        lastCheckout: '2026-02-10',
-        nextDue: '2026-02-25',
-        condition: 'Good',
-        approval: 'Approved'
-      },
-      {
-        id: 'A-1004',
-        name: 'Surface Studio 2+',
-        category: 'Workstation',
-        status: 'Checked Out',
-        location: 'Innovation Lab',
-        assignedTo: 'R. Dutt',
-        value: 5200,
-        serial: 'SS2-8811',
-        lastCheckout: '2026-01-30',
-        nextDue: '2026-02-18',
-        condition: 'Fair',
-        approval: 'Approved'
-      },
-      {
-        id: 'A-1005',
-        name: 'Logitech Rally Bar',
-        category: 'AV Equipment',
-        status: 'Maintenance',
-        location: 'Meeting Room 7',
-        assignedTo: 'AV Support',
-        value: 4100,
-        serial: 'LRB-5530',
-        lastCheckout: '2026-02-01',
-        nextDue: '',
-        condition: 'Repair',
-        approval: 'Not Required'
-      },
-      {
-        id: 'A-1006',
-        name: 'DJI Mavic 3',
-        category: 'Drone',
-        status: 'Available',
-        location: 'Field Ops · Locker 1',
-        assignedTo: '',
-        value: 2600,
-        serial: 'DJI-3389',
-        lastCheckout: '2026-01-22',
-        nextDue: '',
-        condition: 'Excellent',
-        approval: 'Not Required'
-      },
-      {
-        id: 'A-1007',
-        name: 'MacBook Pro 16"',
-        category: 'Laptop',
-        status: 'Checked Out',
-        location: 'Dresden HQ · Locker 6',
-        assignedTo: 'S. Patel',
-        value: 3200,
-        serial: 'MBP-160-707',
-        lastCheckout: '2026-02-01',
-        nextDue: '2026-02-10',
-        condition: 'Good',
-        approval: 'Not Required'
-      },
-      {
-        id: 'A-1008',
-        name: 'Zebra TC57',
-        category: 'Scanner',
-        status: 'Available',
-        location: 'Warehouse Dock',
-        assignedTo: '',
-        value: 1150,
-        serial: 'ZB-5704',
-        lastCheckout: '2026-02-12',
-        nextDue: '',
-        condition: 'Good',
-        approval: 'Not Required'
-      }
-    ]
-
-    const auditLog = {
-      'A-1001': [
-        { time: '2026-02-05 09:10', action: 'Checked Out', by: 'M. Krüger', note: 'Client demo kit' },
-        { time: '2026-02-05 09:12', action: 'Policy OK', by: 'Auto', note: 'Duration 15 days' }
-      ],
-      'A-1002': [
-        { time: '2026-01-28 13:22', action: 'Checked In', by: 'N. Schulz', note: 'Returned from offsite' }
-      ],
-      'A-1003': [
-        { time: '2026-02-10 10:45', action: 'Reserved', by: 'Product Marketing', note: 'Launch video shoot' },
-        { time: '2026-02-10 10:50', action: 'Approval', by: 'L. Meyer', note: 'APR-00412' }
-      ],
-      'A-1004': [
-        { time: '2026-01-30 14:05', action: 'Checked Out', by: 'R. Dutt', note: 'Workshop build-out' },
-        { time: '2026-01-30 14:10', action: 'Approval', by: 'C. Reuter', note: 'APR-00388' }
-      ],
-      'A-1005': [
-        { time: '2026-02-14 08:20', action: 'Maintenance', by: 'AV Support', note: 'Firmware issue' }
-      ],
-      'A-1006': [
-        { time: '2026-01-22 16:10', action: 'Checked In', by: 'Ops Team', note: 'Battery swap' }
-      ],
-      'A-1007': [
-        { time: '2026-02-01 09:30', action: 'Checked Out', by: 'S. Patel', note: 'New hire setup' }
-      ],
-      'A-1008': [
-        { time: '2026-02-12 11:05', action: 'Checked In', by: 'Warehouse', note: 'Cycle count complete' }
-      ]
-    }
+    const store = window.BackOfficeStore;
+    let data = store.load();
+    let assets = data.assets || [];
+    let auditLog = data.assetAudit || {};
 
     const state = {
       search: '',
       status: 'All',
       sort: 'name',
-      selectedId: assets[0].id
+      selectedId: assets[0]?.id || ''
+    }
+
+    function persist() {
+      data.assets = assets;
+      data.assetAudit = auditLog;
+      data = store.save(data);
+      assets = data.assets || [];
+      auditLog = data.assetAudit || {};
+      if (!assets.find(asset => asset.id === state.selectedId) && assets.length) {
+        state.selectedId = assets[0].id;
+      }
+    }
+
+    function syncFromStore() {
+      data = store.load();
+      assets = data.assets || [];
+      auditLog = data.assetAudit || {};
+      if (!assets.find(asset => asset.id === state.selectedId) && assets.length) {
+        state.selectedId = assets[0].id;
+      }
     }
 
     const ui = {
@@ -497,6 +377,7 @@
       if (!auditLog[assetId]) auditLog[assetId] = []
       const time = new Date().toISOString().slice(0, 16).replace('T', ' ')
       auditLog[assetId].push({ time, action, by, note })
+      persist()
       renderAudit(assetId)
     }
 
@@ -561,6 +442,7 @@
 
       appendAudit(asset.id, 'Checked Out', assignee, purpose)
       if (requiresApproval) appendAudit(asset.id, 'Approval', 'Manager', approvalId)
+      persist()
       renderKPIs()
       renderList()
       renderDetails()
@@ -575,6 +457,7 @@
       asset.nextDue = ''
       asset.approval = 'Not Required'
       appendAudit(asset.id, 'Checked In', 'Asset Desk', 'Returned to storage')
+      persist()
       renderKPIs()
       renderList()
       renderDetails()
@@ -589,6 +472,7 @@
       asset.nextDue = ''
       asset.approval = 'Not Required'
       appendAudit(asset.id, 'Reserved', 'Asset Desk', 'Reserved for upcoming request')
+      persist()
       renderKPIs()
       renderList()
       renderDetails()
@@ -603,23 +487,12 @@
       asset.nextDue = ''
       asset.approval = 'Not Required'
       appendAudit(asset.id, 'Maintenance', 'Asset Care', 'Scheduled maintenance')
+      persist()
       renderKPIs()
       renderList()
       renderDetails()
       setMessage('Maintenance status applied.', 'success')
     }
-
-    function initTheme() {
-      const stored = localStorage.getItem('bob-theme')
-      if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark')
-      }
-    }
-
-    function toggleTheme() {
-      document.documentElement.classList.toggle('dark')
-      const mode = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-      localStorage.setItem('bob-theme', mode)
     }
 
     function bindEvents() {
@@ -646,15 +519,22 @@
       ui.checkInBtn.addEventListener('click', handleCheckIn)
       ui.reserveBtn.addEventListener('click', handleReserve)
       ui.maintenanceBtn.addEventListener('click', handleMaintenance)
-      document.getElementById('themeToggle').addEventListener('click', toggleTheme)
       document.getElementById('exportBtn').addEventListener('click', exportCSV)
     }
 
-    initTheme()
     bindEvents()
     renderKPIs()
     renderList()
     renderDetails()
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === store.KEY) {
+        syncFromStore()
+        renderKPIs()
+        renderList()
+        renderDetails()
+      }
+    })
   </script>
 </body>
 </html>

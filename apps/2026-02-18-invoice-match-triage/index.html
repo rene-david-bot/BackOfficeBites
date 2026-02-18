@@ -7,6 +7,7 @@
   <title>Invoice Match Triage Desk</title>
   <meta name="description" content="Triage invoice matching with policy checks, exceptions, and approvals." />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../shared/data-store.js"></script>
   <script>
     tailwind.config = { darkMode: 'class' }
   </script>
@@ -121,121 +122,9 @@
   </div>
 
   <script>
-    const data = [
-      {
-        id: 'INV-3291', vendor: 'Northwind Metals', po: 'PO-22018', amount: 18450, variance: 20, received: true,
-        status: 'Pending', owner: 'Maya', due: '2026-02-20', currency: 'USD',
-        notes: 'Two line items missing ship docs.',
-        lines: [
-          { item: 'Aluminum coils', qty: 30, price: 420 },
-          { item: 'Packaging pallets', qty: 10, price: 120 }
-        ],
-        audit: ['Submitted 02/15 08:20', 'PO matched 02/15 09:12', 'GRN synced 02/15 10:05']
-      },
-      {
-        id: 'INV-3299', vendor: 'Helios Logistics', po: 'PO-21991', amount: 7420, variance: 160, received: true,
-        status: 'Exception', owner: 'Noah', due: '2026-02-18', currency: 'USD',
-        notes: 'Freight surcharge exceeds contract cap.',
-        lines: [
-          { item: 'Inbound freight', qty: 1, price: 6800 },
-          { item: 'Fuel surcharge', qty: 1, price: 620 }
-        ],
-        audit: ['Submitted 02/14 12:03', 'Policy flag: surcharge cap 02/14 12:05']
-      },
-      {
-        id: 'INV-3304', vendor: 'Verta Office', po: 'PO-22022', amount: 2150, variance: 0, received: true,
-        status: 'Matched', owner: 'Iris', due: '2026-02-22', currency: 'USD',
-        notes: 'Auto-match completed.',
-        lines: [
-          { item: 'Desk chairs', qty: 10, price: 215 }
-        ],
-        audit: ['Submitted 02/15 14:01', 'Auto-match approved 02/15 14:02']
-      },
-      {
-        id: 'INV-3312', vendor: 'Kessel Components', po: 'PO-22030', amount: 49200, variance: 420, received: false,
-        status: 'Exception', owner: 'Maya', due: '2026-02-19', currency: 'USD',
-        notes: 'Goods receipt pending for line 3.',
-        lines: [
-          { item: 'Drive assemblies', qty: 12, price: 4100 }
-        ],
-        audit: ['Submitted 02/16 09:40', 'GRN pending 02/16 09:42']
-      },
-      {
-        id: 'INV-3320', vendor: 'Blue Harbor IT', po: 'PO-22044', amount: 9800, variance: 75, received: true,
-        status: 'Pending', owner: 'Noah', due: '2026-02-23', currency: 'USD',
-        notes: 'Awaiting security review for software add-on.',
-        lines: [
-          { item: 'License bundle', qty: 1, price: 9200 },
-          { item: 'Support add-on', qty: 1, price: 600 }
-        ],
-        audit: ['Submitted 02/16 11:22', 'Policy check queued 02/16 11:25']
-      },
-      {
-        id: 'INV-3327', vendor: 'Atlas Packaging', po: 'PO-22050', amount: 6450, variance: 15, received: true,
-        status: 'Matched', owner: 'Iris', due: '2026-02-24', currency: 'USD',
-        notes: 'Auto-match completed.',
-        lines: [
-          { item: 'Protective foam', qty: 50, price: 120 },
-          { item: 'Cartons', qty: 300, price: 6 }
-        ],
-        audit: ['Submitted 02/16 13:48', 'Auto-match approved 02/16 13:49']
-      },
-      {
-        id: 'INV-3333', vendor: 'Solara Energy', po: 'PO-22055', amount: 12700, variance: 260, received: true,
-        status: 'Exception', owner: 'Maya', due: '2026-02-18', currency: 'USD',
-        notes: 'Rate change outside contract window.',
-        lines: [
-          { item: 'Facility power', qty: 1, price: 12700 }
-        ],
-        audit: ['Submitted 02/17 08:10', 'Policy flag: rate window 02/17 08:12']
-      },
-      {
-        id: 'INV-3341', vendor: 'Orchid Labs', po: 'PO-22061', amount: 3650, variance: 0, received: true,
-        status: 'Matched', owner: 'Noah', due: '2026-02-25', currency: 'USD',
-        notes: 'Auto-match completed.',
-        lines: [
-          { item: 'Testing kits', qty: 5, price: 730 }
-        ],
-        audit: ['Submitted 02/17 09:30', 'Auto-match approved 02/17 09:31']
-      },
-      {
-        id: 'INV-3348', vendor: 'Nimbus Freight', po: 'PO-22070', amount: 21400, variance: 90, received: true,
-        status: 'Pending', owner: 'Iris', due: '2026-02-26', currency: 'USD',
-        notes: 'Carrier insurance clause needs approval.',
-        lines: [
-          { item: 'Outbound freight', qty: 1, price: 21000 },
-          { item: 'Insurance', qty: 1, price: 400 }
-        ],
-        audit: ['Submitted 02/17 11:54', 'Policy check queued 02/17 12:01']
-      },
-      {
-        id: 'INV-3354', vendor: 'Civic Print', po: 'PO-22075', amount: 2980, variance: 5, received: true,
-        status: 'Pending', owner: 'Noah', due: '2026-02-27', currency: 'USD',
-        notes: 'Backorder confirmation still open.',
-        lines: [
-          { item: 'Product labels', qty: 2000, price: 1.49 }
-        ],
-        audit: ['Submitted 02/17 13:09', 'PO matched 02/17 13:12']
-      },
-      {
-        id: 'INV-3362', vendor: 'Everline Safety', po: 'PO-22083', amount: 8350, variance: 110, received: true,
-        status: 'Exception', owner: 'Maya', due: '2026-02-21', currency: 'USD',
-        notes: 'Unit cost above policy threshold.',
-        lines: [
-          { item: 'Safety harness', qty: 25, price: 310 }
-        ],
-        audit: ['Submitted 02/17 15:22', 'Policy flag: unit cost 02/17 15:25']
-      },
-      {
-        id: 'INV-3370', vendor: 'Granite Data', po: 'PO-22090', amount: 15600, variance: 45, received: true,
-        status: 'Pending', owner: 'Iris', due: '2026-02-28', currency: 'USD',
-        notes: 'Contract extension doc awaiting sign-off.',
-        lines: [
-          { item: 'Data hosting', qty: 1, price: 15600 }
-        ],
-        audit: ['Submitted 02/17 16:40', 'Policy check queued 02/17 16:42']
-      }
-    ];
+    const store = window.BackOfficeStore;
+    let storeData = store.load();
+    let data = storeData.invoices || [];
 
     const statusFilter = document.getElementById('statusFilter');
     const vendorFilter = document.getElementById('vendorFilter');
@@ -253,6 +142,17 @@
     const statRate = document.getElementById('statRate');
     const statVariance = document.getElementById('statVariance');
     const state = { selected: null };
+
+    function persist() {
+      storeData.invoices = data;
+      storeData = store.save(storeData);
+      data = storeData.invoices || [];
+    }
+
+    function syncFromStore() {
+      storeData = store.load();
+      data = storeData.invoices || [];
+    }
 
     function toCurrency(value) {
       return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -403,6 +303,7 @@
       if (!state.selected) return;
       state.selected.status = status;
       state.selected.audit.unshift(`${status === 'Matched' ? 'Approved' : 'Case created'} ${new Date().toLocaleDateString('en-US')}`);
+      persist();
       renderAll();
       showToast(`Updated ${state.selected.id} → ${status}`);
     }
@@ -416,6 +317,7 @@
           changed += 1;
         }
       });
+      persist();
       renderAll();
       showToast(`${changed} invoice(s) auto-matched`);
     }
@@ -463,6 +365,13 @@
       onlyExceptions.checked = false;
       sortSelect.value = 'amount-desc';
       renderAll();
+    });
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === store.KEY) {
+        syncFromStore();
+        renderAll();
+      }
     });
   </script>
 </body>
