@@ -441,14 +441,10 @@
       if (state.selected) {
         selectRow(state.selected);
       }
-    }        const isDark = document.documentElement.classList.contains('dark');
-        localStorage.setItem('bob-dark', isDark ? 'dark' : 'light');
-      });
     }
 
     populateFilters();
     renderAll();
-    initDarkMode();
 
     statusFilter.addEventListener('change', renderAll);
     vendorFilter.addEventListener('change', renderAll);
