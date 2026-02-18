@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Asset Checkout Console** — track asset checkouts with policy validation, approvals, and audit trail.
+**Invoice Match Triage Desk** — triage 3-way invoice matches with policy checks, exceptions, and approvals.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

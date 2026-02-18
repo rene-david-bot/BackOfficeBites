@@ -32,5 +32,23 @@
       "master-detail"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 3,
+    "slug": "2026-02-18-invoice-match-triage",
+    "name": "Invoice Match Triage Desk",
+    "description": "Triage 3-way invoice matches with policy checks, exceptions, and approvals.",
+    "category": "Finance",
+    "pattern": "Data Grid",
+    "tags": [
+      "invoice matching",
+      "exceptions",
+      "policy validation",
+      "search",
+      "csv export",
+      "data grid"
+    ],
+    "thumb": ""
   }
 ]
