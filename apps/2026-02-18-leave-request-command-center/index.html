@@ -270,6 +270,19 @@
       renderTable();
     };
 
+    const focusRoleRequest = () => {
+      const roleMap = {
+        Manager: ['Pending', 'Needs Info'],
+        HR: ['Approved'],
+        Payroll: ['Validated']
+      };
+      const targets = roleMap[currentRole] || [];
+      const candidate = requests.find((req) => targets.includes(req.status));
+      if (candidate) {
+        selectedId = candidate.id;
+      }
+    };
+
 
     const applyFilters = () => {
       return requests.filter((request) => {
@@ -640,6 +653,7 @@
 
     document.getElementById('roleSelect').addEventListener('change', (event) => {
       currentRole = event.target.value;
+      focusRoleRequest();
       renderTable();
       showToast(`Switched to ${currentRole} view.`, 'success');
     });
