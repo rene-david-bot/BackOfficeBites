@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Risk Register Timeline</title>
+  <meta name="description" content="Track enterprise risks with milestone timelines, approvals, and mitigation status." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.3em] text-amber-400">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold">Risk Register Timeline</h1>
+        <p class="text-slate-300 mt-2 max-w-2xl">
+          Surface enterprise risks, line up mitigation milestones, and shepherd approvals before deadlines slip.
+        </p>
+      </div>
+      <button id="themeToggle" class="px-3 py-2 rounded-lg border border-slate-700 text-xs uppercase tracking-widest">
+        Toggle Dark
+      </button>
+    </div>
+
+    <section class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-400">Total risks</div>
+        <div id="statTotal" class="text-2xl font-semibold mt-2">0</div>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-400">High / Critical</div>
+        <div id="statHigh" class="text-2xl font-semibold mt-2 text-rose-300">0</div>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-400">Awaiting approval</div>
+        <div id="statApproval" class="text-2xl font-semibold mt-2 text-amber-300">0</div>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-400">Overdue reviews</div>
+        <div id="statOverdue" class="text-2xl font-semibold mt-2 text-cyan-300">0</div>
+      </div>
+    </section>
+
+    <section class="mt-8 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[220px]">
+          <label class="text-xs uppercase text-slate-400" for="searchInput">Search</label>
+          <input id="searchInput" class="mt-2 w-full bg-slate-950 border border-slate-800 rounded-lg p-2" placeholder="risk, owner, department" />
+        </div>
+        <div>
+          <label class="text-xs uppercase text-slate-400" for="ownerFilter">Owner</label>
+          <select id="ownerFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-slate-400" for="statusFilter">Status</label>
+          <select id="statusFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-slate-400" for="levelFilter">Level</label>
+          <select id="levelFilter" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-slate-400" for="sortSelect">Sort</label>
+          <select id="sortSelect" class="mt-2 bg-slate-950 border border-slate-800 rounded-lg p-2">
+            <option value="score-desc">Risk score ↓</option>
+            <option value="score-asc">Risk score ↑</option>
+            <option value="due-asc">Next review ↑</option>
+            <option value="due-desc">Next review ↓</option>
+            <option value="level-desc">Level (Critical→Low)</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2 text-xs uppercase text-slate-400">
+          <input id="overdueOnly" type="checkbox" class="rounded" />
+          Overdue only
+        </label>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-3 items-center">
+        <button id="exportBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm">Export CSV</button>
+        <button id="resetBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <div id="toast" class="text-sm text-amber-300"></div>
+      </div>
+    </section>
+
+    <section class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <div class="text-xs uppercase text-slate-400">Mitigation timeline</div>
+          <div class="text-xs text-slate-500" id="timelineCount">0 risks</div>
+        </div>
+        <div id="timeline" class="mt-6 space-y-6"></div>
+      </div>
+
+      <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs uppercase text-slate-400">Selected risk</div>
+        <div id="detailCard" class="mt-3 space-y-4 text-sm text-slate-200">
+          <div class="text-slate-500">Select a risk from the timeline.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const today = new Date('2026-02-18T09:00:00Z');
+    const risks = [
+      {
+        id: 'R-144',
+        name: 'Vendor API deprecation impacts order promises',
+        owner: 'Lea',
+        department: 'Supply Chain',
+        level: 'High',
+        status: 'Mitigating',
+        impact: 4,
+        likelihood: 3,
+        nextReview: '2026-02-21',
+        mitigation: 'Roll out dual routing + cache for legacy endpoints.',
+        milestones: [
+          { date: '2026-02-15', label: 'Deprecation notice received', type: 'signal' },
+          { date: '2026-02-18', label: 'Mitigation sprint started', type: 'work' },
+          { date: '2026-02-21', label: 'Failover test & exec update', type: 'review' }
+        ],
+        audit: ['Owner assigned: Lea', 'Mitigation plan approved 02/16 10:12', 'Daily status updates started']
+      },
+      {
+        id: 'R-152',
+        name: 'Quarterly revenue forecast variance > 8%',
+        owner: 'Omar',
+        department: 'Finance',
+        level: 'Critical',
+        status: 'Awaiting Approval',
+        impact: 5,
+        likelihood: 4,
+        nextReview: '2026-02-19',
+        mitigation: 'Re-baseline pipeline assumptions, tighten discount guardrails.',
+        milestones: [
+          { date: '2026-02-12', label: 'Variance detected', type: 'signal' },
+          { date: '2026-02-16', label: 'Mitigation drafted', type: 'work' },
+          { date: '2026-02-19', label: 'Approval review', type: 'approval' }
+        ],
+        audit: ['Risk escalated 02/12 16:40', 'Mitigation awaiting CFO approval']
+      },
+      {
+        id: 'R-158',
+        name: 'Data residency gap for new EU customer segment',
+        owner: 'Priya',
+        department: 'Legal',
+        level: 'High',
+        status: 'Escalated',
+        impact: 4,
+        likelihood: 4,
+        nextReview: '2026-02-18',
+        mitigation: 'Finalize EU data zone contract + DPA updates.',
+        milestones: [
+          { date: '2026-02-10', label: 'Contract review requested', type: 'work' },
+          { date: '2026-02-14', label: 'Legal review completed', type: 'review' },
+          { date: '2026-02-18', label: 'Board approval needed', type: 'approval' }
+        ],
+        audit: ['Escalated to board 02/13 08:30', 'Waiting on final sign-off']
+      },
+      {
+        id: 'R-163',
+        name: 'Cyber insurance renewal delay',
+        owner: 'Jules',
+        department: 'IT Ops',
+        level: 'Medium',
+        status: 'Open',
+        impact: 3,
+        likelihood: 2,
+        nextReview: '2026-02-25',
+        mitigation: 'Collect control evidence for renewal underwriting.',
+        milestones: [
+          { date: '2026-02-17', label: 'Evidence request sent', type: 'work' },
+          { date: '2026-02-22', label: 'Broker review', type: 'review' },
+          { date: '2026-02-25', label: 'Renewal decision', type: 'approval' }
+        ],
+        audit: ['Broker contacted 02/17 14:20']
+      },
+      {
+        id: 'R-167',
+        name: 'Call center staffing shortfall for product launch',
+        owner: 'Mia',
+        department: 'HR',
+        level: 'High',
+        status: 'Mitigating',
+        impact: 4,
+        likelihood: 3,
+        nextReview: '2026-02-20',
+        mitigation: 'Contract temp staffing + shift incentives.',
+        milestones: [
+          { date: '2026-02-13', label: 'Forecast gap confirmed', type: 'signal' },
+          { date: '2026-02-18', label: 'Staffing outreach', type: 'work' },
+          { date: '2026-02-20', label: 'Capacity checkpoint', type: 'review' }
+        ],
+        audit: ['Temp staffing RFP sent 02/14']
+      },
+      {
+        id: 'R-171',
+        name: 'Tier-1 logistics partner capacity risk',
+        owner: 'Kai',
+        department: 'Supply Chain',
+        level: 'Medium',
+        status: 'Open',
+        impact: 3,
+        likelihood: 3,
+        nextReview: '2026-02-23',
+        mitigation: 'Qualify alternate carriers and flex lanes.',
+        milestones: [
+          { date: '2026-02-11', label: 'Capacity warning from carrier', type: 'signal' },
+          { date: '2026-02-19', label: 'Backup lane proposal', type: 'work' },
+          { date: '2026-02-23', label: 'Ops review', type: 'review' }
+        ],
+        audit: ['Carrier escalation logged 02/11 09:14']
+      },
+      {
+        id: 'R-175',
+        name: 'Customer churn spike in SMB segment',
+        owner: 'Zoe',
+        department: 'Sales',
+        level: 'High',
+        status: 'Awaiting Approval',
+        impact: 4,
+        likelihood: 4,
+        nextReview: '2026-02-22',
+        mitigation: 'Retention playbooks + renewal incentives.',
+        milestones: [
+          { date: '2026-02-16', label: 'Churn alert triggered', type: 'signal' },
+          { date: '2026-02-18', label: 'Retention plan drafted', type: 'work' },
+          { date: '2026-02-22', label: 'Leadership approval', type: 'approval' }
+        ],
+        audit: ['Exec sponsor assigned 02/16 12:20']
+      }
+    ];
+
+    const levelRank = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const searchInput = document.getElementById('searchInput');
+    const ownerFilter = document.getElementById('ownerFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const levelFilter = document.getElementById('levelFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const overdueOnly = document.getElementById('overdueOnly');
+    const timeline = document.getElementById('timeline');
+    const detailCard = document.getElementById('detailCard');
+    const timelineCount = document.getElementById('timelineCount');
+    const toast = document.getElementById('toast');
+
+    const statTotal = document.getElementById('statTotal');
+    const statHigh = document.getElementById('statHigh');
+    const statApproval = document.getElementById('statApproval');
+    const statOverdue = document.getElementById('statOverdue');
+
+    const state = { selectedId: risks[0].id };
+
+    function riskScore(risk) {
+      return risk.impact * risk.likelihood;
+    }
+
+    function parseDate(value) {
+      return new Date(`${value}T00:00:00Z`);
+    }
+
+    function nextMilestone(risk) {
+      const sorted = [...risk.milestones].sort((a, b) => parseDate(a.date) - parseDate(b.date));
+      const future = sorted.find(m => parseDate(m.date) >= today);
+      return future || sorted[sorted.length - 1];
+    }
+
+    function setToast(text) {
+      toast.textContent = text;
+      if (!text) return;
+      setTimeout(() => {
+        if (toast.textContent === text) toast.textContent = '';
+      }, 2500);
+    }
+
+    function populateFilters() {
+      const owners = [...new Set(risks.map(r => r.owner))];
+      const statuses = [...new Set(risks.map(r => r.status))];
+      const levels = [...new Set(risks.map(r => r.level))];
+
+      for (const owner of owners) {
+        const opt = document.createElement('option');
+        opt.value = owner; opt.textContent = owner;
+        ownerFilter.appendChild(opt);
+      }
+      for (const status of statuses) {
+        const opt = document.createElement('option');
+        opt.value = status; opt.textContent = status;
+        statusFilter.appendChild(opt);
+      }
+      for (const level of levels) {
+        const opt = document.createElement('option');
+        opt.value = level; opt.textContent = level;
+        levelFilter.appendChild(opt);
+      }
+    }
+
+    function isOverdue(risk) {
+      const due = parseDate(risk.nextReview);
+      return due < today && risk.status !== 'Closed';
+    }
+
+    function applyFilters() {
+      const q = searchInput.value.trim().toLowerCase();
+      const owner = ownerFilter.value;
+      const status = statusFilter.value;
+      const level = levelFilter.value;
+
+      return risks.filter(risk => {
+        if (owner !== 'all' && risk.owner !== owner) return false;
+        if (status !== 'all' && risk.status !== status) return false;
+        if (level !== 'all' && risk.level !== level) return false;
+        if (overdueOnly.checked && !isOverdue(risk)) return false;
+        if (q) {
+          const hay = `${risk.name} ${risk.owner} ${risk.department}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function sortRisks(list) {
+      const sorted = [...list];
+      const mode = sortSelect.value;
+      sorted.sort((a, b) => {
+        if (mode === 'score-desc') return riskScore(b) - riskScore(a);
+        if (mode === 'score-asc') return riskScore(a) - riskScore(b);
+        if (mode === 'due-asc') return parseDate(nextMilestone(a).date) - parseDate(nextMilestone(b).date);
+        if (mode === 'due-desc') return parseDate(nextMilestone(b).date) - parseDate(nextMilestone(a).date);
+        if (mode === 'level-desc') return levelRank[b.level] - levelRank[a.level];
+        return 0;
+      });
+      return sorted;
+    }
+
+    function renderTimeline(list) {
+      timeline.innerHTML = '';
+      if (!list.length) {
+        timeline.innerHTML = '<div class="text-slate-500">No risks match these filters.</div>';
+        timelineCount.textContent = '0 risks';
+        detailCard.innerHTML = '<div class="text-slate-500">Select a risk from the timeline.</div>';
+        return;
+      }
+
+      timelineCount.textContent = `${list.length} risk${list.length === 1 ? '' : 's'}`;
+
+      list.forEach(risk => {
+        const milestone = nextMilestone(risk);
+        const isSelected = state.selectedId === risk.id;
+
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `w-full text-left relative pl-8 pb-6 ${isSelected ? 'border-l-2 border-amber-400' : 'border-l border-slate-800'} focus:outline-none`;
+        card.innerHTML = `
+          <span class="absolute left-[-7px] top-2 h-3 w-3 rounded-full ${risk.level === 'Critical' ? 'bg-rose-500' : risk.level === 'High' ? 'bg-amber-400' : 'bg-cyan-400'}"></span>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="text-xs uppercase text-slate-500">${milestone.date}</div>
+            <span class="text-xs px-2 py-0.5 rounded-full ${risk.status === 'Awaiting Approval' ? 'bg-amber-500/20 text-amber-200' : risk.status === 'Escalated' ? 'bg-rose-500/20 text-rose-200' : risk.status === 'Mitigating' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700/60 text-slate-300'}">${risk.status}</span>
+            ${isOverdue(risk) ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200">Overdue</span>' : ''}
+          </div>
+          <div class="mt-2 text-lg font-semibold">${risk.name}</div>
+          <div class="mt-1 text-sm text-slate-400">${risk.department} · Owner ${risk.owner} · Score ${riskScore(risk)}</div>
+          <div class="mt-2 text-sm text-slate-300">Next: ${milestone.label}</div>
+        `;
+        card.addEventListener('click', () => {
+          state.selectedId = risk.id;
+          render();
+        });
+        timeline.appendChild(card);
+      });
+    }
+
+    function renderDetails() {
+      const risk = risks.find(r => r.id === state.selectedId);
+      if (!risk) return;
+      const milestone = nextMilestone(risk);
+
+      detailCard.innerHTML = `
+        <div>
+          <div class="text-xl font-semibold">${risk.name}</div>
+          <div class="mt-2 text-sm text-slate-400">${risk.department} · Owner ${risk.owner}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-xs uppercase text-slate-400">
+          <div>Level <div class="text-sm text-slate-200">${risk.level}</div></div>
+          <div>Status <div class="text-sm text-slate-200">${risk.status}</div></div>
+          <div>Impact <div class="text-sm text-slate-200">${risk.impact}</div></div>
+          <div>Likelihood <div class="text-sm text-slate-200">${risk.likelihood}</div></div>
+          <div>Score <div class="text-sm text-slate-200">${riskScore(risk)}</div></div>
+          <div>Next review <div class="text-sm text-slate-200">${milestone.date}</div></div>
+        </div>
+        <div>
+          <div class="text-xs uppercase text-slate-400">Mitigation plan</div>
+          <div class="mt-2 text-sm text-slate-200">${risk.mitigation}</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase text-slate-400">Milestones</div>
+          <ul class="mt-2 space-y-2 text-sm text-slate-200">
+            ${risk.milestones.map(m => `<li class="flex items-center gap-2"><span class="text-slate-500">${m.date}</span><span>${m.label}</span></li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <div class="text-xs uppercase text-slate-400">Audit trail</div>
+          <ul class="mt-2 space-y-1 text-sm text-slate-300">
+            ${risk.audit.map(entry => `<li>• ${entry}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="requestBtn" class="px-3 py-2 bg-amber-500/20 text-amber-200 border border-amber-500/40 rounded-lg text-xs uppercase tracking-widest">Request approval</button>
+          <button id="approveBtn" class="px-3 py-2 bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 rounded-lg text-xs uppercase tracking-widest">Approve mitigation</button>
+          <button id="escalateBtn" class="px-3 py-2 bg-rose-500/20 text-rose-200 border border-rose-500/40 rounded-lg text-xs uppercase tracking-widest">Escalate</button>
+          <button id="closeBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs uppercase tracking-widest">Close</button>
+        </div>
+      `;
+
+      document.getElementById('requestBtn').addEventListener('click', () => updateStatus(risk, 'Awaiting Approval', 'Approval requested'));
+      document.getElementById('approveBtn').addEventListener('click', () => updateStatus(risk, 'Mitigating', 'Mitigation approved'));
+      document.getElementById('escalateBtn').addEventListener('click', () => updateStatus(risk, 'Escalated', 'Escalated for leadership review'));
+      document.getElementById('closeBtn').addEventListener('click', () => updateStatus(risk, 'Closed', 'Risk closed'));
+    }
+
+    function updateStatus(risk, status, note) {
+      risk.status = status;
+      risk.audit.unshift(`${note} ${new Date().toLocaleDateString('en-GB')}`);
+      setToast(`${risk.id} → ${status}`);
+      render();
+    }
+
+    function updateStats() {
+      statTotal.textContent = risks.length;
+      statHigh.textContent = risks.filter(r => ['High', 'Critical'].includes(r.level)).length;
+      statApproval.textContent = risks.filter(r => r.status === 'Awaiting Approval').length;
+      statOverdue.textContent = risks.filter(r => isOverdue(r)).length;
+    }
+
+    function exportCsv(list) {
+      const rows = [
+        ['ID', 'Risk', 'Owner', 'Department', 'Level', 'Status', 'Impact', 'Likelihood', 'Score', 'Next Review']
+      ];
+      list.forEach(r => {
+        rows.push([
+          r.id,
+          r.name,
+          r.owner,
+          r.department,
+          r.level,
+          r.status,
+          r.impact,
+          r.likelihood,
+          riskScore(r),
+          r.nextReview
+        ]);
+      });
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'risk-register.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      setToast('CSV exported');
+    }
+
+    function resetFilters() {
+      searchInput.value = '';
+      ownerFilter.value = 'all';
+      statusFilter.value = 'all';
+      levelFilter.value = 'all';
+      sortSelect.value = 'score-desc';
+      overdueOnly.checked = false;
+      render();
+    }
+
+    function render() {
+      const filtered = applyFilters();
+      const sorted = sortRisks(filtered);
+      renderTimeline(sorted);
+      renderDetails();
+      updateStats();
+    }
+
+    populateFilters();
+    render();
+
+    [searchInput, ownerFilter, statusFilter, levelFilter, sortSelect, overdueOnly].forEach(el => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => exportCsv(sortRisks(applyFilters())));
+    document.getElementById('resetBtn').addEventListener('click', resetFilters);
+  </script>
+
+  <script>
+    (function() {
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggle');
+      const stored = localStorage.getItem('bob-theme');
+      if (stored) {
+        root.classList.toggle('dark', stored === 'dark');
+      }
+      if (!btn) return;
+      function syncLabel() {
+        btn.textContent = root.classList.contains('dark') ? 'Toggle Light' : 'Toggle Dark';
+      }
+      btn.addEventListener('click', () => {
+        const isDark = root.classList.toggle('dark');
+        localStorage.setItem('bob-theme', isDark ? 'dark' : 'light');
+        syncLabel();
+      });
+      syncLabel();
+    })();
+  </script>
+</body>
+</html>

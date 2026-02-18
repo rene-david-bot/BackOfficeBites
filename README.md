@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Invoice Match Triage Desk** — triage 3-way invoice matches with policy checks, exceptions, and approvals.
+**Risk Register Timeline** — track enterprise risks with milestone timelines, approvals, and mitigation status.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

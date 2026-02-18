@@ -50,5 +50,23 @@
       "data grid"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-18",
+    "day": 4,
+    "slug": "2026-02-18-risk-register-timeline",
+    "name": "Risk Register Timeline",
+    "description": "Track enterprise risks with milestone timelines, approvals, and mitigation status.",
+    "category": "Planning",
+    "pattern": "Timeline",
+    "tags": [
+      "risk register",
+      "timeline",
+      "approval workflow",
+      "audit trail",
+      "search",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
