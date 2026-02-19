@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Desk Approval Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="min-h-screen">
+    <header class="px-6 py-6 max-w-7xl mx-auto">
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200">BackOfficeBites 🍔</a>
+      <h1 class="text-3xl font-semibold mt-2">Deal Desk Approval Kanban</h1>
+      <p class="text-slate-400 mt-2">Route discount approvals across sales, finance, and leadership with policy checks, drag-and-drop, and audit-ready trails.</p>
+    </header>
+
+    <section class="px-6 max-w-7xl mx-auto grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Pending approvals</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiPending">0</p>
+        <p class="text-xs text-slate-500 mt-1">Submitted + Review</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Average discount</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiDiscount">0%</p>
+        <p class="text-xs text-slate-500 mt-1">Across filtered deals</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy exceptions</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiExceptions">0</p>
+        <p class="text-xs text-slate-500 mt-1">Require escalation</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Total ARR</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiArr">$0</p>
+        <p class="text-xs text-slate-500 mt-1">Pipeline value</p>
+      </div>
+    </section>
+
+    <section class="px-6 py-6 max-w-7xl mx-auto grid lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-8 space-y-6">
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5">
+          <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div>
+              <label class="text-xs text-slate-400" for="searchInput">Search deal or account</label>
+              <input id="searchInput" type="text" placeholder="Search Vantage Health…" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="regionFilter">Region</label>
+              <select id="regionFilter" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>All</option>
+                <option>NA</option>
+                <option>EMEA</option>
+                <option>APAC</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="segmentFilter">Segment</label>
+              <select id="segmentFilter" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>All</option>
+                <option>Enterprise</option>
+                <option>Mid-Market</option>
+                <option>SMB</option>
+                <option>Public Sector</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="ownerFilter">Owner</label>
+              <select id="ownerFilter" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"></select>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">Min discount</span>
+                <select id="discountFilter" class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-sm">
+                  <option value="0">0%</option>
+                  <option value="10">10%</option>
+                  <option value="20">20%</option>
+                  <option value="30">30%</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-slate-400">
+                <input id="exceptionToggle" type="checkbox" class="rounded border-slate-700 bg-slate-900" />
+                Exceptions only
+              </label>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">Sort</span>
+                <select id="sortFilter" class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-sm">
+                  <option value="value">ARR</option>
+                  <option value="discount">Discount</option>
+                  <option value="age">Age in stage</option>
+                  <option value="risk">Risk</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-400" for="roleView">View as</label>
+              <select id="roleView" class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-sm">
+                <option>Sales Manager</option>
+                <option>Finance</option>
+                <option>VP Sales</option>
+              </select>
+              <button id="exportBtn" class="text-sm px-3 py-2 rounded-xl border border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10">Export CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4" id="kanbanBoard">
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">Draft</p>
+                <p class="text-xs text-slate-500">Prep before submit</p>
+              </div>
+              <span class="text-xs text-slate-400" id="count-Draft">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[140px]" id="col-Draft" data-status="Draft"></div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">Submitted</p>
+                <p class="text-xs text-slate-500">Awaiting intake</p>
+              </div>
+              <span class="text-xs text-slate-400" id="count-Submitted">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[140px]" id="col-Submitted" data-status="Submitted"></div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">Review</p>
+                <p class="text-xs text-slate-500">Deal desk review</p>
+              </div>
+              <span class="text-xs text-slate-400" id="count-Review">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[140px]" id="col-Review" data-status="Review"></div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">Approved</p>
+                <p class="text-xs text-slate-500">Ready to close</p>
+              </div>
+              <span class="text-xs text-slate-400" id="count-Approved">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[140px]" id="col-Approved" data-status="Approved"></div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">Rejected</p>
+                <p class="text-xs text-slate-500">Needs rework</p>
+              </div>
+              <span class="text-xs text-slate-400" id="count-Rejected">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[140px]" id="col-Rejected" data-status="Rejected"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-4 space-y-6">
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="detailPanel"></div>
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="policyPanel"></div>
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="auditPanel"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="fixed bottom-6 right-6 bg-emerald-500/90 text-slate-900 text-sm px-4 py-2 rounded-xl shadow-lg hidden"></div>
+
+  <script>
+    const deals = [
+      {
+        id: "d1",
+        account: "Vantage Health",
+        deal: "Telehealth Platform Expansion",
+        owner: "Avery T.",
+        region: "NA",
+        segment: "Enterprise",
+        arr: 640000,
+        discount: 28,
+        risk: "High",
+        status: "Review",
+        daysInStage: 6,
+        lastAction: "Finance requested margin analysis",
+        nextStep: "Provide margin breakdown",
+        term: "36 months",
+        closeDate: "2026-03-05"
+      },
+      {
+        id: "d2",
+        account: "Helix Analytics",
+        deal: "Data Cloud Renewal",
+        owner: "Priya M.",
+        region: "EMEA",
+        segment: "Mid-Market",
+        arr: 210000,
+        discount: 15,
+        risk: "Low",
+        status: "Submitted",
+        daysInStage: 2,
+        lastAction: "Submitted by sales",
+        nextStep: "Deal desk intake",
+        term: "24 months",
+        closeDate: "2026-02-26"
+      },
+      {
+        id: "d3",
+        account: "NovaGrid Utilities",
+        deal: "Operational Data Hub",
+        owner: "Liam S.",
+        region: "NA",
+        segment: "Public Sector",
+        arr: 520000,
+        discount: 22,
+        risk: "Medium",
+        status: "Review",
+        daysInStage: 9,
+        lastAction: "Security review opened",
+        nextStep: "Confirm compliance packet",
+        term: "48 months",
+        closeDate: "2026-03-20"
+      },
+      {
+        id: "d4",
+        account: "Brightleaf Retail",
+        deal: "Unified Commerce Suite",
+        owner: "Jordan K.",
+        region: "APAC",
+        segment: "Enterprise",
+        arr: 780000,
+        discount: 35,
+        risk: "High",
+        status: "Submitted",
+        daysInStage: 4,
+        lastAction: "Submitted with exception",
+        nextStep: "VP approval required",
+        term: "36 months",
+        closeDate: "2026-03-12"
+      },
+      {
+        id: "d5",
+        account: "Summit Capital",
+        deal: "Risk Ops Automation",
+        owner: "Elena R.",
+        region: "EMEA",
+        segment: "Enterprise",
+        arr: 430000,
+        discount: 18,
+        risk: "Low",
+        status: "Approved",
+        daysInStage: 3,
+        lastAction: "Approved by deal desk",
+        nextStep: "Send order form",
+        term: "24 months",
+        closeDate: "2026-02-24"
+      },
+      {
+        id: "d6",
+        account: "Orbit Logistics",
+        deal: "Supply Chain Control Tower",
+        owner: "Max F.",
+        region: "NA",
+        segment: "Mid-Market",
+        arr: 310000,
+        discount: 12,
+        risk: "Medium",
+        status: "Draft",
+        daysInStage: 1,
+        lastAction: "Drafted in CPQ",
+        nextStep: "Submit for review",
+        term: "24 months",
+        closeDate: "2026-03-03"
+      },
+      {
+        id: "d7",
+        account: "Lighthouse Media",
+        deal: "Audience Insights Add-on",
+        owner: "Maya P.",
+        region: "EMEA",
+        segment: "SMB",
+        arr: 90000,
+        discount: 8,
+        risk: "Low",
+        status: "Draft",
+        daysInStage: 2,
+        lastAction: "Draft pricing review",
+        nextStep: "Finalize scope",
+        term: "12 months",
+        closeDate: "2026-02-28"
+      },
+      {
+        id: "d8",
+        account: "Crestline Energy",
+        deal: "Asset Monitoring Suite",
+        owner: "Noah D.",
+        region: "APAC",
+        segment: "Enterprise",
+        arr: 560000,
+        discount: 26,
+        risk: "Medium",
+        status: "Review",
+        daysInStage: 12,
+        lastAction: "Pricing modeled",
+        nextStep: "Align on scope",
+        term: "36 months",
+        closeDate: "2026-03-18"
+      },
+      {
+        id: "d9",
+        account: "Northwind Foods",
+        deal: "Retail Forecasting",
+        owner: "Isabel J.",
+        region: "NA",
+        segment: "Mid-Market",
+        arr: 180000,
+        discount: 20,
+        risk: "Medium",
+        status: "Rejected",
+        daysInStage: 5,
+        lastAction: "Rejected: margin below floor",
+        nextStep: "Re-price with 18% max",
+        term: "18 months",
+        closeDate: "2026-03-08"
+      }
+    ];
+
+    let selectedId = deals[0].id;
+    const filters = {
+      search: "",
+      region: "All",
+      segment: "All",
+      owner: "All",
+      minDiscount: 0,
+      exceptionsOnly: false,
+      sort: "value"
+    };
+
+    const auditLog = [
+      { time: "06:05", message: "Finance flagged Brightleaf Retail for VP approval." },
+      { time: "05:52", message: "Deal desk approved Summit Capital at 18% discount." },
+      { time: "05:40", message: "Security review opened for NovaGrid Utilities." }
+    ];
+
+    const ownerFilter = document.getElementById("ownerFilter");
+    const searchInput = document.getElementById("searchInput");
+    const regionFilter = document.getElementById("regionFilter");
+    const segmentFilter = document.getElementById("segmentFilter");
+    const discountFilter = document.getElementById("discountFilter");
+    const exceptionToggle = document.getElementById("exceptionToggle");
+    const sortFilter = document.getElementById("sortFilter");
+    const exportBtn = document.getElementById("exportBtn");
+
+    const kpiPending = document.getElementById("kpiPending");
+    const kpiDiscount = document.getElementById("kpiDiscount");
+    const kpiExceptions = document.getElementById("kpiExceptions");
+    const kpiArr = document.getElementById("kpiArr");
+
+    const detailPanel = document.getElementById("detailPanel");
+    const policyPanel = document.getElementById("policyPanel");
+    const auditPanel = document.getElementById("auditPanel");
+
+    const toast = document.getElementById("toast");
+
+    const statusColors = {
+      Draft: "bg-slate-800 text-slate-200",
+      Submitted: "bg-amber-500/20 text-amber-200",
+      Review: "bg-indigo-500/20 text-indigo-200",
+      Approved: "bg-emerald-500/20 text-emerald-200",
+      Rejected: "bg-rose-500/20 text-rose-200"
+    };
+
+    function formatCurrency(value) {
+      return "$" + value.toLocaleString("en-US");
+    }
+
+    function formatPercent(value) {
+      return `${value}%`;
+    }
+
+    function getPolicyFlags(deal) {
+      const flags = [];
+      if (deal.discount >= 30) flags.push("VP approval required");
+      if (deal.arr >= 500000) flags.push("Finance margin review");
+      if (deal.segment === "Public Sector") flags.push("Legal & security review");
+      if (deal.daysInStage >= 10) flags.push("Stale in stage");
+      return flags;
+    }
+
+    function isException(deal) {
+      return getPolicyFlags(deal).length > 0;
+    }
+
+    function getFilteredDeals() {
+      return deals
+        .filter(deal => {
+          const text = `${deal.account} ${deal.deal}`.toLowerCase();
+          if (filters.search && !text.includes(filters.search)) return false;
+          if (filters.region !== "All" && deal.region !== filters.region) return false;
+          if (filters.segment !== "All" && deal.segment !== filters.segment) return false;
+          if (filters.owner !== "All" && deal.owner !== filters.owner) return false;
+          if (deal.discount < filters.minDiscount) return false;
+          if (filters.exceptionsOnly && !isException(deal)) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          if (filters.sort === "value") return b.arr - a.arr;
+          if (filters.sort === "discount") return b.discount - a.discount;
+          if (filters.sort === "age") return b.daysInStage - a.daysInStage;
+          if (filters.sort === "risk") {
+            const rank = { High: 3, Medium: 2, Low: 1 };
+            return rank[b.risk] - rank[a.risk];
+          }
+          return 0;
+        });
+    }
+
+    function updateKPIs(list) {
+      const pending = list.filter(d => ["Submitted", "Review"].includes(d.status)).length;
+      const avgDiscount = list.length ? list.reduce((sum, d) => sum + d.discount, 0) / list.length : 0;
+      const exceptions = list.filter(d => isException(d)).length;
+      const totalArr = list.reduce((sum, d) => sum + d.arr, 0);
+      kpiPending.textContent = pending.toString();
+      kpiDiscount.textContent = `${avgDiscount.toFixed(1)}%`;
+      kpiExceptions.textContent = exceptions.toString();
+      kpiArr.textContent = formatCurrency(totalArr);
+    }
+
+    function createCard(deal) {
+      const card = document.createElement("button");
+      card.className = `w-full text-left rounded-xl border border-slate-800 bg-slate-950/70 p-3 hover:border-emerald-500/40 ${selectedId === deal.id ? "ring-2 ring-emerald-400/70" : ""}`;
+      card.draggable = true;
+      card.addEventListener("dragstart", event => {
+        event.dataTransfer.setData("text/plain", deal.id);
+      });
+      card.addEventListener("click", () => {
+        selectedId = deal.id;
+        renderBoard();
+        renderDetail();
+        renderPolicy();
+      });
+
+      const flags = getPolicyFlags(deal);
+      const badge = flags.length ? `<span class="text-[10px] uppercase tracking-wide text-rose-200 bg-rose-500/20 px-2 py-0.5 rounded-full">Policy</span>` : "";
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-sm font-semibold">${deal.deal}</p>
+            <p class="text-xs text-slate-400 mt-1">${deal.account}</p>
+          </div>
+          ${badge}
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+          <span class="px-2 py-0.5 rounded-full bg-slate-800/70">${deal.owner}</span>
+          <span class="px-2 py-0.5 rounded-full bg-slate-800/70">${deal.region}</span>
+          <span class="px-2 py-0.5 rounded-full bg-slate-800/70">${deal.segment}</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs">
+          <span class="text-emerald-200 font-semibold">${formatCurrency(deal.arr)}</span>
+          <span class="text-slate-400">${formatPercent(deal.discount)} discount</span>
+        </div>
+        <div class="mt-2 text-xs text-slate-500">${deal.daysInStage} days • Risk: ${deal.risk}</div>
+      `;
+
+      return card;
+    }
+
+    function renderBoard() {
+      const filtered = getFilteredDeals();
+      updateKPIs(filtered);
+
+      const columns = {
+        Draft: document.getElementById("col-Draft"),
+        Submitted: document.getElementById("col-Submitted"),
+        Review: document.getElementById("col-Review"),
+        Approved: document.getElementById("col-Approved"),
+        Rejected: document.getElementById("col-Rejected")
+      };
+
+      Object.values(columns).forEach(col => (col.innerHTML = ""));
+
+      const counts = { Draft: 0, Submitted: 0, Review: 0, Approved: 0, Rejected: 0 };
+      filtered.forEach(deal => {
+        counts[deal.status] += 1;
+        columns[deal.status].appendChild(createCard(deal));
+      });
+
+      Object.keys(counts).forEach(status => {
+        const countEl = document.getElementById(`count-${status}`);
+        if (countEl) countEl.textContent = counts[status];
+      });
+    }
+
+    function renderDetail() {
+      const deal = deals.find(item => item.id === selectedId);
+      if (!deal) {
+        detailPanel.innerHTML = "<p class='text-sm text-slate-400'>Select a deal to see details.</p>";
+        return;
+      }
+
+      detailPanel.innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs text-slate-400">Selected deal</p>
+            <h3 class="text-xl font-semibold">${deal.deal}</h3>
+            <p class="text-sm text-slate-400 mt-1">${deal.account} • ${deal.region} • ${deal.segment}</p>
+          </div>
+          <span class="text-xs px-2 py-1 rounded-full ${statusColors[deal.status] || "bg-slate-800 text-slate-200"}">${deal.status}</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-slate-500">Owner</p>
+            <p class="font-semibold">${deal.owner}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">ARR</p>
+            <p class="font-semibold">${formatCurrency(deal.arr)}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">Discount</p>
+            <p class="font-semibold">${formatPercent(deal.discount)}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">Term</p>
+            <p class="font-semibold">${deal.term}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">Close date</p>
+            <p class="font-semibold">${deal.closeDate}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">Days in stage</p>
+            <p class="font-semibold">${deal.daysInStage}</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <p class="text-xs text-slate-500">Last action</p>
+          <p class="text-sm text-slate-300">${deal.lastAction}</p>
+          <p class="text-xs text-slate-500 mt-2">Next step</p>
+          <p class="text-sm text-slate-300">${deal.nextStep}</p>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-slate-400" for="approvalNote">Approval note</label>
+          <textarea id="approvalNote" rows="3" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="Add justification or rejection reason..."></textarea>
+          <p class="text-[11px] text-slate-500 mt-1">Deals with 30%+ discount require a note.</p>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button id="approveBtn" class="px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 border border-emerald-500/40">Approve</button>
+          <button id="rejectBtn" class="px-3 py-2 rounded-xl bg-rose-500/20 text-rose-200 border border-rose-500/40">Reject</button>
+          <button id="escalateBtn" class="px-3 py-2 rounded-xl bg-indigo-500/20 text-indigo-200 border border-indigo-500/40">Escalate</button>
+        </div>
+        <p id="detailError" class="text-xs text-rose-300 mt-2 hidden"></p>
+      `;
+
+      const approvalNote = document.getElementById("approvalNote");
+      const detailError = document.getElementById("detailError");
+
+      approvalNote.value = deal.note || "";
+      approvalNote.addEventListener("input", event => {
+        deal.note = event.target.value;
+      });
+
+      document.getElementById("approveBtn").addEventListener("click", () => {
+        if (deal.discount >= 30 && (!deal.note || deal.note.trim().length < 10)) {
+          detailError.textContent = "Approval note required for discounts over 30%.";
+          detailError.classList.remove("hidden");
+          return;
+        }
+        detailError.classList.add("hidden");
+        updateStatus(deal.id, "Approved", "Approved by deal desk");
+      });
+
+      document.getElementById("rejectBtn").addEventListener("click", () => {
+        if (!deal.note || deal.note.trim().length < 8) {
+          detailError.textContent = "Rejection requires a short justification.";
+          detailError.classList.remove("hidden");
+          return;
+        }
+        detailError.classList.add("hidden");
+        updateStatus(deal.id, "Rejected", "Rejected with justification");
+      });
+
+      document.getElementById("escalateBtn").addEventListener("click", () => {
+        updateStatus(deal.id, "Review", "Escalated for leadership review");
+      });
+    }
+
+    function renderPolicy() {
+      const deal = deals.find(item => item.id === selectedId);
+      if (!deal) {
+        policyPanel.innerHTML = "";
+        return;
+      }
+      const flags = getPolicyFlags(deal);
+      const role = document.getElementById("roleView").value;
+
+      policyPanel.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Policy checks</p>
+            <h3 class="text-lg font-semibold">${role} view</h3>
+          </div>
+          <span class="text-xs px-2 py-1 rounded-full bg-slate-800/70">${flags.length} flags</span>
+        </div>
+        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+          <li class="flex items-center justify-between">
+            <span>Discount ceiling (30%)</span>
+            <span class="${deal.discount >= 30 ? "text-rose-300" : "text-emerald-300"}">${deal.discount >= 30 ? "Exceeded" : "Within"}</span>
+          </li>
+          <li class="flex items-center justify-between">
+            <span>ARR threshold ($500k)</span>
+            <span class="${deal.arr >= 500000 ? "text-rose-300" : "text-emerald-300"}">${deal.arr >= 500000 ? "Review" : "Clear"}</span>
+          </li>
+          <li class="flex items-center justify-between">
+            <span>Public sector review</span>
+            <span class="${deal.segment === "Public Sector" ? "text-rose-300" : "text-emerald-300"}">${deal.segment === "Public Sector" ? "Required" : "N/A"}</span>
+          </li>
+          <li class="flex items-center justify-between">
+            <span>Stage aging</span>
+            <span class="${deal.daysInStage >= 10 ? "text-amber-200" : "text-emerald-300"}">${deal.daysInStage} days</span>
+          </li>
+        </ul>
+        <div class="mt-4 p-3 rounded-xl border border-slate-800 bg-slate-950/60">
+          <p class="text-xs text-slate-400">Recommendations</p>
+          <p class="text-sm text-slate-200 mt-2">${flags.length ? "Escalate flagged items before final approval." : "No escalations required."}</p>
+        </div>
+      `;
+    }
+
+    function renderAudit() {
+      auditPanel.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Audit trail</p>
+            <h3 class="text-lg font-semibold">Latest activity</h3>
+          </div>
+          <span class="text-xs text-slate-500">${auditLog.length} entries</span>
+        </div>
+        <div class="mt-3 space-y-3">
+          ${auditLog
+            .slice(0, 6)
+            .map(entry => `
+              <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                  <span>${entry.time}</span>
+                  <span>Deal desk</span>
+                </div>
+                <p class="text-sm text-slate-200 mt-2">${entry.message}</p>
+              </div>
+            `)
+            .join("")}
+        </div>
+      `;
+    }
+
+    function updateStatus(id, status, message) {
+      const deal = deals.find(item => item.id === id);
+      if (!deal) return;
+      deal.status = status;
+      deal.lastAction = message;
+      const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      auditLog.unshift({ time, message: `${deal.account}: ${message}` });
+      showToast(`Status updated: ${status}`);
+      renderBoard();
+      renderDetail();
+      renderPolicy();
+      renderAudit();
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      clearTimeout(showToast.timeout);
+      showToast.timeout = setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 2400);
+    }
+
+    function populateOwners() {
+      const owners = ["All", ...new Set(deals.map(deal => deal.owner))];
+      ownerFilter.innerHTML = owners.map(owner => `<option>${owner}</option>`).join("");
+    }
+
+    function handleFilterChange() {
+      filters.search = searchInput.value.trim().toLowerCase();
+      filters.region = regionFilter.value;
+      filters.segment = segmentFilter.value;
+      filters.owner = ownerFilter.value;
+      filters.minDiscount = parseInt(discountFilter.value, 10);
+      filters.exceptionsOnly = exceptionToggle.checked;
+      filters.sort = sortFilter.value;
+      renderBoard();
+    }
+
+    function attachDropZones() {
+      document.querySelectorAll("[data-status]").forEach(column => {
+        column.addEventListener("dragover", event => {
+          event.preventDefault();
+        });
+        column.addEventListener("drop", event => {
+          event.preventDefault();
+          const id = event.dataTransfer.getData("text/plain");
+          updateStatus(id, column.dataset.status, "Moved via drag-and-drop");
+        });
+      });
+    }
+
+    exportBtn.addEventListener("click", () => {
+      const rows = getFilteredDeals().map(deal => ({
+        Account: deal.account,
+        Deal: deal.deal,
+        Owner: deal.owner,
+        Region: deal.region,
+        Segment: deal.segment,
+        ARR: deal.arr,
+        Discount: deal.discount,
+        Status: deal.status,
+        Risk: deal.risk
+      }));
+
+      const headers = Object.keys(rows[0] || {}).join(",");
+      const csv = [
+        headers,
+        ...rows.map(row => Object.values(row).join(","))
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "deal-desk-approvals.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("CSV exported");
+    });
+
+    [searchInput, regionFilter, segmentFilter, ownerFilter, discountFilter, exceptionToggle, sortFilter].forEach(element => {
+      element.addEventListener("input", handleFilterChange);
+      element.addEventListener("change", handleFilterChange);
+    });
+
+    document.getElementById("roleView").addEventListener("change", renderPolicy);
+
+    populateOwners();
+    attachDropZones();
+    renderBoard();
+    renderDetail();
+    renderPolicy();
+    renderAudit();
+  </script>
+</body>
+</html>

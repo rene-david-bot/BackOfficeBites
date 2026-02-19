@@ -142,5 +142,26 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-19",
+    "day": 9,
+    "slug": "2026-02-19-deal-desk-approval-kanban",
+    "name": "Deal Desk Approval Kanban",
+    "description": "Kanban board to route discount approvals with policy checks, drag-and-drop, and audit trail.",
+    "category": "Sales",
+    "pattern": "Kanban",
+    "tags": [
+      "deal desk",
+      "discount approvals",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "csv export",
+      "drag-and-drop"
+    ],
+    "thumb": ""
   }
 ]
