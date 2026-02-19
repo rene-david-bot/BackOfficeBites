@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contract Renewal Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="min-h-screen">
+    <header class="px-6 py-6 max-w-7xl mx-auto">
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200">BackOfficeBites 🍔</a>
+      <h1 class="text-3xl font-semibold mt-2">Contract Renewal Calendar</h1>
+      <p class="text-slate-400 mt-2">Plan, triage, and approve renewals with risk-aware policies and audit-ready history.</p>
+    </header>
+
+    <section class="px-6 max-w-7xl mx-auto grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Renewals this month</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiMonth">0</p>
+        <p class="text-xs text-slate-500 mt-1">February 2026</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">High risk</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiHigh">0</p>
+        <p class="text-xs text-slate-500 mt-1">Needs legal review</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Due in 30 days</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiDue">0</p>
+        <p class="text-xs text-slate-500 mt-1">Negotiation window</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Total contract value</p>
+        <p class="text-2xl font-semibold mt-2" id="kpiValue">$0</p>
+        <p class="text-xs text-slate-500 mt-1">Annualized run rate</p>
+      </div>
+    </section>
+
+    <section class="px-6 py-6 max-w-7xl mx-auto grid lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-8 space-y-6">
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5">
+          <div class="grid md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+              <label class="text-xs text-slate-400">Search vendor or contract</label>
+              <input id="searchInput" type="text" placeholder="Search Helios Logistics…" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400">Status</label>
+              <select id="statusFilter" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>All</option>
+                <option>Draft</option>
+                <option>In Review</option>
+                <option>Approved</option>
+                <option>Escalated</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400">Owner</label>
+              <select id="ownerFilter" class="mt-2 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"></select>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">Sort by</span>
+              <select id="sortFilter" class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-sm">
+                <option value="date">Renewal date</option>
+                <option value="value">Contract value</option>
+                <option value="risk">Risk level</option>
+              </select>
+            </div>
+            <button id="exportBtn" class="text-sm px-3 py-2 rounded-xl border border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10">Export CSV</button>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-slate-400">Calendar View</p>
+              <h2 class="text-xl font-semibold" id="monthLabel">February 2026</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="prevMonth" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">Prev</button>
+              <button id="nextMonth" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">Next</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-7 text-xs text-slate-500 mt-4">
+            <div class="py-2">Mon</div>
+            <div class="py-2">Tue</div>
+            <div class="py-2">Wed</div>
+            <div class="py-2">Thu</div>
+            <div class="py-2">Fri</div>
+            <div class="py-2">Sat</div>
+            <div class="py-2">Sun</div>
+          </div>
+          <div id="calendarGrid" class="grid grid-cols-7 gap-2 text-sm"></div>
+        </div>
+
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Upcoming Renewals</h3>
+            <span class="text-xs text-slate-500" id="listCount">0 items</span>
+          </div>
+          <div class="mt-4 space-y-3" id="renewalList"></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-4 space-y-6">
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="detailPanel"></div>
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="policyPanel"></div>
+        <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-5" id="auditPanel"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const contracts = [
+      {
+        id: "c1",
+        title: "Helios Logistics Master Services",
+        vendor: "Helios Logistics",
+        renewalDate: "2026-02-06",
+        value: 420000,
+        status: "In Review",
+        risk: "High",
+        owner: "Mila K.",
+        region: "EU",
+        autoRenew: false,
+        addendum: false,
+        noticeDays: 90,
+        lastReview: "2025-11-10"
+      },
+      {
+        id: "c2",
+        title: "Nordic Cloud Hosting",
+        vendor: "Nordic Cloud",
+        renewalDate: "2026-02-19",
+        value: 180000,
+        status: "Draft",
+        risk: "Medium",
+        owner: "Omar S.",
+        region: "US",
+        autoRenew: true,
+        addendum: true,
+        noticeDays: 60,
+        lastReview: "2025-12-05"
+      },
+      {
+        id: "c3",
+        title: "Brightlane CRM",
+        vendor: "Brightlane",
+        renewalDate: "2026-02-21",
+        value: 95000,
+        status: "Approved",
+        risk: "Low",
+        owner: "Priya D.",
+        region: "EU",
+        autoRenew: true,
+        addendum: true,
+        noticeDays: 45,
+        lastReview: "2026-01-12"
+      },
+      {
+        id: "c4",
+        title: "Papertrail Secure Storage",
+        vendor: "Papertrail",
+        renewalDate: "2026-02-25",
+        value: 60000,
+        status: "Escalated",
+        risk: "High",
+        owner: "Mila K.",
+        region: "APAC",
+        autoRenew: false,
+        addendum: false,
+        noticeDays: 120,
+        lastReview: "2025-10-29"
+      },
+      {
+        id: "c5",
+        title: "Vantage Security Monitoring",
+        vendor: "Vantage Security",
+        renewalDate: "2026-02-14",
+        value: 130000,
+        status: "In Review",
+        risk: "Medium",
+        owner: "Liam R.",
+        region: "EU",
+        autoRenew: false,
+        addendum: true,
+        noticeDays: 90,
+        lastReview: "2025-12-18"
+      },
+      {
+        id: "c6",
+        title: "Quantum Payroll Services",
+        vendor: "Quantum Payroll",
+        renewalDate: "2026-02-28",
+        value: 155000,
+        status: "Draft",
+        risk: "Medium",
+        owner: "Omar S.",
+        region: "US",
+        autoRenew: true,
+        addendum: true,
+        noticeDays: 60,
+        lastReview: "2026-01-04"
+      }
+    ];
+
+    const auditLog = {};
+    const policyPanel = document.getElementById("policyPanel");
+
+    const state = {
+      month: 1,
+      year: 2026,
+      selectedId: contracts[0].id,
+      query: "",
+      status: "All",
+      owner: "All",
+      sort: "date"
+    };
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const statusColors = {
+      "Draft": "bg-slate-700 text-slate-100",
+      "In Review": "bg-amber-500/20 text-amber-200",
+      "Approved": "bg-emerald-500/20 text-emerald-200",
+      "Escalated": "bg-rose-500/20 text-rose-200"
+    };
+
+    const riskColors = {
+      "Low": "bg-emerald-500/20 text-emerald-200",
+      "Medium": "bg-amber-500/20 text-amber-200",
+      "High": "bg-rose-500/20 text-rose-200"
+    };
+
+    function initAudit() {
+      contracts.forEach(contract => {
+        auditLog[contract.id] = [
+          { time: "2026-01-10 09:12", text: "Renewal case opened." },
+          { time: "2026-01-22 14:40", text: "Legal review assigned to " + contract.owner + "." }
+        ];
+      });
+    }
+
+    function formatCurrency(value) {
+      return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    }
+
+    function formatDate(value) {
+      const date = new Date(value + "T00:00:00");
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function getFiltered() {
+      return contracts
+        .filter(contract => {
+          const matchesQuery = state.query === "" ||
+            contract.vendor.toLowerCase().includes(state.query) ||
+            contract.title.toLowerCase().includes(state.query);
+          const matchesStatus = state.status === "All" || contract.status === state.status;
+          const matchesOwner = state.owner === "All" || contract.owner === state.owner;
+          return matchesQuery && matchesStatus && matchesOwner;
+        })
+        .sort((a, b) => {
+          if (state.sort === "value") return b.value - a.value;
+          if (state.sort === "risk") return riskScore(b.risk) - riskScore(a.risk);
+          return new Date(a.renewalDate) - new Date(b.renewalDate);
+        });
+    }
+
+    function riskScore(risk) {
+      return risk === "High" ? 3 : risk === "Medium" ? 2 : 1;
+    }
+
+    function getMonthRange() {
+      const start = new Date(state.year, state.month, 1);
+      const end = new Date(state.year, state.month + 1, 0);
+      return { start, end };
+    }
+
+    function renderKPIs(filtered) {
+      const { start, end } = getMonthRange();
+      const monthContracts = filtered.filter(c => {
+        const date = new Date(c.renewalDate + "T00:00:00");
+        return date >= start && date <= end;
+      });
+
+      document.getElementById("kpiMonth").textContent = monthContracts.length;
+      document.getElementById("kpiHigh").textContent = monthContracts.filter(c => c.risk === "High").length;
+
+      const today = new Date("2026-02-01T00:00:00");
+      const dueSoon = monthContracts.filter(c => {
+        const date = new Date(c.renewalDate + "T00:00:00");
+        const diff = (date - today) / (1000 * 60 * 60 * 24);
+        return diff <= 30 && diff >= 0;
+      });
+      document.getElementById("kpiDue").textContent = dueSoon.length;
+
+      const totalValue = monthContracts.reduce((sum, c) => sum + c.value, 0);
+      document.getElementById("kpiValue").textContent = formatCurrency(totalValue);
+    }
+
+    function renderCalendar(filtered) {
+      const grid = document.getElementById("calendarGrid");
+      grid.innerHTML = "";
+
+      const { start, end } = getMonthRange();
+      const monthLabel = document.getElementById("monthLabel");
+      monthLabel.textContent = `${monthNames[state.month]} ${state.year}`;
+
+      const firstDay = (start.getDay() + 6) % 7; // shift to Monday start
+      const daysInMonth = end.getDate();
+      const totalCells = 42;
+
+      for (let i = 0; i < totalCells; i++) {
+        const dayNumber = i - firstDay + 1;
+        const cell = document.createElement("div");
+        cell.className = "min-h-[92px] rounded-xl border border-slate-800 p-2 bg-slate-950/40";
+
+        if (dayNumber > 0 && dayNumber <= daysInMonth) {
+          const dateKey = `${state.year}-${String(state.month + 1).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+          const dayEvents = filtered.filter(c => c.renewalDate === dateKey);
+
+          const numberEl = document.createElement("div");
+          numberEl.className = "text-xs text-slate-400 mb-2";
+          numberEl.textContent = dayNumber;
+          cell.appendChild(numberEl);
+
+          dayEvents.forEach(event => {
+            const badge = document.createElement("button");
+            badge.className = "w-full text-left text-xs px-2 py-1 rounded-lg mb-1 border border-slate-700 hover:border-emerald-400";
+            badge.innerHTML = `<span class="font-semibold">${event.vendor}</span><span class="ml-2 ${riskColors[event.risk]} px-2 py-0.5 rounded-full">${event.risk}</span>`;
+            badge.addEventListener("click", () => selectContract(event.id));
+            cell.appendChild(badge);
+          });
+        } else {
+          cell.className += " opacity-40";
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    function renderList(filtered) {
+      const list = document.getElementById("renewalList");
+      const count = document.getElementById("listCount");
+      list.innerHTML = "";
+      count.textContent = `${filtered.length} items`;
+
+      filtered.forEach(contract => {
+        const item = document.createElement("div");
+        item.className = `p-3 rounded-xl border ${contract.id === state.selectedId ? "border-emerald-400/80 bg-emerald-500/10" : "border-slate-800 bg-slate-950/40"}`;
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold">${contract.vendor}</p>
+              <p class="text-xs text-slate-400">${contract.title}</p>
+            </div>
+            <span class="text-xs ${statusColors[contract.status]} px-2 py-1 rounded-full">${contract.status}</span>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span>${formatDate(contract.renewalDate)}</span>
+            <span>${formatCurrency(contract.value)}</span>
+            <span class="${riskColors[contract.risk]} px-2 py-0.5 rounded-full">${contract.risk} risk</span>
+          </div>
+        `;
+        item.addEventListener("click", () => selectContract(contract.id));
+        list.appendChild(item);
+      });
+    }
+
+    function renderDetails(contract) {
+      const panel = document.getElementById("detailPanel");
+      if (!contract) {
+        panel.innerHTML = "<p class='text-sm text-slate-400'>Select a contract to view details.</p>";
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400">Selected contract</p>
+            <h3 class="text-lg font-semibold mt-1">${contract.vendor}</h3>
+            <p class="text-sm text-slate-400">${contract.title}</p>
+          </div>
+          <span class="text-xs ${statusColors[contract.status]} px-2 py-1 rounded-full">${contract.status}</span>
+        </div>
+        <div class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-400">Renewal date</span><span>${formatDate(contract.renewalDate)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Contract value</span><span>${formatCurrency(contract.value)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Owner</span><span>${contract.owner}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Region</span><span>${contract.region}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Auto renew</span><span>${contract.autoRenew ? "Yes" : "No"}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Security addendum</span><span>${contract.addendum ? "Complete" : "Missing"}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Notice window</span><span>${contract.noticeDays} days</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Last reviewed</span><span>${formatDate(contract.lastReview)}</span></div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button data-action="Approved" class="actionBtn px-3 py-2 text-sm rounded-xl border border-emerald-500/70 text-emerald-200 hover:bg-emerald-500/10">Approve</button>
+          <button data-action="In Review" class="actionBtn px-3 py-2 text-sm rounded-xl border border-amber-500/70 text-amber-200 hover:bg-amber-500/10">Request changes</button>
+          <button data-action="Escalated" class="actionBtn px-3 py-2 text-sm rounded-xl border border-rose-500/70 text-rose-200 hover:bg-rose-500/10">Escalate</button>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-slate-400">Add note</label>
+          <div class="flex gap-2 mt-2">
+            <input id="noteInput" type="text" placeholder="Add negotiation note" class="flex-1 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+            <button id="noteBtn" class="px-3 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">Add</button>
+          </div>
+        </div>
+      `;
+
+      panel.querySelectorAll(".actionBtn").forEach(btn => {
+        btn.addEventListener("click", () => updateStatus(contract.id, btn.dataset.action));
+      });
+
+      panel.querySelector("#noteBtn").addEventListener("click", () => {
+        const input = panel.querySelector("#noteInput");
+        if (input.value.trim() !== "") {
+          addAudit(contract.id, `Note added: ${input.value.trim()}`);
+          input.value = "";
+          render();
+        }
+      });
+    }
+
+    function renderPolicy(contract, message = "") {
+      if (!contract) {
+        policyPanel.innerHTML = "<p class='text-sm text-slate-400'>Policy checks appear here.</p>";
+        return;
+      }
+      policyPanel.innerHTML = `
+        <h3 class="text-lg font-semibold">Policy Validation</h3>
+        <p class="text-sm text-slate-400 mt-2">High-risk contracts require a security addendum before approval.</p>
+        <div class="mt-4 p-3 rounded-xl border border-slate-800 bg-slate-950/50">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Risk level</span>
+            <span class="${riskColors[contract.risk]} px-2 py-0.5 rounded-full">${contract.risk}</span>
+          </div>
+          <div class="flex justify-between text-sm mt-2">
+            <span class="text-slate-400">Security addendum</span>
+            <span>${contract.addendum ? "Complete" : "Missing"}</span>
+          </div>
+          <div class="flex justify-between text-sm mt-2">
+            <span class="text-slate-400">Auto renew</span>
+            <span>${contract.autoRenew ? "Enabled" : "Disabled"}</span>
+          </div>
+        </div>
+        ${message ? `<div class="mt-4 text-sm text-rose-200 border border-rose-500/40 bg-rose-500/10 rounded-xl p-3">${message}</div>` : ""}
+      `;
+    }
+
+    function renderAudit(contract) {
+      const panel = document.getElementById("auditPanel");
+      if (!contract) {
+        panel.innerHTML = "<p class='text-sm text-slate-400'>Audit trail will appear here.</p>";
+        return;
+      }
+
+      const entries = auditLog[contract.id] || [];
+      panel.innerHTML = `
+        <h3 class="text-lg font-semibold">Audit Trail</h3>
+        <div class="mt-4 space-y-3">
+          ${entries.map(entry => `
+            <div class="text-sm">
+              <p class="text-xs text-slate-500">${entry.time}</p>
+              <p>${entry.text}</p>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function addAudit(id, text) {
+      const now = new Date();
+      const stamp = now.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      auditLog[id] = auditLog[id] || [];
+      auditLog[id].unshift({ time: stamp, text });
+    }
+
+    function updateStatus(id, newStatus) {
+      const contract = contracts.find(c => c.id === id);
+      if (!contract) return;
+
+      if (newStatus === "Approved" && contract.risk === "High" && !contract.addendum) {
+        addAudit(id, "Policy block: Approval requires security addendum for high-risk contract.");
+        renderPolicy(contract, "Policy block: add the security addendum before approval.");
+        renderAudit(contract);
+        return;
+      }
+
+      contract.status = newStatus;
+      addAudit(id, `Status updated to ${newStatus}.`);
+      render();
+    }
+
+    function selectContract(id) {
+      state.selectedId = id;
+      render();
+    }
+
+    function renderOwnerOptions() {
+      const owners = Array.from(new Set(contracts.map(c => c.owner)));
+      const ownerFilter = document.getElementById("ownerFilter");
+      ownerFilter.innerHTML = "<option>All</option>" + owners.map(o => `<option>${o}</option>`).join("");
+    }
+
+    function exportCSV(filtered) {
+      const headers = ["Vendor", "Contract", "Renewal Date", "Value", "Status", "Risk", "Owner", "Region", "Auto Renew", "Addendum"];
+      const rows = filtered.map(c => [
+        c.vendor,
+        c.title,
+        c.renewalDate,
+        c.value,
+        c.status,
+        c.risk,
+        c.owner,
+        c.region,
+        c.autoRenew ? "Yes" : "No",
+        c.addendum ? "Complete" : "Missing"
+      ]);
+
+      const csv = [headers, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "contract-renewals.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      renderKPIs(filtered);
+      renderCalendar(filtered);
+      renderList(filtered);
+
+      const contract = contracts.find(c => c.id === state.selectedId) || filtered[0];
+      if (contract && contract.id !== state.selectedId) state.selectedId = contract.id;
+      const selected = contracts.find(c => c.id === state.selectedId);
+
+      renderDetails(selected);
+      renderPolicy(selected);
+      renderAudit(selected);
+    }
+
+    document.getElementById("searchInput").addEventListener("input", event => {
+      state.query = event.target.value.trim().toLowerCase();
+      render();
+    });
+
+    document.getElementById("statusFilter").addEventListener("change", event => {
+      state.status = event.target.value;
+      render();
+    });
+
+    document.getElementById("ownerFilter").addEventListener("change", event => {
+      state.owner = event.target.value;
+      render();
+    });
+
+    document.getElementById("sortFilter").addEventListener("change", event => {
+      state.sort = event.target.value;
+      render();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      exportCSV(getFiltered());
+      addAudit(state.selectedId, "CSV export generated for filtered renewals.");
+      renderAudit(contracts.find(c => c.id === state.selectedId));
+    });
+
+    document.getElementById("prevMonth").addEventListener("click", () => {
+      if (state.month === 0) { state.month = 11; state.year -= 1; } else { state.month -= 1; }
+      render();
+    });
+
+    document.getElementById("nextMonth").addEventListener("click", () => {
+      if (state.month === 11) { state.month = 0; state.year += 1; } else { state.month += 1; }
+      render();
+    });
+
+    initAudit();
+    renderOwnerOptions();
+    render();
+  </script>
+</body>
+</html>

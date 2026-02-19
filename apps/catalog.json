@@ -124,5 +124,23 @@
       "form"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-19",
+    "day": 8,
+    "slug": "2026-02-19-contract-renewal-calendar",
+    "name": "Contract Renewal Calendar",
+    "description": "Calendar view to triage contract renewals with risk-aware approvals and audit history.",
+    "category": "Legal",
+    "pattern": "Calendar",
+    "tags": [
+      "contract renewal",
+      "calendar",
+      "approval workflow",
+      "audit trail",
+      "search",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

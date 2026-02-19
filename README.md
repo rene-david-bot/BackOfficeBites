@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Leave Request Approval Center** — review leave requests with policy checks, approvals, and coverage impact.
+**Contract Renewal Calendar** — calendar view to triage contract renewals with risk-aware approvals and audit history.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
