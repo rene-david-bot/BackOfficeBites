@@ -163,5 +163,25 @@
       "drag-and-drop"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-19",
+    "day": 10,
+    "slug": "2026-02-19-incident-triage-chat",
+    "name": "Incident Triage Chatdesk",
+    "description": "Role-based incident chat desk with approvals, policy checks, and audit trail.",
+    "category": "IT Ops",
+    "pattern": "Chat UI",
+    "tags": [
+      "incident response",
+      "chat",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "search",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]

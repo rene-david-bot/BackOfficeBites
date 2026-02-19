@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Incident Triage Chatdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <a href="../../index.html" class="text-sm text-amber-400 hover:text-amber-300">BackOfficeBites 🍔</a>
+      <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-semibold">Incident Triage Chatdesk</h1>
+          <p class="text-slate-400">Real-time incident coordination with approvals, audit trail, and role-based controls.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs uppercase tracking-wide text-slate-500">Active Role</span>
+          <select id="roleSelect" class="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+            <option>Dispatcher</option>
+            <option>Analyst</option>
+            <option>Approver</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-4">
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs text-slate-400">Open Incidents</p>
+          <p id="statTotal" class="text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs text-slate-400">P1 Critical</p>
+          <p id="statP1" class="text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs text-slate-400">Awaiting Approval</p>
+          <p id="statAwaiting" class="text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs text-slate-400">Avg SLA Hours</p>
+          <p id="statSla" class="text-2xl font-semibold">0</p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-3">
+        <div class="space-y-4 lg:col-span-1">
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <div class="flex flex-col gap-3">
+              <label class="text-xs text-slate-400" for="searchInput">Search incidents</label>
+              <input id="searchInput" type="text" placeholder="ID, title, system, tag" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs text-slate-400" for="statusFilter">Status</label>
+                  <select id="statusFilter" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm">
+                    <option>All</option>
+                    <option>Investigating</option>
+                    <option>Awaiting Approval</option>
+                    <option>Mitigating</option>
+                    <option>Monitoring</option>
+                    <option>Resolved</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-slate-400" for="sortSelect">Sort</label>
+                  <select id="sortSelect" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm">
+                    <option value="sla">SLA (Soonest)</option>
+                    <option value="severity">Severity</option>
+                    <option value="lastUpdate">Last Update</option>
+                  </select>
+                </div>
+              </div>
+              <button id="exportBtn" class="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20">Export Queue CSV</button>
+            </div>
+          </div>
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <h2 class="text-sm font-semibold text-slate-200">Incident Queue</h2>
+            <div id="queueList" class="mt-4 space-y-3"></div>
+          </div>
+        </div>
+
+        <div class="space-y-6 lg:col-span-2">
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p id="incidentId" class="text-xs text-slate-400">INC-0000</p>
+                <h2 id="incidentTitle" class="text-2xl font-semibold">Incident</h2>
+                <p id="incidentSystem" class="mt-1 text-sm text-slate-400">System</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="severityPill" class="rounded-full px-3 py-1 text-xs font-semibold">P2</span>
+                <span id="statusPill" class="rounded-full px-3 py-1 text-xs font-semibold">Investigating</span>
+              </div>
+            </div>
+            <div class="mt-4 grid gap-4 md:grid-cols-3">
+              <div>
+                <p class="text-xs text-slate-500">Owner</p>
+                <p id="incidentOwner" class="text-sm font-medium">-</p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500">SLA (hours)</p>
+                <p id="incidentSla" class="text-sm font-medium">-</p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500">Last Update</p>
+                <p id="incidentUpdated" class="text-sm font-medium">-</p>
+              </div>
+            </div>
+            <div class="mt-4">
+              <p class="text-xs text-slate-500">Tags</p>
+              <div id="incidentTags" class="mt-2 flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="mt-6 grid gap-6 lg:grid-cols-2">
+              <div class="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                <h3 class="text-sm font-semibold">Policy Checks</h3>
+                <p class="mt-1 text-xs text-slate-400">Required before closing the incident.</p>
+                <div class="mt-3 space-y-2">
+                  <label class="flex items-center gap-2 text-sm text-slate-200">
+                    <input id="rootCauseCheck" type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-slate-900" />
+                    Root cause logged
+                  </label>
+                  <label class="flex items-center gap-2 text-sm text-slate-200">
+                    <input id="customerCheck" type="checkbox" class="h-4 w-4 rounded border-slate-600 bg-slate-900" />
+                    Customer communications sent
+                  </label>
+                </div>
+                <p id="policyError" class="mt-2 text-xs text-rose-400"></p>
+              </div>
+              <div class="rounded-lg border border-slate-800 bg-slate-950 p-4">
+                <h3 class="text-sm font-semibold">Actions</h3>
+                <div class="mt-3 space-y-3 text-sm">
+                  <div class="flex items-center gap-2">
+                    <select id="assignSelect" class="flex-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-2">
+                      <option>A. Novak</option>
+                      <option>J. Malik</option>
+                      <option>S. Ito</option>
+                      <option>M. Garner</option>
+                    </select>
+                    <button id="assignBtn" class="rounded-md border border-slate-700 px-3 py-2">Assign</button>
+                  </div>
+                  <button id="requestBtn" class="w-full rounded-md border border-slate-700 px-3 py-2">Request Approval</button>
+                  <button id="approveBtn" class="w-full rounded-md border border-slate-700 px-3 py-2">Approve Mitigation</button>
+                  <button id="closeBtn" class="w-full rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-emerald-100">Close Incident</button>
+                </div>
+                <p id="actionFeedback" class="mt-3 text-xs text-slate-400"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid gap-6 lg:grid-cols-2">
+            <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <h3 class="text-sm font-semibold">Live Chat</h3>
+              <div id="chatList" class="mt-3 max-h-72 space-y-3 overflow-y-auto pr-2"></div>
+              <div class="mt-4 flex gap-2">
+                <input id="chatInput" type="text" placeholder="Send an update to the bridge" class="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+                <button id="sendBtn" class="rounded-md border border-slate-700 px-3 py-2 text-sm">Send</button>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <h3 class="text-sm font-semibold">Audit Trail</h3>
+              <div id="auditList" class="mt-3 space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const incidents = [
+        {
+          id: "INC-1042",
+          title: "Payment gateway timeout spikes",
+          severity: "P1",
+          status: "Investigating",
+          system: "Checkout API",
+          owner: "On-call: J. Malik",
+          slaHours: 2.0,
+          lastUpdate: "09:05",
+          tags: ["revenue", "api", "latency"],
+          policy: { rootCause: false, customerNotified: false },
+          chat: [
+            { from: "Monitor", text: "Error rate up 12% in EU cluster.", time: "09:01" },
+            { from: "Analyst", text: "Seeing upstream TLS resets. Checking vendor status.", time: "09:04" }
+          ],
+          audit: [
+            { time: "09:02", action: "Incident created by Watchtower", actor: "Automation" },
+            { time: "09:05", action: "Bridge opened", actor: "Dispatcher" }
+          ]
+        },
+        {
+          id: "INC-1041",
+          title: "Warehouse scan latency in APAC",
+          severity: "P2",
+          status: "Monitoring",
+          system: "Inventory Scanners",
+          owner: "On-call: S. Ito",
+          slaHours: 4.5,
+          lastUpdate: "08:52",
+          tags: ["warehouse", "apac", "mobile"],
+          policy: { rootCause: true, customerNotified: false },
+          chat: [
+            { from: "Dispatcher", text: "Vendor patch applied, monitoring for 30m.", time: "08:40" }
+          ],
+          audit: [
+            { time: "08:35", action: "Assigned to S. Ito", actor: "Dispatcher" },
+            { time: "08:41", action: "Patch deployed", actor: "Analyst" }
+          ]
+        },
+        {
+          id: "INC-1038",
+          title: "SSO login loops after IdP update",
+          severity: "P1",
+          status: "Awaiting Approval",
+          system: "Identity Platform",
+          owner: "On-call: M. Garner",
+          slaHours: 1.2,
+          lastUpdate: "08:48",
+          tags: ["identity", "sso", "security"],
+          policy: { rootCause: false, customerNotified: false },
+          chat: [
+            { from: "Analyst", text: "Rollback script ready. Approval requested.", time: "08:45" }
+          ],
+          audit: [
+            { time: "08:32", action: "Incident escalated to P1", actor: "Automation" },
+            { time: "08:46", action: "Approval requested for rollback", actor: "Analyst" }
+          ]
+        },
+        {
+          id: "INC-1035",
+          title: "Email digest backlog",
+          severity: "P3",
+          status: "Mitigating",
+          system: "Notification Service",
+          owner: "On-call: A. Novak",
+          slaHours: 6.0,
+          lastUpdate: "08:20",
+          tags: ["notifications", "queue"],
+          policy: { rootCause: true, customerNotified: true },
+          chat: [
+            { from: "Analyst", text: "Scaled worker pool to 12 nodes.", time: "08:18" }
+          ],
+          audit: [
+            { time: "08:05", action: "Mitigation approved", actor: "Approver" }
+          ]
+        },
+        {
+          id: "INC-1032",
+          title: "CRM sync job missed window",
+          severity: "P2",
+          status: "Investigating",
+          system: "Salesforce Sync",
+          owner: "On-call: J. Malik",
+          slaHours: 5.0,
+          lastUpdate: "07:56",
+          tags: ["crm", "sync", "etl"],
+          policy: { rootCause: false, customerNotified: false },
+          chat: [
+            { from: "Dispatcher", text: "Checking job schedule drift.", time: "07:55" }
+          ],
+          audit: [
+            { time: "07:50", action: "Incident opened", actor: "Automation" }
+          ]
+        }
+      ];
+
+      const severityRank = { P1: 1, P2: 2, P3: 3, P4: 4 };
+      const statusStyles = {
+        "Investigating": "bg-amber-500/20 text-amber-300",
+        "Awaiting Approval": "bg-indigo-500/20 text-indigo-300",
+        "Mitigating": "bg-emerald-500/20 text-emerald-300",
+        "Monitoring": "bg-cyan-500/20 text-cyan-300",
+        "Resolved": "bg-slate-600/30 text-slate-200"
+      };
+      const severityStyles = {
+        P1: "bg-rose-500/20 text-rose-300",
+        P2: "bg-orange-500/20 text-orange-300",
+        P3: "bg-amber-500/20 text-amber-300",
+        P4: "bg-emerald-500/20 text-emerald-300"
+      };
+
+      const state = {
+        role: "Dispatcher",
+        selectedId: incidents[0].id,
+        search: "",
+        status: "All",
+        sort: "sla"
+      };
+
+      const queueList = document.getElementById("queueList");
+      const statTotal = document.getElementById("statTotal");
+      const statP1 = document.getElementById("statP1");
+      const statAwaiting = document.getElementById("statAwaiting");
+      const statSla = document.getElementById("statSla");
+
+      function minutesFromTime(t) {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      }
+
+      function currentTime() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      function renderStats() {
+        const total = incidents.length;
+        const p1 = incidents.filter((i) => i.severity === "P1").length;
+        const awaiting = incidents.filter((i) => i.status === "Awaiting Approval").length;
+        const avg = incidents.reduce((sum, i) => sum + i.slaHours, 0) / total;
+        statTotal.textContent = total;
+        statP1.textContent = p1;
+        statAwaiting.textContent = awaiting;
+        statSla.textContent = avg.toFixed(1);
+      }
+
+      function filteredIncidents() {
+        return incidents
+          .filter((incident) => {
+            if (state.status !== "All" && incident.status !== state.status) return false;
+            if (!state.search) return true;
+            const haystack = `${incident.id} ${incident.title} ${incident.system} ${incident.tags.join(" ")}`.toLowerCase();
+            return haystack.includes(state.search.toLowerCase());
+          })
+          .sort((a, b) => {
+            if (state.sort === "severity") return severityRank[a.severity] - severityRank[b.severity];
+            if (state.sort === "lastUpdate") return minutesFromTime(b.lastUpdate) - minutesFromTime(a.lastUpdate);
+            return a.slaHours - b.slaHours;
+          });
+      }
+
+      function renderQueue() {
+        queueList.innerHTML = "";
+        const list = filteredIncidents();
+        if (!list.length) {
+          queueList.innerHTML = '<p class="text-sm text-slate-500">No incidents match the filters.</p>';
+          return;
+        }
+        list.forEach((incident) => {
+          const button = document.createElement("button");
+          button.className = `w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-left transition hover:border-slate-600 ${
+            incident.id === state.selectedId ? "border-amber-400/60" : ""
+          }`;
+          button.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs text-slate-500">${incident.id}</p>
+                <p class="font-medium">${incident.title}</p>
+              </div>
+              <span class="rounded-full px-2 py-1 text-xs font-semibold ${severityStyles[incident.severity]}">${incident.severity}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span>${incident.system}</span>
+              <span>${incident.status}</span>
+            </div>
+          `;
+          button.addEventListener("click", () => {
+            state.selectedId = incident.id;
+            renderAll();
+          });
+          queueList.appendChild(button);
+        });
+      }
+
+      function renderDetails() {
+        const incident = incidents.find((i) => i.id === state.selectedId) || incidents[0];
+        if (!incident) return;
+        document.getElementById("incidentId").textContent = incident.id;
+        document.getElementById("incidentTitle").textContent = incident.title;
+        document.getElementById("incidentSystem").textContent = incident.system;
+        document.getElementById("incidentOwner").textContent = incident.owner;
+        document.getElementById("incidentSla").textContent = incident.slaHours;
+        document.getElementById("incidentUpdated").textContent = incident.lastUpdate;
+
+        const severityPill = document.getElementById("severityPill");
+        severityPill.textContent = incident.severity;
+        severityPill.className = `rounded-full px-3 py-1 text-xs font-semibold ${severityStyles[incident.severity]}`;
+
+        const statusPill = document.getElementById("statusPill");
+        statusPill.textContent = incident.status;
+        statusPill.className = `rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[incident.status] || "bg-slate-700 text-slate-200"}`;
+
+        const tagWrap = document.getElementById("incidentTags");
+        tagWrap.innerHTML = "";
+        incident.tags.forEach((tag) => {
+          const span = document.createElement("span");
+          span.className = "rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-300";
+          span.textContent = tag;
+          tagWrap.appendChild(span);
+        });
+
+        const chatList = document.getElementById("chatList");
+        chatList.innerHTML = "";
+        incident.chat.forEach((msg) => {
+          const item = document.createElement("div");
+          item.className = "rounded-md border border-slate-800 bg-slate-950 p-3";
+          item.innerHTML = `
+            <div class="flex items-center justify-between text-xs text-slate-500">
+              <span>${msg.from}</span>
+              <span>${msg.time}</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-200">${msg.text}</p>
+          `;
+          chatList.appendChild(item);
+        });
+
+        const auditList = document.getElementById("auditList");
+        auditList.innerHTML = "";
+        incident.audit.forEach((entry) => {
+          const row = document.createElement("div");
+          row.className = "rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-300";
+          row.innerHTML = `<span class="text-slate-500">${entry.time}</span> · ${entry.action} <span class="text-slate-500">(${entry.actor})</span>`;
+          auditList.appendChild(row);
+        });
+
+        document.getElementById("rootCauseCheck").checked = incident.policy.rootCause;
+        document.getElementById("customerCheck").checked = incident.policy.customerNotified;
+        document.getElementById("policyError").textContent = "";
+
+        updateActionButtons();
+      }
+
+      function updateActionButtons() {
+        const role = state.role;
+        const assignBtn = document.getElementById("assignBtn");
+        const requestBtn = document.getElementById("requestBtn");
+        const approveBtn = document.getElementById("approveBtn");
+        const closeBtn = document.getElementById("closeBtn");
+
+        const setButton = (btn, enabled) => {
+          btn.disabled = !enabled;
+          btn.classList.toggle("opacity-50", !enabled);
+          btn.classList.toggle("cursor-not-allowed", !enabled);
+        };
+
+        setButton(assignBtn, role === "Dispatcher");
+        setButton(requestBtn, role === "Analyst");
+        setButton(approveBtn, role === "Approver");
+        setButton(closeBtn, role === "Analyst");
+
+        document.getElementById("actionFeedback").textContent = `Role gates: ${role}`;
+      }
+
+      function logAction(incident, action, actor = state.role) {
+        incident.audit.unshift({ time: currentTime(), action, actor });
+        incident.lastUpdate = currentTime();
+      }
+
+      function setFeedback(text, tone = "neutral") {
+        const el = document.getElementById("actionFeedback");
+        const color = tone === "error" ? "text-rose-400" : "text-slate-400";
+        el.className = `mt-3 text-xs ${color}`;
+        el.textContent = text;
+      }
+
+      function renderAll() {
+        renderStats();
+        renderQueue();
+        renderDetails();
+      }
+
+      document.getElementById("roleSelect").addEventListener("change", (event) => {
+        state.role = event.target.value;
+        renderDetails();
+      });
+
+      document.getElementById("searchInput").addEventListener("input", (event) => {
+        state.search = event.target.value;
+        renderQueue();
+      });
+
+      document.getElementById("statusFilter").addEventListener("change", (event) => {
+        state.status = event.target.value;
+        renderQueue();
+      });
+
+      document.getElementById("sortSelect").addEventListener("change", (event) => {
+        state.sort = event.target.value;
+        renderQueue();
+      });
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const list = filteredIncidents();
+        const rows = [
+          ["ID", "Title", "Severity", "Status", "System", "Owner", "SLA Hours", "Last Update"],
+          ...list.map((i) => [i.id, i.title, i.severity, i.status, i.system, i.owner, i.slaHours, i.lastUpdate])
+        ];
+        const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "incident-queue.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+        setFeedback("CSV export generated for current queue view.");
+      });
+
+      document.getElementById("sendBtn").addEventListener("click", () => {
+        const input = document.getElementById("chatInput");
+        const message = input.value.trim();
+        if (!message) return;
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        incident.chat.push({ from: state.role, text: message, time: currentTime() });
+        logAction(incident, `Bridge update sent: "${message.slice(0, 40)}${message.length > 40 ? "…" : ""}"`);
+        input.value = "";
+        renderDetails();
+        setFeedback("Update posted to live bridge.");
+      });
+
+      document.getElementById("assignBtn").addEventListener("click", () => {
+        if (state.role !== "Dispatcher") return setFeedback("Dispatcher role required to assign.", "error");
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        const assignee = document.getElementById("assignSelect").value;
+        incident.owner = `On-call: ${assignee}`;
+        logAction(incident, `Assigned to ${assignee}`);
+        renderAll();
+        setFeedback(`Assigned to ${assignee}.`);
+      });
+
+      document.getElementById("requestBtn").addEventListener("click", () => {
+        if (state.role !== "Analyst") return setFeedback("Analyst role required to request approval.", "error");
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        incident.status = "Awaiting Approval";
+        incident.chat.push({ from: "Analyst", text: "Approval requested for mitigation plan.", time: currentTime() });
+        logAction(incident, "Approval requested for mitigation plan");
+        renderAll();
+        setFeedback("Approval workflow started.");
+      });
+
+      document.getElementById("approveBtn").addEventListener("click", () => {
+        if (state.role !== "Approver") return setFeedback("Approver role required to approve.", "error");
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        incident.status = "Mitigating";
+        incident.chat.push({ from: "Approver", text: "Mitigation approved. Proceed.", time: currentTime() });
+        logAction(incident, "Mitigation approved");
+        renderAll();
+        setFeedback("Mitigation approved and logged.");
+      });
+
+      document.getElementById("closeBtn").addEventListener("click", () => {
+        if (state.role !== "Analyst") return setFeedback("Analyst role required to close incidents.", "error");
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        if (!incident.policy.rootCause || !incident.policy.customerNotified) {
+          document.getElementById("policyError").textContent = "Complete policy checks before closing.";
+          return;
+        }
+        incident.status = "Resolved";
+        logAction(incident, "Incident closed with policy checks completed");
+        incident.chat.push({ from: "Analyst", text: "Incident resolved and closed. Great work team.", time: currentTime() });
+        renderAll();
+        setFeedback("Incident closed and archived.");
+      });
+
+      document.getElementById("rootCauseCheck").addEventListener("change", (event) => {
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        incident.policy.rootCause = event.target.checked;
+      });
+
+      document.getElementById("customerCheck").addEventListener("change", (event) => {
+        const incident = incidents.find((i) => i.id === state.selectedId);
+        incident.policy.customerNotified = event.target.checked;
+      });
+
+      renderAll();
+    </script>
+  </body>
+</html>

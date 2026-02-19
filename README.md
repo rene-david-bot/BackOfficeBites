@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Deal Desk Approval Kanban** — kanban board to route discount approvals with policy checks, drag-and-drop, and audit trail.
+**Incident Triage Chatdesk** — role-based incident chat desk with approvals, policy checks, and audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
