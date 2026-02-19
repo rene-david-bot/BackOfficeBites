@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Incident Triage Chatdesk** — role-based incident chat desk with approvals, policy checks, and audit trail.
+**Policy-Aware Expensing Wizard** — wizard-driven expense submission with policy guardrails, risk scoring, and approval queues.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

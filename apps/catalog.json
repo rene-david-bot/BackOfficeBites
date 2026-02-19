@@ -183,5 +183,25 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-19",
+    "day": 11,
+    "slug": "2026-02-19-policy-aware-expensing-wizard",
+    "name": "Policy-Aware Expensing Wizard",
+    "description": "Wizard-driven expense submission with policy guardrails, risk scoring, and approval queues.",
+    "category": "Finance",
+    "pattern": "Wizard + Approval Queue",
+    "tags": [
+      "expenses",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based",
+      "search",
+      "risk scoring"
+    ],
+    "thumb": ""
   }
 ]
