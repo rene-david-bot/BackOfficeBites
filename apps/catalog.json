@@ -203,5 +203,26 @@
       "risk scoring"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-20",
+    "day": 12,
+    "slug": "2026-02-20-reorder-point-control-grid",
+    "name": "Reorder Point Control Grid",
+    "description": "Data grid to tune reorder points with approvals, audit trail, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Data Grid",
+    "tags": [
+      "reorder points",
+      "inventory",
+      "data grid",
+      "approval workflow",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

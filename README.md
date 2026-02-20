@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Policy-Aware Expensing Wizard** — wizard-driven expense submission with policy guardrails, risk scoring, and approval queues.
+**Reorder Point Control Grid** — data grid to tune reorder points with approvals, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

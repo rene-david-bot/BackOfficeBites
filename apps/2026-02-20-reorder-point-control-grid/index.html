@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reorder Point Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.2em] text-slate-400 hover:text-amber-300">BackOfficeBites 🍔</a>
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between mt-3 gap-6">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-semibold">Reorder Point Control Grid</h1>
+        <p class="text-slate-400 mt-2 max-w-2xl">Tune reorder points across sites with policy guardrails, approval workflow, and live inventory signals.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="exportBtn" class="px-4 py-2 rounded-lg bg-amber-400/20 text-amber-200 border border-amber-400/40 hover:bg-amber-400/30">Export CSV</button>
+        <button id="refreshBtn" class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-500">Refresh Signals</button>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase text-slate-500">Tracked SKUs</p>
+        <p id="statTotal" class="text-2xl font-semibold mt-2">0</p>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase text-slate-500">Below Reorder Point</p>
+        <p id="statBelow" class="text-2xl font-semibold mt-2 text-rose-300">0</p>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase text-slate-500">Pending Approvals</p>
+        <p id="statPending" class="text-2xl font-semibold mt-2 text-amber-200">0</p>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase text-slate-500">Avg Lead Time</p>
+        <p id="statLead" class="text-2xl font-semibold mt-2">0 days</p>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 mt-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <div class="flex flex-col">
+            <label class="text-xs uppercase text-slate-500" for="searchInput">Search SKU or Item</label>
+            <input id="searchInput" class="mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Search..." />
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs uppercase text-slate-500" for="siteFilter">Site</label>
+            <select id="siteFilter" class="mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="all">All sites</option>
+            </select>
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs uppercase text-slate-500" for="statusFilter">Status</label>
+            <select id="statusFilter" class="mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="all">All statuses</option>
+              <option value="Healthy">Healthy</option>
+              <option value="Watch">Watch</option>
+              <option value="Below ROP">Below ROP</option>
+              <option value="Pending Approval">Pending Approval</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex flex-col md:flex-row md:items-center gap-3">
+          <div class="flex flex-col">
+            <label class="text-xs uppercase text-slate-500" for="sortSelect">Sort by</label>
+            <select id="sortSelect" class="mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="gap">Gap to ROP</option>
+              <option value="lead">Lead Time</option>
+              <option value="onHand">On Hand</option>
+              <option value="reorder">Reorder Point</option>
+            </select>
+          </div>
+          <button id="sortDirBtn" class="mt-5 md:mt-6 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700">Desc</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[2.2fr_1fr] gap-6 mt-6">
+        <div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-xs uppercase text-slate-500 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-3">SKU</th>
+                  <th class="text-left py-3">Item</th>
+                  <th class="text-left py-3">Site</th>
+                  <th class="text-right py-3">On Hand</th>
+                  <th class="text-right py-3">Safety</th>
+                  <th class="text-right py-3">ROP</th>
+                  <th class="text-right py-3">Lead</th>
+                  <th class="text-left py-3">Status</th>
+                  <th class="text-left py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="gridBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+            <h3 class="font-semibold">Approval Queue</h3>
+            <p class="text-xs text-slate-500">Reorder point changes awaiting sign-off.</p>
+            <div id="queueList" class="mt-4 space-y-3"></div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+            <h3 class="font-semibold">Selected SKU</h3>
+            <div id="detailPanel" class="mt-3 text-sm text-slate-400">Select a row to review details.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+      <h2 class="font-semibold">Policy Guardrails</h2>
+      <ul class="text-sm text-slate-400 list-disc list-inside mt-2 space-y-1">
+        <li>Reorder point must be greater than or equal to safety stock.</li>
+        <li>Changes above 20% require approval from Supply Chain Ops.</li>
+        <li>Items flagged as Below ROP require an audit note.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 px-4 py-3 rounded-lg text-sm hidden"></div>
+
+  <script>
+    const inventory = [
+      { id: 1, sku: 'SC-1042', item: 'Thermal Labels 4x6', site: 'Berlin DC', supplier: 'NordPrint', onHand: 420, safetyStock: 300, reorderPoint: 360, leadTime: 8, status: 'Watch', lastReview: '2026-02-14', audit: ['2026-02-12: Cycle count reconciled (+8)'] },
+      { id: 2, sku: 'SC-1879', item: 'Pallet Wrap - Heavy', site: 'Berlin DC', supplier: 'FlexPack', onHand: 120, safetyStock: 200, reorderPoint: 240, leadTime: 11, status: 'Below ROP', lastReview: '2026-02-13', audit: ['2026-02-10: Supplier delay logged (3 days)'] },
+      { id: 3, sku: 'SC-2210', item: 'Forklift Battery Pack', site: 'Hamburg Hub', supplier: 'LiftCore', onHand: 18, safetyStock: 12, reorderPoint: 20, leadTime: 21, status: 'Below ROP', lastReview: '2026-02-11', audit: ['2026-02-09: Warranty replacements shipped'] },
+      { id: 4, sku: 'SC-2588', item: 'RFID Handheld Scanner', site: 'Hamburg Hub', supplier: 'ScanPro', onHand: 34, safetyStock: 25, reorderPoint: 28, leadTime: 15, status: 'Healthy', lastReview: '2026-02-15', audit: ['2026-02-05: ROP lowered after turnover review'] },
+      { id: 5, sku: 'SC-3005', item: 'Reusable Tote - Medium', site: 'Munich FC', supplier: 'LoopBox', onHand: 610, safetyStock: 420, reorderPoint: 500, leadTime: 9, status: 'Watch', lastReview: '2026-02-12', audit: ['2026-02-12: Peak season buffer applied'] },
+      { id: 6, sku: 'SC-3124', item: 'Dry Ice Pack', site: 'Munich FC', supplier: 'ColdStream', onHand: 90, safetyStock: 140, reorderPoint: 170, leadTime: 6, status: 'Below ROP', lastReview: '2026-02-14', audit: ['2026-02-14: RMA packaging spike noted'] },
+      { id: 7, sku: 'SC-3551', item: 'Dock Leveler Kit', site: 'Cologne DC', supplier: 'DockSafe', onHand: 55, safetyStock: 40, reorderPoint: 48, leadTime: 18, status: 'Healthy', lastReview: '2026-02-16', audit: ['2026-02-16: Safety stock aligned to policy'] },
+      { id: 8, sku: 'SC-3770', item: 'Cold Chain Sensor', site: 'Cologne DC', supplier: 'ThermoIQ', onHand: 14, safetyStock: 20, reorderPoint: 24, leadTime: 12, status: 'Below ROP', lastReview: '2026-02-15', audit: ['2026-02-15: Calibration queue added'] },
+      { id: 9, sku: 'SC-4020', item: 'Bulk Carton - XL', site: 'Berlin DC', supplier: 'Boxline', onHand: 980, safetyStock: 700, reorderPoint: 820, leadTime: 7, status: 'Healthy', lastReview: '2026-02-17', audit: ['2026-02-01: Supplier rate locked'] },
+      { id: 10, sku: 'SC-4412', item: 'Pallet Jack Wheels', site: 'Hamburg Hub', supplier: 'LiftCore', onHand: 65, safetyStock: 50, reorderPoint: 60, leadTime: 10, status: 'Watch', lastReview: '2026-02-12', audit: ['2026-02-12: Preventative maintenance schedule synced'] },
+      { id: 11, sku: 'SC-4621', item: 'Shrink Tunnel Film', site: 'Munich FC', supplier: 'FlexPack', onHand: 210, safetyStock: 160, reorderPoint: 190, leadTime: 8, status: 'Healthy', lastReview: '2026-02-16', audit: ['2026-02-03: Stock audit passed'] },
+      { id: 12, sku: 'SC-4875', item: 'Label Printer Heads', site: 'Cologne DC', supplier: 'NordPrint', onHand: 26, safetyStock: 30, reorderPoint: 36, leadTime: 14, status: 'Below ROP', lastReview: '2026-02-13', audit: ['2026-02-13: Repair backlog flagged'] }
+    ]
+
+    let proposals = [
+      { id: 'P-219', sku: 'SC-1879', requestor: 'Lina M.', newRop: 280, newSafety: 220, reason: 'Supplier delays from FlexPack', status: 'Pending' },
+      { id: 'P-233', sku: 'SC-3124', requestor: 'Omar K.', newRop: 190, newSafety: 150, reason: 'RMA volume exceeded forecast', status: 'Pending' }
+    ]
+
+    let selectedId = null
+    let sortDir = 'desc'
+
+    const gridBody = document.getElementById('gridBody')
+    const siteFilter = document.getElementById('siteFilter')
+    const statusFilter = document.getElementById('statusFilter')
+    const searchInput = document.getElementById('searchInput')
+    const sortSelect = document.getElementById('sortSelect')
+    const sortDirBtn = document.getElementById('sortDirBtn')
+
+    const statTotal = document.getElementById('statTotal')
+    const statBelow = document.getElementById('statBelow')
+    const statPending = document.getElementById('statPending')
+    const statLead = document.getElementById('statLead')
+    const queueList = document.getElementById('queueList')
+    const detailPanel = document.getElementById('detailPanel')
+    const toast = document.getElementById('toast')
+
+    function initFilters() {
+      const sites = [...new Set(inventory.map(item => item.site))]
+      sites.forEach(site => {
+        const option = document.createElement('option')
+        option.value = site
+        option.textContent = site
+        siteFilter.appendChild(option)
+      })
+    }
+
+    function getFilteredData() {
+      const query = searchInput.value.toLowerCase()
+      const site = siteFilter.value
+      const status = statusFilter.value
+
+      return inventory.filter(item => {
+        const matchesQuery = item.sku.toLowerCase().includes(query) || item.item.toLowerCase().includes(query)
+        const matchesSite = site === 'all' || item.site === site
+        const matchesStatus = status === 'all' || item.status === status
+        return matchesQuery && matchesSite && matchesStatus
+      })
+    }
+
+    function sortData(data) {
+      const key = sortSelect.value
+      const sorted = [...data].sort((a, b) => {
+        let valA
+        let valB
+        if (key === 'gap') {
+          valA = a.onHand - a.reorderPoint
+          valB = b.onHand - b.reorderPoint
+        } else if (key === 'lead') {
+          valA = a.leadTime
+          valB = b.leadTime
+        } else if (key === 'onHand') {
+          valA = a.onHand
+          valB = b.onHand
+        } else {
+          valA = a.reorderPoint
+          valB = b.reorderPoint
+        }
+        return sortDir === 'desc' ? valB - valA : valA - valB
+      })
+      return sorted
+    }
+
+    function statusPill(status) {
+      const map = {
+        'Healthy': 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40',
+        'Watch': 'bg-amber-500/20 text-amber-200 border-amber-400/40',
+        'Below ROP': 'bg-rose-500/20 text-rose-200 border-rose-400/40',
+        'Pending Approval': 'bg-sky-500/20 text-sky-200 border-sky-400/40'
+      }
+      return `<span class="px-2 py-1 rounded-full border text-xs ${map[status] || 'border-slate-700'}">${status}</span>`
+    }
+
+    function renderGrid() {
+      const filtered = sortData(getFilteredData())
+      gridBody.innerHTML = ''
+      filtered.forEach(item => {
+        const row = document.createElement('tr')
+        row.className = `hover:bg-slate-800/60 ${selectedId === item.id ? 'bg-slate-800/80' : ''}`
+        row.innerHTML = `
+          <td class="py-3 font-medium">${item.sku}</td>
+          <td class="py-3">${item.item}</td>
+          <td class="py-3 text-slate-400">${item.site}</td>
+          <td class="py-3 text-right">${item.onHand}</td>
+          <td class="py-3 text-right">${item.safetyStock}</td>
+          <td class="py-3 text-right">${item.reorderPoint}</td>
+          <td class="py-3 text-right">${item.leadTime}d</td>
+          <td class="py-3">${statusPill(item.status)}</td>
+          <td class="py-3">
+            <button class="text-amber-200 hover:text-amber-100" data-action="review" data-id="${item.id}">Review</button>
+          </td>
+        `
+        gridBody.appendChild(row)
+      })
+    }
+
+    function renderStats() {
+      statTotal.textContent = inventory.length
+      statBelow.textContent = inventory.filter(item => item.status === 'Below ROP').length
+      statPending.textContent = proposals.filter(p => p.status === 'Pending').length
+      const avgLead = Math.round(inventory.reduce((sum, item) => sum + item.leadTime, 0) / inventory.length)
+      statLead.textContent = `${avgLead} days`
+    }
+
+    function renderQueue() {
+      queueList.innerHTML = ''
+      if (!proposals.length) {
+        queueList.innerHTML = '<p class="text-sm text-slate-500">No pending requests.</p>'
+        return
+      }
+      proposals.forEach(item => {
+        const div = document.createElement('div')
+        div.className = 'border border-slate-800 rounded-lg p-3'
+        div.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-semibold">${item.sku} · ${item.id}</p>
+              <p class="text-xs text-slate-500">${item.requestor} · ${item.reason}</p>
+              <p class="text-xs text-slate-400 mt-1">New ROP ${item.newRop} · Safety ${item.newSafety}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full border border-amber-400/40 text-amber-200">${item.status}</span>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/40" data-action="approve" data-id="${item.id}">Approve</button>
+            <button class="px-2 py-1 text-xs rounded bg-rose-500/20 text-rose-200 border border-rose-400/40" data-action="reject" data-id="${item.id}">Reject</button>
+          </div>
+        `
+        queueList.appendChild(div)
+      })
+    }
+
+    function renderDetail() {
+      if (!selectedId) {
+        detailPanel.innerHTML = '<p class="text-sm text-slate-500">Select a row to review details.</p>'
+        return
+      }
+      const item = inventory.find(x => x.id === selectedId)
+      const auditHtml = item.audit.map(entry => `<li>${entry}</li>`).join('')
+      detailPanel.innerHTML = `
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs uppercase text-slate-500">SKU</p>
+            <p class="font-semibold">${item.sku} · ${item.item}</p>
+            <p class="text-xs text-slate-400">${item.site} · Supplier ${item.supplier}</p>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-2">
+              <p class="text-slate-500">On Hand</p>
+              <p class="font-semibold text-sm">${item.onHand}</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-2">
+              <p class="text-slate-500">Safety</p>
+              <p class="font-semibold text-sm">${item.safetyStock}</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-2">
+              <p class="text-slate-500">ROP</p>
+              <p class="font-semibold text-sm">${item.reorderPoint}</p>
+            </div>
+          </div>
+          <form id="proposalForm" class="space-y-2">
+            <div>
+              <label class="text-xs uppercase text-slate-500" for="newRop">Proposed ROP</label>
+              <input id="newRop" type="number" min="1" value="${item.reorderPoint}" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-500" for="newSafety">Proposed Safety Stock</label>
+              <input id="newSafety" type="number" min="1" value="${item.safetyStock}" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-500" for="reason">Change Rationale</label>
+              <textarea id="reason" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Explain the operational signal..."></textarea>
+            </div>
+            <button class="w-full mt-2 px-3 py-2 rounded-lg bg-sky-500/20 text-sky-200 border border-sky-400/40" type="submit">Submit for Approval</button>
+            <p id="formError" class="text-xs text-rose-300 hidden"></p>
+          </form>
+          <div>
+            <p class="text-xs uppercase text-slate-500">Audit Trail</p>
+            <ul class="text-xs text-slate-400 list-disc list-inside mt-2 space-y-1">${auditHtml}</ul>
+          </div>
+        </div>
+      `
+      document.getElementById('proposalForm').addEventListener('submit', handleProposalSubmit)
+    }
+
+    function handleProposalSubmit(event) {
+      event.preventDefault()
+      const item = inventory.find(x => x.id === selectedId)
+      const newRop = Number(document.getElementById('newRop').value)
+      const newSafety = Number(document.getElementById('newSafety').value)
+      const reason = document.getElementById('reason').value.trim()
+      const errorEl = document.getElementById('formError')
+
+      if (newRop < newSafety) {
+        errorEl.textContent = 'Reorder point must be greater than or equal to safety stock.'
+        errorEl.classList.remove('hidden')
+        return
+      }
+      if (!reason) {
+        errorEl.textContent = 'Provide a rationale for audit coverage.'
+        errorEl.classList.remove('hidden')
+        return
+      }
+      errorEl.classList.add('hidden')
+
+      const proposal = {
+        id: `P-${Math.floor(Math.random() * 900 + 100)}`,
+        sku: item.sku,
+        requestor: 'You',
+        newRop,
+        newSafety,
+        reason,
+        status: 'Pending'
+      }
+      proposals.unshift(proposal)
+      item.status = 'Pending Approval'
+      item.audit.unshift(`${new Date().toISOString().slice(0,10)}: Proposal submitted (${newRop}/${newSafety})`)
+      showToast('Proposal sent to Supply Chain Ops for approval.')
+      renderAll()
+    }
+
+    function handleQueueAction(id, action) {
+      const proposal = proposals.find(p => p.id === id)
+      if (!proposal) return
+      const item = inventory.find(x => x.sku === proposal.sku)
+      if (action === 'approve') {
+        item.reorderPoint = proposal.newRop
+        item.safetyStock = proposal.newSafety
+        item.status = item.onHand < item.reorderPoint ? 'Below ROP' : 'Healthy'
+        item.audit.unshift(`${new Date().toISOString().slice(0,10)}: Proposal approved (${proposal.id})`)
+        proposal.status = 'Approved'
+        showToast(`Approved ${proposal.sku}. ROP updated.`)
+      } else {
+        item.audit.unshift(`${new Date().toISOString().slice(0,10)}: Proposal rejected (${proposal.id})`)
+        proposal.status = 'Rejected'
+        showToast(`Rejected ${proposal.sku} request.`)
+      }
+      proposals = proposals.filter(p => p.status === 'Pending')
+      renderAll()
+    }
+
+    function showToast(message) {
+      toast.textContent = message
+      toast.classList.remove('hidden')
+      setTimeout(() => toast.classList.add('hidden'), 2400)
+    }
+
+    function renderAll() {
+      renderStats()
+      renderGrid()
+      renderQueue()
+      renderDetail()
+    }
+
+    function handleExport() {
+      const rows = sortData(getFilteredData())
+      const header = ['SKU','Item','Site','On Hand','Safety Stock','Reorder Point','Lead Time','Status']
+      const csv = [header.join(',')]
+      rows.forEach(item => {
+        csv.push([item.sku, item.item, item.site, item.onHand, item.safetyStock, item.reorderPoint, item.leadTime, item.status].join(','))
+      })
+      const blob = new Blob([csv.join('\n')], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `reorder-point-grid-${new Date().toISOString().slice(0,10)}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+    }
+
+    document.addEventListener('click', (event) => {
+      const action = event.target.dataset.action
+      const id = event.target.dataset.id
+      if (action === 'review') {
+        selectedId = Number(id)
+        renderAll()
+      }
+      if (action === 'approve' || action === 'reject') {
+        handleQueueAction(id, action)
+      }
+    })
+
+    document.getElementById('exportBtn').addEventListener('click', handleExport)
+    document.getElementById('refreshBtn').addEventListener('click', () => showToast('Signals refreshed from WMS feed.'))
+
+    ;[searchInput, siteFilter, statusFilter, sortSelect].forEach(el => el.addEventListener('input', renderAll))
+    sortDirBtn.addEventListener('click', () => {
+      sortDir = sortDir === 'desc' ? 'asc' : 'desc'
+      sortDirBtn.textContent = sortDir === 'desc' ? 'Desc' : 'Asc'
+      renderAll()
+    })
+
+    initFilters()
+    renderAll()
+  </script>
+</body>
+</html>
