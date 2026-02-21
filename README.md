@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Reorder Point Control Grid** — data grid to tune reorder points with approvals, audit trail, and CSV export.
+**Warehouse Bin Rebalance Board** — drag-and-drop bin rebalancing with policy validation, approvals, and audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

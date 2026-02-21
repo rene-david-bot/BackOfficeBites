@@ -224,5 +224,26 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-21",
+    "day": 13,
+    "slug": "2026-02-21-warehouse-bin-rebalance",
+    "name": "Warehouse Bin Rebalance Board",
+    "description": "Drag-and-drop warehouse bin rebalancing with policy validation, approvals, and audit trail.",
+    "category": "Supply Chain",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "warehouse bins",
+      "drag-and-drop",
+      "policy validation",
+      "approval workflow",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

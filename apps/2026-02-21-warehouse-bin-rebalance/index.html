@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse Bin Rebalance Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { height: 10px; width: 10px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+    .drag-ghost { opacity: 0.4; }
+    .drop-target { outline: 2px dashed #38bdf8; outline-offset: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-slate-400 hover:text-slate-200">BackOfficeBites 🍔</a>
+    <div class="mt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div>
+        <h1 class="text-3xl font-semibold">Warehouse Bin Rebalance Board</h1>
+        <p class="text-slate-400 mt-2">Drag items between bins, validate policies, and approve rebalance moves in one workspace.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg px-4 py-3">
+          <p class="text-xs text-slate-500 uppercase">Pending approvals</p>
+          <p id="statPending" class="text-2xl font-semibold">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-lg px-4 py-3">
+          <p class="text-xs text-slate-500 uppercase">Bins over capacity</p>
+          <p id="statOver" class="text-2xl font-semibold">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-lg px-4 py-3">
+          <p class="text-xs text-slate-500 uppercase">Total SKUs</p>
+          <p id="statTotal" class="text-2xl font-semibold">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <section class="xl:col-span-8">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold">Bin Map</h2>
+          <span class="text-sm text-slate-400">Drag items to rebalance. Pending moves require approval.</span>
+        </div>
+        <div id="bins" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+      </section>
+
+      <aside class="xl:col-span-4 space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold">Controls</h3>
+          <div class="mt-4 space-y-4">
+            <div>
+              <label class="text-xs uppercase text-slate-500" for="searchInput">Search SKU or item</label>
+              <input id="searchInput" type="text" placeholder="Search..." class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs uppercase text-slate-500" for="zoneFilter">Zone</label>
+                <select id="zoneFilter" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm">
+                  <option value="all">All</option>
+                  <option value="A">Zone A</option>
+                  <option value="B">Zone B</option>
+                  <option value="Cold">Cold</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs uppercase text-slate-500" for="typeFilter">Item Type</label>
+                <select id="typeFilter" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm">
+                  <option value="all">All</option>
+                  <option value="standard">Standard</option>
+                  <option value="cold">Cold Chain</option>
+                  <option value="hazmat">Hazmat</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs uppercase text-slate-500" for="sortBy">Sort by</label>
+                <select id="sortBy" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm">
+                  <option value="sku">SKU</option>
+                  <option value="qty">Qty</option>
+                  <option value="volume">Volume</option>
+                  <option value="lastScan">Last Scan</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs uppercase text-slate-500" for="sortDir">Direction</label>
+                <select id="sortDir" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm">
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="resetFilters" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm">Reset Filters</button>
+              <button id="exportCsv" class="px-3 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold rounded-lg text-sm">Export CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold">Rebalance Requests</h3>
+          <p class="text-sm text-slate-400 mt-1">Moves remain pending until approved.</p>
+          <div id="requests" class="mt-4 space-y-3"></div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold">Policy Checks</h3>
+          <ul class="mt-3 text-sm text-slate-300 space-y-2">
+            <li>• Capacity cannot exceed bin limit.</li>
+            <li>• Cold chain items must stay in Cold bins.</li>
+            <li>• Hazmat items must stay in Hazmat bins.</li>
+            <li>• Pending moves cannot be moved again.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 class="text-lg font-semibold">Audit Trail</h3>
+          <div id="audit" class="mt-3 space-y-3 text-sm"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 rounded-lg shadow-lg hidden"></div>
+
+  <script>
+    const bins = [
+      { id: 'A1', name: 'A1 - Fast Movers', zone: 'A', capacity: 90, allowed: ['standard'], current: 0 },
+      { id: 'A2', name: 'A2 - Bulk Storage', zone: 'A', capacity: 110, allowed: ['standard'], current: 0 },
+      { id: 'B1', name: 'B1 - Hazmat Cage', zone: 'B', capacity: 60, allowed: ['hazmat'], current: 0 },
+      { id: 'C1', name: 'C1 - Cold Chain', zone: 'Cold', capacity: 70, allowed: ['cold'], current: 0 }
+    ];
+
+    const items = [
+      { id: 'SKU-4412', name: 'Eco Tape Roll', qty: 240, volume: 10, type: 'standard', status: 'Available', binId: 'A1', lastScan: '2026-02-20 18:42', value: 3120, pending: null },
+      { id: 'SKU-5521', name: 'Pallet Wrap 100m', qty: 90, volume: 16, type: 'standard', status: 'Available', binId: 'A1', lastScan: '2026-02-21 07:12', value: 980, pending: null },
+      { id: 'SKU-7744', name: 'Barcode Labels', qty: 480, volume: 8, type: 'standard', status: 'QC Hold', binId: 'A2', lastScan: '2026-02-21 06:50', value: 620, pending: null },
+      { id: 'SKU-2201', name: 'Packing Slip Paper', qty: 150, volume: 12, type: 'standard', status: 'Available', binId: 'A2', lastScan: '2026-02-20 19:30', value: 540, pending: null },
+      { id: 'SKU-3310', name: 'Steel Fasteners', qty: 65, volume: 22, type: 'standard', status: 'Available', binId: 'A2', lastScan: '2026-02-21 08:04', value: 1880, pending: null },
+      { id: 'SKU-9041', name: 'Adhesive Solvent', qty: 40, volume: 18, type: 'hazmat', status: 'Available', binId: 'B1', lastScan: '2026-02-21 05:55', value: 2700, pending: null },
+      { id: 'SKU-9042', name: 'Aerosol Cleaner', qty: 120, volume: 20, type: 'hazmat', status: 'Available', binId: 'B1', lastScan: '2026-02-20 21:22', value: 1320, pending: null },
+      { id: 'SKU-9043', name: 'Paint Thinner', qty: 30, volume: 15, type: 'hazmat', status: 'Cycle Count', binId: 'B1', lastScan: '2026-02-21 04:40', value: 2100, pending: null },
+      { id: 'SKU-7101', name: 'Insulated Gel Packs', qty: 140, volume: 14, type: 'cold', status: 'Available', binId: 'C1', lastScan: '2026-02-21 07:50', value: 1680, pending: null },
+      { id: 'SKU-7102', name: 'Chilled Container Lids', qty: 210, volume: 16, type: 'cold', status: 'Available', binId: 'C1', lastScan: '2026-02-21 07:20', value: 1320, pending: null },
+      { id: 'SKU-7103', name: 'Thermal Inserts', qty: 95, volume: 12, type: 'cold', status: 'Available', binId: 'C1', lastScan: '2026-02-20 22:15', value: 880, pending: null },
+      { id: 'SKU-6604', name: 'Return Mailers', qty: 300, volume: 14, type: 'standard', status: 'Available', binId: 'A1', lastScan: '2026-02-20 20:14', value: 760, pending: null },
+      { id: 'SKU-6605', name: 'Shock Sensors', qty: 75, volume: 19, type: 'standard', status: 'Available', binId: 'A2', lastScan: '2026-02-21 06:10', value: 2900, pending: null },
+      { id: 'SKU-6620', name: 'Stacking Pads', qty: 180, volume: 9, type: 'standard', status: 'Available', binId: 'A1', lastScan: '2026-02-21 07:58', value: 510, pending: null }
+    ];
+
+    let requests = [
+      { id: 'REQ-1001', itemId: 'SKU-3310', sku: 'SKU-3310', from: 'A2', to: 'A1', reason: 'Pick velocity spike on fasteners', status: 'Pending', createdAt: '2026-02-21 08:10' }
+    ];
+
+    let audit = [
+      { time: '2026-02-21 08:05', text: 'Cycle count completed for B1 - Hazmat Cage.' },
+      { time: '2026-02-21 08:10', text: 'Rebalance request created for SKU-3310 (A2 → A1).' },
+      { time: '2026-02-21 08:32', text: 'Cold chain bin temperature verified at 2.4°C.' }
+    ];
+
+    const filters = {
+      search: '',
+      zone: 'all',
+      type: 'all',
+      sortBy: 'sku',
+      sortDir: 'asc'
+    };
+
+    const binsEl = document.getElementById('bins');
+    const requestsEl = document.getElementById('requests');
+    const auditEl = document.getElementById('audit');
+
+    const searchInput = document.getElementById('searchInput');
+    const zoneFilter = document.getElementById('zoneFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const sortBy = document.getElementById('sortBy');
+    const sortDir = document.getElementById('sortDir');
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2800);
+    }
+
+    function computeBinUsage(binId) {
+      return items.filter(item => item.binId === binId).reduce((sum, item) => sum + item.volume, 0);
+    }
+
+    function sortItems(list) {
+      const dir = filters.sortDir === 'asc' ? 1 : -1;
+      return [...list].sort((a, b) => {
+        let valA = a[filters.sortBy];
+        let valB = b[filters.sortBy];
+        if (filters.sortBy === 'lastScan') {
+          valA = new Date(valA);
+          valB = new Date(valB);
+        }
+        if (typeof valA === 'string') {
+          return valA.localeCompare(valB) * dir;
+        }
+        return (valA - valB) * dir;
+      });
+    }
+
+    function applyFilters(list) {
+      return list.filter(item => {
+        const matchesSearch = `${item.id} ${item.name}`.toLowerCase().includes(filters.search.toLowerCase());
+        const matchesType = filters.type === 'all' || item.type === filters.type;
+        return matchesSearch && matchesType;
+      });
+    }
+
+    function renderBins() {
+      binsEl.innerHTML = '';
+      const visibleBins = filters.zone === 'all' ? bins : bins.filter(bin => bin.zone === filters.zone);
+      visibleBins.forEach(bin => {
+        const binItems = sortItems(applyFilters(items.filter(item => item.binId === bin.id)));
+        const usage = computeBinUsage(bin.id);
+        const over = usage > bin.capacity;
+        const binCard = document.createElement('div');
+        binCard.className = `bg-slate-900 border ${over ? 'border-rose-500/70' : 'border-slate-800'} rounded-xl p-4 min-h-[220px]`;
+        binCard.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="text-lg font-semibold">${bin.name}</h4>
+              <p class="text-xs text-slate-400">Zone ${bin.zone} · Allowed: ${bin.allowed.join(', ')}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-slate-500 uppercase">Capacity</p>
+              <p class="text-sm font-semibold ${over ? 'text-rose-400' : 'text-slate-200'}">${usage} / ${bin.capacity}</p>
+            </div>
+          </div>
+          <div class="mt-3 space-y-3" data-bin="${bin.id}"></div>
+        `;
+        const listEl = binCard.querySelector('[data-bin]');
+        if (binItems.length === 0) {
+          listEl.innerHTML = '<p class="text-sm text-slate-500 italic">No items match filters.</p>';
+        } else {
+          binItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm cursor-move';
+            card.setAttribute('draggable', 'true');
+            card.dataset.item = item.id;
+            card.innerHTML = `
+              <div class="flex items-center justify-between">
+                <p class="font-semibold">${item.id}</p>
+                <span class="text-xs ${item.pending ? 'text-amber-400' : 'text-slate-400'}">${item.pending ? 'Pending' : item.status}</span>
+              </div>
+              <p class="text-slate-300">${item.name}</p>
+              <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+                <span>Qty ${item.qty}</span>
+                <span>Vol ${item.volume}</span>
+                <span>Type ${item.type}</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Last scan ${item.lastScan}</p>
+            `;
+            card.addEventListener('dragstart', event => {
+              if (item.pending) {
+                event.preventDefault();
+                showToast('Move blocked: item already pending approval.');
+                return;
+              }
+              event.dataTransfer.setData('text/plain', item.id);
+              card.classList.add('drag-ghost');
+            });
+            card.addEventListener('dragend', () => card.classList.remove('drag-ghost'));
+            listEl.appendChild(card);
+          });
+        }
+
+        const dropZone = binCard.querySelector('[data-bin]');
+        dropZone.addEventListener('dragover', event => {
+          event.preventDefault();
+          dropZone.classList.add('drop-target');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-target'));
+        dropZone.addEventListener('drop', event => {
+          event.preventDefault();
+          dropZone.classList.remove('drop-target');
+          const itemId = event.dataTransfer.getData('text/plain');
+          handleDrop(itemId, bin.id);
+        });
+
+        binsEl.appendChild(binCard);
+      });
+    }
+
+    function renderRequests() {
+      if (requests.length === 0) {
+        requestsEl.innerHTML = '<p class="text-sm text-slate-500 italic">No pending requests.</p>';
+        return;
+      }
+      requestsEl.innerHTML = '';
+      requests.forEach(req => {
+        const card = document.createElement('div');
+        card.className = 'border border-slate-800 bg-slate-950 rounded-lg p-3';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">${req.sku}</p>
+            <span class="text-xs ${req.status === 'Pending' ? 'text-amber-400' : req.status === 'Approved' ? 'text-emerald-400' : 'text-rose-400'}">${req.status}</span>
+          </div>
+          <p class="text-sm text-slate-300 mt-1">${req.from} → ${req.to}</p>
+          <p class="text-xs text-slate-500 mt-1">${req.reason}</p>
+          <p class="text-xs text-slate-500 mt-2">${req.createdAt}</p>
+        `;
+        if (req.status === 'Pending') {
+          const actions = document.createElement('div');
+          actions.className = 'flex gap-2 mt-3';
+          const approveBtn = document.createElement('button');
+          approveBtn.className = 'px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs';
+          approveBtn.textContent = 'Approve';
+          approveBtn.onclick = () => updateRequest(req.id, 'Approved');
+          const rejectBtn = document.createElement('button');
+          rejectBtn.className = 'px-2 py-1 rounded-md bg-rose-500/20 text-rose-300 text-xs';
+          rejectBtn.textContent = 'Reject';
+          rejectBtn.onclick = () => updateRequest(req.id, 'Rejected');
+          actions.appendChild(approveBtn);
+          actions.appendChild(rejectBtn);
+          card.appendChild(actions);
+        }
+        requestsEl.appendChild(card);
+      });
+    }
+
+    function renderAudit() {
+      auditEl.innerHTML = '';
+      audit.slice(0, 6).forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'border-l-2 border-slate-700 pl-3';
+        row.innerHTML = `<p class="text-xs text-slate-500">${entry.time}</p><p>${entry.text}</p>`;
+        auditEl.appendChild(row);
+      });
+    }
+
+    function updateStats() {
+      const pending = requests.filter(req => req.status === 'Pending').length;
+      const over = bins.filter(bin => computeBinUsage(bin.id) > bin.capacity).length;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statOver').textContent = over;
+      document.getElementById('statTotal').textContent = items.length;
+    }
+
+    function handleDrop(itemId, targetBin) {
+      const item = items.find(entry => entry.id === itemId);
+      if (!item) return;
+      if (item.pending) {
+        showToast('Move blocked: item already pending approval.');
+        return;
+      }
+      if (item.binId === targetBin) {
+        showToast('Item already in this bin.');
+        return;
+      }
+      const bin = bins.find(entry => entry.id === targetBin);
+      if (!bin.allowed.includes(item.type)) {
+        showToast(`Move blocked: ${item.type} items not allowed in ${bin.name}.`);
+        return;
+      }
+      const projectedUsage = computeBinUsage(targetBin) + item.volume;
+      if (projectedUsage > bin.capacity) {
+        showToast('Move blocked: bin capacity exceeded.');
+        return;
+      }
+      const previousBin = item.binId;
+      item.binId = targetBin;
+      item.pending = { from: previousBin, to: targetBin };
+      const request = {
+        id: `REQ-${Date.now()}`,
+        itemId: item.id,
+        sku: item.id,
+        from: previousBin,
+        to: targetBin,
+        reason: 'Rebalance suggested by pick velocity.',
+        status: 'Pending',
+        createdAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+      };
+      requests.unshift(request);
+      audit.unshift({
+        time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        text: `Rebalance request created for ${item.id} (${previousBin} → ${targetBin}).`
+      });
+      showToast('Rebalance move staged for approval.');
+      renderAll();
+    }
+
+    function updateRequest(requestId, status) {
+      const req = requests.find(entry => entry.id === requestId);
+      if (!req) return;
+      req.status = status;
+      const item = items.find(entry => entry.id === req.itemId);
+      if (status === 'Approved') {
+        if (item) item.pending = null;
+        audit.unshift({
+          time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          text: `Rebalance approved for ${req.sku} (${req.from} → ${req.to}).`
+        });
+        showToast('Rebalance approved.');
+      }
+      if (status === 'Rejected') {
+        if (item && item.pending) {
+          item.binId = item.pending.from;
+          item.pending = null;
+        }
+        audit.unshift({
+          time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          text: `Rebalance rejected for ${req.sku}. Item returned to ${req.from}.`
+        });
+        showToast('Rebalance rejected.');
+      }
+      renderAll();
+    }
+
+    function exportCSV() {
+      const visibleBins = filters.zone === 'all' ? bins : bins.filter(bin => bin.zone === filters.zone);
+      let filteredItems = items.filter(item => visibleBins.some(bin => bin.id === item.binId));
+      filteredItems = sortItems(applyFilters(filteredItems));
+      const rows = [
+        ['SKU', 'Name', 'Qty', 'Volume', 'Type', 'Status', 'Bin', 'Last Scan', 'Pending']
+      ];
+      filteredItems.forEach(item => {
+        rows.push([
+          item.id,
+          item.name,
+          item.qty,
+          item.volume,
+          item.type,
+          item.status,
+          item.binId,
+          item.lastScan,
+          item.pending ? 'Yes' : 'No'
+        ]);
+      });
+      const csv = rows.map(row => row.map(value => `"${value}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'warehouse-bin-rebalance.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      audit.unshift({
+        time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        text: 'CSV export generated for current filters.'
+      });
+      renderAudit();
+      showToast('CSV export downloaded.');
+    }
+
+    function renderAll() {
+      renderBins();
+      renderRequests();
+      renderAudit();
+      updateStats();
+    }
+
+    searchInput.addEventListener('input', event => {
+      filters.search = event.target.value.trim();
+      renderAll();
+    });
+    zoneFilter.addEventListener('change', event => {
+      filters.zone = event.target.value;
+      renderAll();
+    });
+    typeFilter.addEventListener('change', event => {
+      filters.type = event.target.value;
+      renderAll();
+    });
+    sortBy.addEventListener('change', event => {
+      filters.sortBy = event.target.value;
+      renderAll();
+    });
+    sortDir.addEventListener('change', event => {
+      filters.sortDir = event.target.value;
+      renderAll();
+    });
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      filters.search = '';
+      filters.zone = 'all';
+      filters.type = 'all';
+      filters.sortBy = 'sku';
+      filters.sortDir = 'asc';
+      searchInput.value = '';
+      zoneFilter.value = 'all';
+      typeFilter.value = 'all';
+      sortBy.value = 'sku';
+      sortDir.value = 'asc';
+      renderAll();
+    });
+    document.getElementById('exportCsv').addEventListener('click', exportCSV);
+
+    renderAll();
+  </script>
+</body>
+</html>
