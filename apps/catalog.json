@@ -245,5 +245,26 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-23",
+    "day": 14,
+    "slug": "2026-02-23-room-booking-command-center",
+    "name": "Room Booking Command Center",
+    "description": "Policy-aware room scheduling with approvals, conflict checks, and audit trail.",
+    "category": "IT Ops",
+    "pattern": "Calendar",
+    "tags": [
+      "room booking",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

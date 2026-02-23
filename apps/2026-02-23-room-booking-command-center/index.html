@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Booking Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-400 hover:text-amber-300 font-semibold">BackOfficeBites 🍔</a>
+
+    <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Room Booking Command Center</h1>
+        <p class="text-slate-300 mt-2 max-w-2xl">Policy-aware room scheduling with approvals, live conflict checks, and audit-ready history.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="exportCsv" class="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30">Export CSV</button>
+        <button id="resetDemo" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">Reset Demo</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Bookings Today</p>
+        <p id="statToday" class="text-2xl font-semibold mt-2">0</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Needs Approval</p>
+        <p id="statPending" class="text-2xl font-semibold mt-2">0</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Policy Flags</p>
+        <p id="statFlags" class="text-2xl font-semibold mt-2">0</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Rooms Available</p>
+        <p id="statAvailable" class="text-2xl font-semibold mt-2">0</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6 mt-8">
+      <section class="lg:col-span-1 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">New Booking Request</h2>
+        <p class="text-sm text-slate-400 mt-1">Auto-routes approvals when policies are triggered.</p>
+        <form id="bookingForm" class="mt-4 space-y-4">
+          <div>
+            <label class="text-xs text-slate-400" for="title">Meeting Title</label>
+            <input id="title" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Q1 Forecast Review" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400" for="requester">Requester</label>
+            <input id="requester" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Alex Tan" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400" for="room">Room</label>
+            <select id="room" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400" for="date">Date</label>
+              <input id="date" type="date" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="attendees">Attendees</label>
+              <input id="attendees" type="number" min="2" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="12" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400" for="start">Start</label>
+              <input id="start" type="time" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="end">End</label>
+              <input id="end" type="time" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400" for="notes">Notes</label>
+            <textarea id="notes" rows="2" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Needs hybrid setup"></textarea>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <div>
+              <span class="font-semibold text-slate-200">Policy rules:</span>
+              After-hours, capacity overrides, or exec events require approval.
+            </div>
+          </div>
+          <div id="formError" class="text-sm text-rose-300 hidden"></div>
+          <button class="w-full mt-2 px-4 py-2 rounded-lg bg-amber-500/20 text-amber-100 border border-amber-500/40 hover:bg-amber-500/30">Submit Booking</button>
+        </form>
+      </section>
+
+      <section class="lg:col-span-2 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">Weekly Calendar</h2>
+            <p class="text-sm text-slate-400">View bookings by day and room focus.</p>
+          </div>
+          <div class="flex gap-2">
+            <select id="calendarRoom" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></select>
+          </div>
+        </div>
+        <div id="calendarGrid" class="grid md:grid-cols-5 gap-3 mt-4"></div>
+      </section>
+    </div>
+
+    <section class="mt-8 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">Booking Ledger</h2>
+          <p class="text-sm text-slate-400">Search, filter, and sort every request.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <input id="search" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm" placeholder="Search title or requester" />
+          <select id="filterStatus" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="all">All Statuses</option>
+            <option value="Approved">Approved</option>
+            <option value="Needs Approval">Needs Approval</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <select id="filterBuilding" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></select>
+          <select id="sortBy" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="start">Sort: Start Time</option>
+            <option value="title">Sort: Title</option>
+            <option value="requester">Sort: Requester</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 border-b border-slate-800">
+              <th class="py-2">Title</th>
+              <th>Requester</th>
+              <th>Room</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody id="bookingTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="grid lg:grid-cols-2 gap-6 mt-8">
+      <section class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">Approval Queue</h2>
+        <p class="text-sm text-slate-400">Resolve policy exceptions and high-impact bookings.</p>
+        <div id="approvalQueue" class="mt-4 space-y-3"></div>
+      </section>
+      <section class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <p class="text-sm text-slate-400">Every status change is logged automatically.</p>
+        <div id="auditTrail" class="mt-4 space-y-3 max-h-64 overflow-y-auto"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const rooms = [
+      { id: 'r-aurora', name: 'Aurora Boardroom', building: 'HQ East', floor: '14F', capacity: 18, equipment: ['Video', 'Whiteboard'] },
+      { id: 'r-nova', name: 'Nova Strategy Pod', building: 'HQ East', floor: '12F', capacity: 8, equipment: ['Video'] },
+      { id: 'r-atlas', name: 'Atlas Town Hall', building: 'HQ West', floor: '3F', capacity: 40, equipment: ['Stage', 'Recording'] },
+      { id: 'r-orbit', name: 'Orbit Sprint Room', building: 'HQ West', floor: '5F', capacity: 12, equipment: ['Whiteboard'] },
+      { id: 'r-lumen', name: 'Lumen Client Suite', building: 'HQ East', floor: '16F', capacity: 6, equipment: ['Video', 'Catering'] }
+    ];
+
+    const seedBookings = [
+      { id: 'BK-1001', title: 'Security Posture Review', requester: 'Mila Roth', roomId: 'r-aurora', date: '2026-02-23', start: '09:30', end: '10:30', attendees: 12, status: 'Approved', policyFlags: [], notes: 'Quarterly review', createdAt: '08:10' },
+      { id: 'BK-1002', title: 'Ops All-Hands', requester: 'Diego Keller', roomId: 'r-atlas', date: '2026-02-23', start: '17:30', end: '19:00', attendees: 35, status: 'Needs Approval', policyFlags: ['After-hours booking', 'Executive approval required'], notes: 'Town hall with recording', createdAt: '08:25' },
+      { id: 'BK-1003', title: 'Finance Close Sprint', requester: 'Nora Berg', roomId: 'r-orbit', date: '2026-02-24', start: '11:00', end: '12:30', attendees: 10, status: 'Approved', policyFlags: [], notes: 'Close week', createdAt: '09:02' },
+      { id: 'BK-1004', title: 'Customer Escalation', requester: 'Samir Patel', roomId: 'r-lumen', date: '2026-02-24', start: '15:00', end: '16:00', attendees: 7, status: 'Needs Approval', policyFlags: ['Capacity override'], notes: 'VIP presence', createdAt: '09:10' },
+      { id: 'BK-1005', title: 'IT Change Advisory', requester: 'Hana Volk', roomId: 'r-aurora', date: '2026-02-25', start: '13:00', end: '14:00', attendees: 16, status: 'Approved', policyFlags: [], notes: 'CAB weekly', createdAt: '09:15' },
+      { id: 'BK-1006', title: 'Vendor Onboarding', requester: 'Leo Chen', roomId: 'r-nova', date: '2026-02-25', start: '09:00', end: '10:00', attendees: 6, status: 'Approved', policyFlags: [], notes: 'Legal check', createdAt: '09:20' },
+      { id: 'BK-1007', title: 'After-Hours War Room', requester: 'Priya Shah', roomId: 'r-orbit', date: '2026-02-26', start: '18:30', end: '20:00', attendees: 9, status: 'Needs Approval', policyFlags: ['After-hours booking'], notes: 'Incident follow-up', createdAt: '09:34' },
+      { id: 'BK-1008', title: 'Client Quarterly Briefing', requester: 'Avery Jones', roomId: 'r-lumen', date: '2026-02-27', start: '10:00', end: '11:30', attendees: 6, status: 'Approved', policyFlags: [], notes: 'Exec sponsor', createdAt: '09:45' },
+      { id: 'BK-1009', title: 'Facilities Retrofit', requester: 'Lara Weiss', roomId: 'r-atlas', date: '2026-02-27', start: '14:00', end: '15:30', attendees: 22, status: 'Needs Approval', policyFlags: ['Executive approval required'], notes: 'Recording needed', createdAt: '09:52' }
+    ];
+
+    let bookings = [];
+    let auditTrail = [];
+
+    const dateBase = new Date('2026-02-23T00:00:00');
+    const weekDates = Array.from({ length: 5 }).map((_, idx) => {
+      const d = new Date(dateBase);
+      d.setDate(d.getDate() + idx);
+      return d;
+    });
+
+    const formatDateKey = (date) => date.toISOString().split('T')[0];
+    const formatDayLabel = (date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const statusStyles = {
+      'Approved': 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+      'Needs Approval': 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+      'Rejected': 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+    };
+
+    function resetState() {
+      bookings = seedBookings.map(b => ({ ...b }));
+      auditTrail = [
+        { time: '08:30', message: 'Policy engine initialized for weekly scheduling window.' },
+        { time: '08:42', message: 'BK-1002 flagged: after-hours booking routed to approvals.' },
+        { time: '09:12', message: 'BK-1004 flagged: capacity override requires approval.' }
+      ];
+    }
+
+    function populateRoomOptions() {
+      const roomSelect = document.getElementById('room');
+      const calendarRoom = document.getElementById('calendarRoom');
+      roomSelect.innerHTML = rooms.map(r => `<option value="${r.id}">${r.name} • ${r.capacity} seats</option>`).join('');
+      calendarRoom.innerHTML = `<option value="all">All Rooms</option>` + rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      document.getElementById('filterBuilding').innerHTML = `<option value="all">All Buildings</option>` + [...new Set(rooms.map(r => r.building))].map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+
+    function computePolicyFlags({ attendees, start, end, roomId, title }) {
+      const room = rooms.find(r => r.id === roomId);
+      const flags = [];
+      const toMinutes = (time) => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+      };
+      if (attendees > room.capacity) flags.push('Capacity override');
+      if (toMinutes(start) < 8 * 60 || toMinutes(end) > 18 * 60) flags.push('After-hours booking');
+      if (room.equipment.includes('Recording') || title.toLowerCase().includes('all-hands')) flags.push('Executive approval required');
+      return flags;
+    }
+
+    function logAudit(message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      auditTrail.unshift({ time, message });
+    }
+
+    function updateStats() {
+      const todayKey = formatDateKey(dateBase);
+      const todayBookings = bookings.filter(b => b.date === todayKey);
+      const pending = bookings.filter(b => b.status === 'Needs Approval').length;
+      const flagged = bookings.filter(b => b.policyFlags.length).length;
+      const roomsInUse = new Set(todayBookings.map(b => b.roomId)).size;
+      document.getElementById('statToday').textContent = todayBookings.length;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statFlags').textContent = flagged;
+      document.getElementById('statAvailable').textContent = Math.max(rooms.length - roomsInUse, 0);
+    }
+
+    function renderCalendar() {
+      const calendar = document.getElementById('calendarGrid');
+      const focusRoom = document.getElementById('calendarRoom').value;
+      calendar.innerHTML = '';
+      weekDates.forEach(date => {
+        const key = formatDateKey(date);
+        const dayBookings = bookings
+          .filter(b => b.date === key && (focusRoom === 'all' || b.roomId === focusRoom))
+          .sort((a, b) => a.start.localeCompare(b.start));
+
+        const cards = dayBookings.map(b => {
+          const room = rooms.find(r => r.id === b.roomId);
+          const statusClass = statusStyles[b.status] || statusStyles['Approved'];
+          return `
+            <div class="rounded-lg border ${statusClass} px-3 py-2">
+              <p class="text-sm font-semibold">${b.start} • ${b.title}</p>
+              <p class="text-xs opacity-80">${room.name} (${b.attendees} ppl)</p>
+              <p class="text-[11px] opacity-70">${b.status}</p>
+            </div>
+          `;
+        }).join('') || `<div class="text-xs text-slate-500">No bookings</div>`;
+
+        const dayCard = document.createElement('div');
+        dayCard.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800';
+        dayCard.innerHTML = `
+          <div class="text-sm font-semibold">${formatDayLabel(date)}</div>
+          <div class="mt-2 space-y-2">${cards}</div>
+        `;
+        calendar.appendChild(dayCard);
+      });
+    }
+
+    function filteredBookings() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const statusFilter = document.getElementById('filterStatus').value;
+      const buildingFilter = document.getElementById('filterBuilding').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      let list = bookings.filter(b => {
+        const room = rooms.find(r => r.id === b.roomId);
+        const matchesSearch = b.title.toLowerCase().includes(search) || b.requester.toLowerCase().includes(search);
+        const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+        const matchesBuilding = buildingFilter === 'all' || room.building === buildingFilter;
+        return matchesSearch && matchesStatus && matchesBuilding;
+      });
+
+      list = list.sort((a, b) => {
+        if (sortBy === 'start') return (a.date + a.start).localeCompare(b.date + b.start);
+        if (sortBy === 'title') return a.title.localeCompare(b.title);
+        return a.requester.localeCompare(b.requester);
+      });
+      return list;
+    }
+
+    function renderTable() {
+      const table = document.getElementById('bookingTable');
+      table.innerHTML = '';
+      filteredBookings().forEach(b => {
+        const room = rooms.find(r => r.id === b.roomId);
+        const statusClass = statusStyles[b.status] || statusStyles['Approved'];
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-900/60';
+        row.innerHTML = `
+          <td class="py-2 font-medium">${b.title}</td>
+          <td>${b.requester}</td>
+          <td>${room.name}</td>
+          <td>${b.date}</td>
+          <td>${b.start} - ${b.end}</td>
+          <td><span class="px-2 py-1 rounded-full text-xs border ${statusClass}">${b.status}</span></td>
+          <td class="text-xs text-slate-400">${b.policyFlags.join(', ') || '—'}</td>
+        `;
+        table.appendChild(row);
+      });
+    }
+
+    function renderApprovalQueue() {
+      const queue = document.getElementById('approvalQueue');
+      const pending = bookings.filter(b => b.status === 'Needs Approval');
+      queue.innerHTML = '';
+      if (!pending.length) {
+        queue.innerHTML = '<p class="text-sm text-slate-400">No approvals pending.</p>';
+        return;
+      }
+      pending.forEach(b => {
+        const room = rooms.find(r => r.id === b.roomId);
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-semibold">${b.title}</p>
+              <p class="text-xs text-slate-400">${b.date} • ${b.start}-${b.end} • ${room.name}</p>
+              <p class="text-xs text-amber-200 mt-1">Flags: ${b.policyFlags.join(', ')}</p>
+            </div>
+            <div class="flex gap-2">
+              <button data-action="approve" data-id="${b.id}" class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-500/40">Approve</button>
+              <button data-action="reject" data-id="${b.id}" class="px-3 py-1 rounded-lg bg-rose-500/20 text-rose-200 border border-rose-500/40">Reject</button>
+            </div>
+          </div>
+        `;
+        queue.appendChild(card);
+      });
+    }
+
+    function renderAudit() {
+      const audit = document.getElementById('auditTrail');
+      audit.innerHTML = '';
+      auditTrail.slice(0, 10).forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800';
+        item.innerHTML = `
+          <p class="text-xs text-slate-400">${entry.time}</p>
+          <p class="text-sm">${entry.message}</p>
+        `;
+        audit.appendChild(item);
+      });
+    }
+
+    function renderAll() {
+      updateStats();
+      renderCalendar();
+      renderTable();
+      renderApprovalQueue();
+      renderAudit();
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const formError = document.getElementById('formError');
+      formError.classList.add('hidden');
+      const title = document.getElementById('title').value.trim();
+      const requester = document.getElementById('requester').value.trim();
+      const roomId = document.getElementById('room').value;
+      const date = document.getElementById('date').value;
+      const attendees = Number(document.getElementById('attendees').value);
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const notes = document.getElementById('notes').value.trim();
+
+      if (!title || !requester || !date || !start || !end) {
+        formError.textContent = 'Please complete all required fields.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      const toMinutes = (time) => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+      };
+      if (toMinutes(end) <= toMinutes(start)) {
+        formError.textContent = 'End time must be after start time.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      const conflict = bookings.find(b => b.roomId === roomId && b.date === date && !(toMinutes(end) <= toMinutes(b.start) || toMinutes(start) >= toMinutes(b.end)));
+      if (conflict) {
+        formError.textContent = `Conflict with ${conflict.title} at ${conflict.start}.`;
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      const policyFlags = computePolicyFlags({ attendees, start, end, roomId, title });
+      const status = policyFlags.length ? 'Needs Approval' : 'Approved';
+      const id = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
+      bookings.unshift({ id, title, requester, roomId, date, start, end, attendees, status, policyFlags, notes, createdAt: 'Now' });
+      logAudit(`${id} created by ${requester}. Status: ${status}.`);
+
+      document.getElementById('bookingForm').reset();
+      renderAll();
+    });
+
+    document.getElementById('approvalQueue').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      const id = button.dataset.id;
+      const action = button.dataset.action;
+      const booking = bookings.find(b => b.id === id);
+      if (!booking) return;
+
+      if (action === 'approve') {
+        booking.status = 'Approved';
+        logAudit(`${id} approved by Ops lead.`);
+      }
+
+      if (action === 'reject') {
+        const reason = prompt('Rejection reason?', 'Capacity risk not mitigated');
+        booking.status = 'Rejected';
+        booking.policyFlags = booking.policyFlags.length ? booking.policyFlags : ['Rejected'];
+        logAudit(`${id} rejected. Reason: ${reason || 'No reason provided'}.`);
+      }
+      renderAll();
+    });
+
+    document.getElementById('search').addEventListener('input', renderAll);
+    document.getElementById('filterStatus').addEventListener('change', renderAll);
+    document.getElementById('filterBuilding').addEventListener('change', renderAll);
+    document.getElementById('sortBy').addEventListener('change', renderAll);
+    document.getElementById('calendarRoom').addEventListener('change', renderAll);
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const rows = filteredBookings();
+      const header = ['ID', 'Title', 'Requester', 'Room', 'Building', 'Date', 'Start', 'End', 'Status', 'Flags'];
+      const csv = [header.join(',')].concat(rows.map(b => {
+        const room = rooms.find(r => r.id === b.roomId);
+        return [b.id, b.title, b.requester, room.name, room.building, b.date, b.start, b.end, b.status, b.policyFlags.join(' | ')].map(value => `"${value}"`).join(',');
+      })).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'room-booking-ledger.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      logAudit('CSV export triggered for filtered bookings.');
+      renderAudit();
+    });
+
+    document.getElementById('resetDemo').addEventListener('click', () => {
+      resetState();
+      renderAll();
+    });
+
+    function init() {
+      resetState();
+      populateRoomOptions();
+      const dateInput = document.getElementById('date');
+      dateInput.value = formatDateKey(dateBase);
+      dateInput.min = formatDateKey(weekDates[0]);
+      dateInput.max = formatDateKey(weekDates[weekDates.length - 1]);
+      renderAll();
+    }
+
+    init();
+  </script>
+</body>
+</html>
