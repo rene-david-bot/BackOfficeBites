@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cash Flow Forecast Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-400 hover:text-amber-300 font-semibold">BackOfficeBites 🍔</a>
+
+    <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Cash Flow Forecast Command Center</h1>
+        <p class="text-slate-300 mt-2 max-w-2xl">Scenario-based cash flow forecasting with approvals, variance alerts, and audit-ready history.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="exportCsv" class="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30">Export CSV</button>
+        <button id="submitScenario" class="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-100 border border-amber-500/40 hover:bg-amber-500/30">Submit for Approval</button>
+        <button id="resetDemo" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">Reset Demo</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Cash Position (12M)</p>
+        <p id="statCash" class="text-2xl font-semibold mt-2">$0.0M</p>
+        <p id="statCashNote" class="text-xs text-slate-400 mt-1">Updated 09:10 UTC</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Runway</p>
+        <p id="statRunway" class="text-2xl font-semibold mt-2">0 months</p>
+        <p class="text-xs text-slate-400 mt-1">Policy floor: 9 months</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Variance vs Base</p>
+        <p id="statVariance" class="text-2xl font-semibold mt-2">$0.0M</p>
+        <p id="statVarianceNote" class="text-xs text-slate-400 mt-1">Active scenario impact</p>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800">
+        <p class="text-xs uppercase text-slate-400">Approval Queue</p>
+        <p id="statApprovals" class="text-2xl font-semibold mt-2">0</p>
+        <p class="text-xs text-slate-400 mt-1">Pending CFO sign-off</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6 mt-8">
+      <section class="lg:col-span-1 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">Scenario Builder</h2>
+        <p class="text-sm text-slate-400 mt-1">Tune assumptions and reforecast instantly.</p>
+        <form id="scenarioForm" class="mt-4 space-y-4">
+          <div>
+            <label class="text-xs text-slate-400" for="scenarioName">Scenario Name</label>
+            <input id="scenarioName" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400" for="roleSelect">Role View</label>
+              <select id="roleSelect" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                <option value="Analyst">Analyst</option>
+                <option value="CFO">CFO</option>
+                <option value="Treasury">Treasury</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="horizon">Horizon</label>
+              <select id="horizon" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                <option value="6">6 months</option>
+                <option value="12">12 months</option>
+                <option value="18">18 months</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400" for="growth">Revenue Growth %</label>
+              <input id="growth" type="number" step="0.5" min="-20" max="40" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="churn">Churn Delta %</label>
+              <input id="churn" type="number" step="0.5" min="-5" max="15" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400" for="opex">Opex Change %</label>
+              <input id="opex" type="number" step="0.5" min="-10" max="20" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400" for="dso">DSO (days)</label>
+              <input id="dso" type="number" step="1" min="30" max="90" required class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400" for="notes">Notes</label>
+            <textarea id="notes" rows="2" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Key assumption changes"></textarea>
+          </div>
+          <div class="text-xs text-slate-400">
+            <span class="font-semibold text-slate-200">Policy checks:</span>
+            DSO &gt; 60, runway &lt; 9 months, or opex change &gt; 5% triggers approval.
+          </div>
+          <div id="formError" class="text-sm text-rose-300 hidden"></div>
+          <button class="w-full mt-2 px-4 py-2 rounded-lg bg-sky-500/20 text-sky-100 border border-sky-500/40 hover:bg-sky-500/30">Reforecast</button>
+        </form>
+      </section>
+
+      <section class="lg:col-span-2 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">Cash Balance Forecast</h2>
+            <p class="text-sm text-slate-400">Base vs active scenario over the selected horizon.</p>
+          </div>
+          <div class="flex gap-2">
+            <select id="activeScenario" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></select>
+          </div>
+        </div>
+        <div class="mt-4">
+          <canvas id="cashChart" height="160"></canvas>
+        </div>
+        <div id="scenarioCards" class="grid md:grid-cols-3 gap-3 mt-4"></div>
+      </section>
+    </div>
+
+    <section class="mt-8 p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">Forecast Line Items</h2>
+          <p class="text-sm text-slate-400">Search, filter, and sort the cash drivers.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <input id="searchInput" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm" placeholder="Search line items" />
+          <select id="filterUnit" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></select>
+          <select id="filterCategory" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="all">All Categories</option>
+            <option value="Inflow">Inflow</option>
+            <option value="Outflow">Outflow</option>
+          </select>
+          <select id="sortBy" class="rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="variance">Sort: Variance</option>
+            <option value="amount">Sort: Forecast</option>
+            <option value="name">Sort: Name</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 border-b border-slate-800">
+              <th class="py-2">Line Item</th>
+              <th>Unit</th>
+              <th>Category</th>
+              <th>Base ($M)</th>
+              <th>Forecast ($M)</th>
+              <th>Variance ($M)</th>
+              <th id="confidenceHeader" class="hidden">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="lineTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="grid lg:grid-cols-2 gap-6 mt-8">
+      <section class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">Approval Queue</h2>
+        <p class="text-sm text-slate-400">Policy-triggered scenarios awaiting CFO sign-off.</p>
+        <div id="approvalQueue" class="mt-4 space-y-3"></div>
+      </section>
+      <section class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <p class="text-sm text-slate-400">Every scenario update is logged automatically.</p>
+        <div id="auditTrail" class="mt-4 space-y-3 max-h-64 overflow-y-auto"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const baseSeries = [32.0, 31.4, 30.2, 29.1, 28.0, 27.2, 26.6, 25.9, 25.1, 24.4, 23.8, 23.0];
+
+    const seedScenarios = [
+      {
+        id: 'sc-base',
+        name: 'Base FY26',
+        owner: 'Nadia Kim',
+        status: 'Approved',
+        growth: 6,
+        churn: 2,
+        opex: 3,
+        dso: 45,
+        horizon: 12,
+        updatedAt: '09:02'
+      },
+      {
+        id: 'sc-down',
+        name: 'Downside: Delayed Renewals',
+        owner: 'Luis Ortega',
+        status: 'Pending Approval',
+        growth: -4,
+        churn: 6,
+        opex: 5,
+        dso: 62,
+        horizon: 12,
+        updatedAt: '08:45'
+      },
+      {
+        id: 'sc-up',
+        name: 'Upside: Expansion Push',
+        owner: 'Priya Shah',
+        status: 'Draft',
+        growth: 12,
+        churn: 1,
+        opex: 6,
+        dso: 38,
+        horizon: 12,
+        updatedAt: '08:32'
+      }
+    ];
+
+    const baseLineItems = [
+      { id: 'LI-01', name: 'Subscription Revenue', unit: 'Enterprise', category: 'Inflow', base: 8.2 },
+      { id: 'LI-02', name: 'Professional Services', unit: 'Enterprise', category: 'Inflow', base: 2.4 },
+      { id: 'LI-03', name: 'Usage Overages', unit: 'SMB', category: 'Inflow', base: 1.5 },
+      { id: 'LI-04', name: 'Partner Renewals', unit: 'Channel', category: 'Inflow', base: 1.1 },
+      { id: 'LI-05', name: 'Payroll', unit: 'Corporate', category: 'Outflow', base: -4.8 },
+      { id: 'LI-06', name: 'Cloud Hosting', unit: 'IT', category: 'Outflow', base: -2.6 },
+      { id: 'LI-07', name: 'Sales Commissions', unit: 'Sales', category: 'Outflow', base: -1.2 },
+      { id: 'LI-08', name: 'Marketing Programs', unit: 'Marketing', category: 'Outflow', base: -1.1 },
+      { id: 'LI-09', name: 'Facilities & Travel', unit: 'Corporate', category: 'Outflow', base: -0.9 },
+      { id: 'LI-10', name: 'Collections Lag', unit: 'Finance', category: 'Outflow', base: -0.7 },
+      { id: 'LI-11', name: 'Security & Compliance', unit: 'IT', category: 'Outflow', base: -0.5 },
+      { id: 'LI-12', name: 'Partner Rebates', unit: 'Sales', category: 'Outflow', base: -0.6 }
+    ];
+
+    const seedAudit = [
+      { time: '08:12', actor: 'Nadia Kim', message: 'Base FY26 scenario approved by CFO.' },
+      { time: '08:32', actor: 'Priya Shah', message: 'Upside scenario drafted with hiring surge.' },
+      { time: '08:45', actor: 'Luis Ortega', message: 'Downside scenario submitted for approval.' }
+    ];
+
+    let scenarios = JSON.parse(JSON.stringify(seedScenarios));
+    let auditTrail = JSON.parse(JSON.stringify(seedAudit));
+    let activeScenarioId = 'sc-base';
+    let role = 'Analyst';
+    let chart;
+
+    const statusStyles = {
+      'Approved': 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+      'Pending Approval': 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+      'Draft': 'bg-slate-800 text-slate-200 border-slate-700',
+      'Rejected': 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+    };
+
+    const formatMoney = (value) => `$${value.toFixed(1)}M`;
+
+    const getScenario = (id) => scenarios.find((scenario) => scenario.id === id);
+
+    const buildForecastLineItems = (scenario) => {
+      const growthFactor = 1 + (scenario.growth / 100);
+      const churnFactor = 1 - (scenario.churn / 100);
+      const opexFactor = 1 + (scenario.opex / 100);
+      const dsoPenalty = scenario.dso > 45 ? (scenario.dso - 45) / 100 : 0;
+
+      return baseLineItems.map((item) => {
+        let forecast = item.base;
+        if (item.category === 'Inflow') {
+          forecast = item.base * growthFactor * churnFactor;
+        } else {
+          forecast = item.base * opexFactor;
+        }
+        if (item.name === 'Collections Lag') {
+          forecast = item.base * (1 + dsoPenalty);
+        }
+        const variance = forecast - item.base;
+        const confidence = scenario.status === 'Approved' ? 'High' : scenario.status === 'Pending Approval' ? 'Medium' : 'Low';
+        return { ...item, forecast: Number(forecast.toFixed(2)), variance: Number(variance.toFixed(2)), confidence };
+      });
+    };
+
+    const computeScenarioMetrics = (scenario) => {
+      const items = buildForecastLineItems(scenario);
+      const variance = items.reduce((sum, item) => sum + item.variance, 0);
+      const netFlow = items.reduce((sum, item) => sum + item.forecast, 0);
+      const cashPosition = baseSeries[baseSeries.length - 1] + variance;
+      const monthlyBurn = netFlow < 0 ? Math.abs(netFlow) : 0.8;
+      const runway = Math.max(3, Math.min(18, Math.round(cashPosition / monthlyBurn)));
+      const policyFlags = [];
+      if (scenario.dso > 60) policyFlags.push('DSO > 60 days');
+      if (scenario.opex > 5) policyFlags.push('Opex change > 5%');
+      if (runway < 9) policyFlags.push('Runway < 9 months');
+      if (variance < -2.5) policyFlags.push('Variance alert');
+
+      scenario.variance = Number(variance.toFixed(1));
+      scenario.runway = runway;
+      scenario.cashPosition = Number(cashPosition.toFixed(1));
+      scenario.netFlow = Number(netFlow.toFixed(1));
+      scenario.policyFlags = policyFlags;
+
+      return items;
+    };
+
+    const buildScenarioSeries = (scenario) => {
+      const variance = scenario.variance || 0;
+      const monthlyDelta = variance / baseSeries.length;
+      return baseSeries.map((value, index) => Number((value + monthlyDelta * (index + 1)).toFixed(1)));
+    };
+
+    const updateStats = () => {
+      const scenario = getScenario(activeScenarioId);
+      document.getElementById('statCash').textContent = formatMoney(scenario.cashPosition);
+      document.getElementById('statRunway').textContent = `${scenario.runway} months`;
+      document.getElementById('statVariance').textContent = `${scenario.variance >= 0 ? '+' : ''}${formatMoney(scenario.variance)}`;
+      document.getElementById('statApprovals').textContent = scenarios.filter((item) => item.status === 'Pending Approval').length;
+      document.getElementById('statCashNote').textContent = `Updated ${scenario.updatedAt} UTC`;
+    };
+
+    const renderScenarioCards = () => {
+      const container = document.getElementById('scenarioCards');
+      container.innerHTML = '';
+
+      scenarios.forEach((scenario) => {
+        const card = document.createElement('button');
+        card.className = `text-left p-4 rounded-xl border ${activeScenarioId === scenario.id ? 'border-amber-400/60 bg-slate-900' : 'border-slate-800 bg-slate-900/50'} hover:border-amber-400/60 transition`;
+        card.dataset.id = scenario.id;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">${scenario.name}</p>
+            <span class="text-xs px-2 py-1 rounded-full border ${statusStyles[scenario.status]}">${scenario.status}</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">Owner: ${scenario.owner}</p>
+          <p class="text-xs text-slate-400">Variance: ${scenario.variance >= 0 ? '+' : ''}${formatMoney(scenario.variance)}</p>
+          <p class="text-xs text-slate-400">Runway: ${scenario.runway} months</p>
+          ${scenario.policyFlags.length ? `<p class="text-xs text-amber-200 mt-2">Flags: ${scenario.policyFlags.join(', ')}</p>` : '<p class="text-xs text-emerald-200 mt-2">No policy flags</p>'}
+        `;
+        container.appendChild(card);
+      });
+    };
+
+    const renderScenarioSelect = () => {
+      const select = document.getElementById('activeScenario');
+      select.innerHTML = '';
+      scenarios.forEach((scenario) => {
+        const option = document.createElement('option');
+        option.value = scenario.id;
+        option.textContent = scenario.name;
+        select.appendChild(option);
+      });
+      select.value = activeScenarioId;
+    };
+
+    const renderApprovalQueue = () => {
+      const container = document.getElementById('approvalQueue');
+      container.innerHTML = '';
+      const pending = scenarios.filter((scenario) => scenario.status === 'Pending Approval');
+
+      if (!pending.length) {
+        container.innerHTML = '<p class="text-sm text-slate-400">No scenarios awaiting approval.</p>';
+        return;
+      }
+
+      pending.forEach((scenario) => {
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl bg-slate-950/60 border border-slate-800';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-semibold">${scenario.name}</p>
+              <p class="text-xs text-slate-400">Owner: ${scenario.owner} · Runway ${scenario.runway} months</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full border ${statusStyles[scenario.status]}">${scenario.status}</span>
+          </div>
+          ${scenario.policyFlags.length ? `<p class="text-xs text-amber-200 mt-2">Flags: ${scenario.policyFlags.join(', ')}</p>` : ''}
+          <div class="flex gap-2 mt-3">
+            <button data-action="approve" data-id="${scenario.id}" class="px-3 py-1 text-xs rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-500/40">Approve</button>
+            <button data-action="reject" data-id="${scenario.id}" class="px-3 py-1 text-xs rounded-lg bg-rose-500/20 text-rose-200 border border-rose-500/40">Reject</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    };
+
+    const renderAuditTrail = () => {
+      const container = document.getElementById('auditTrail');
+      container.innerHTML = '';
+      auditTrail.slice(0, 8).forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-lg bg-slate-950/60 border border-slate-800';
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>${entry.time} UTC</span>
+            <span>${entry.actor}</span>
+          </div>
+          <p class="text-sm mt-2">${entry.message}</p>
+        `;
+        container.appendChild(row);
+      });
+    };
+
+    const renderLineItems = () => {
+      const scenario = getScenario(activeScenarioId);
+      const items = buildForecastLineItems(scenario);
+
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const unitFilter = document.getElementById('filterUnit').value;
+      const categoryFilter = document.getElementById('filterCategory').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      let filtered = items.filter((item) => {
+        const matchesSearch = item.name.toLowerCase().includes(search) || item.unit.toLowerCase().includes(search);
+        const matchesUnit = unitFilter === 'all' || item.unit === unitFilter;
+        const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+        return matchesSearch && matchesUnit && matchesCategory;
+      });
+
+      filtered.sort((a, b) => {
+        if (sortBy === 'variance') return Math.abs(b.variance) - Math.abs(a.variance);
+        if (sortBy === 'amount') return Math.abs(b.forecast) - Math.abs(a.forecast);
+        return a.name.localeCompare(b.name);
+      });
+
+      const tbody = document.getElementById('lineTable');
+      tbody.innerHTML = '';
+      filtered.forEach((item) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-800/60';
+        row.innerHTML = `
+          <td class="py-2">${item.name}</td>
+          <td>${item.unit}</td>
+          <td>${item.category}</td>
+          <td>${formatMoney(item.base)}</td>
+          <td>${formatMoney(item.forecast)}</td>
+          <td class="${item.variance < 0 ? 'text-rose-300' : 'text-emerald-300'}">${item.variance >= 0 ? '+' : ''}${formatMoney(item.variance)}</td>
+          <td class="confidence-cell ${role === 'CFO' ? '' : 'hidden'}">${item.confidence}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.getElementById('confidenceHeader').classList.toggle('hidden', role !== 'CFO');
+      document.querySelectorAll('.confidence-cell').forEach((cell) => {
+        cell.classList.toggle('hidden', role !== 'CFO');
+      });
+    };
+
+    const renderFilterUnits = () => {
+      const units = ['all', ...new Set(baseLineItems.map((item) => item.unit))];
+      const select = document.getElementById('filterUnit');
+      select.innerHTML = '';
+      units.forEach((unit) => {
+        const option = document.createElement('option');
+        option.value = unit;
+        option.textContent = unit === 'all' ? 'All Units' : unit;
+        select.appendChild(option);
+      });
+    };
+
+    const updateForm = (scenario) => {
+      document.getElementById('scenarioName').value = scenario.name;
+      document.getElementById('growth').value = scenario.growth;
+      document.getElementById('churn').value = scenario.churn;
+      document.getElementById('opex').value = scenario.opex;
+      document.getElementById('dso').value = scenario.dso;
+      document.getElementById('horizon').value = scenario.horizon;
+      document.getElementById('roleSelect').value = role;
+    };
+
+    const updateChart = () => {
+      const scenario = getScenario(activeScenarioId);
+      const scenarioSeries = buildScenarioSeries(scenario);
+      const labels = Array.from({ length: scenario.horizon }).map((_, idx) => `M${idx + 1}`);
+      const baseData = baseSeries.slice(0, scenario.horizon);
+      const scenarioData = scenarioSeries.slice(0, scenario.horizon);
+
+      if (!chart) {
+        const ctx = document.getElementById('cashChart');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Base Forecast',
+                data: baseData,
+                borderColor: 'rgba(148, 163, 184, 0.8)',
+                backgroundColor: 'rgba(148, 163, 184, 0.2)',
+                tension: 0.35
+              },
+              {
+                label: 'Active Scenario',
+                data: scenarioData,
+                borderColor: 'rgba(56, 189, 248, 0.9)',
+                backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                tension: 0.35
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#e2e8f0'
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.1)' }
+              },
+              y: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.1)' }
+              }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = baseData;
+        chart.data.datasets[1].data = scenarioData;
+        chart.update();
+      }
+    };
+
+    const addAudit = (message, actor = 'System') => {
+      const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      auditTrail.unshift({ time, actor, message });
+    };
+
+    const refreshAll = () => {
+      scenarios.forEach((scenario) => computeScenarioMetrics(scenario));
+      renderScenarioSelect();
+      renderScenarioCards();
+      renderApprovalQueue();
+      renderAuditTrail();
+      updateStats();
+      updateChart();
+      renderLineItems();
+    };
+
+    document.getElementById('scenarioCards').addEventListener('click', (event) => {
+      const card = event.target.closest('button');
+      if (!card) return;
+      activeScenarioId = card.dataset.id;
+      updateForm(getScenario(activeScenarioId));
+      refreshAll();
+    });
+
+    document.getElementById('activeScenario').addEventListener('change', (event) => {
+      activeScenarioId = event.target.value;
+      updateForm(getScenario(activeScenarioId));
+      refreshAll();
+    });
+
+    document.getElementById('roleSelect').addEventListener('change', (event) => {
+      role = event.target.value;
+      renderLineItems();
+    });
+
+    document.getElementById('scenarioForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const scenario = getScenario(activeScenarioId);
+      const growth = Number(document.getElementById('growth').value);
+      const churn = Number(document.getElementById('churn').value);
+      const opex = Number(document.getElementById('opex').value);
+      const dso = Number(document.getElementById('dso').value);
+
+      const error = document.getElementById('formError');
+      if (growth < -20 || growth > 40 || churn < -5 || churn > 15 || opex < -10 || opex > 20 || dso < 30 || dso > 90) {
+        error.textContent = 'Please keep values within the allowed policy ranges.';
+        error.classList.remove('hidden');
+        return;
+      }
+
+      error.classList.add('hidden');
+      scenario.name = document.getElementById('scenarioName').value;
+      scenario.growth = growth;
+      scenario.churn = churn;
+      scenario.opex = opex;
+      scenario.dso = dso;
+      scenario.horizon = Number(document.getElementById('horizon').value);
+      scenario.updatedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      scenario.status = 'Draft';
+
+      addAudit(`Reforecasted ${scenario.name} with updated assumptions.`, 'Analyst');
+      refreshAll();
+    });
+
+    document.getElementById('submitScenario').addEventListener('click', () => {
+      const scenario = getScenario(activeScenarioId);
+      scenario.status = 'Pending Approval';
+      scenario.updatedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      addAudit(`Submitted ${scenario.name} for CFO approval.`, 'Analyst');
+      refreshAll();
+    });
+
+    document.getElementById('approvalQueue').addEventListener('click', (event) => {
+      const action = event.target.dataset.action;
+      const id = event.target.dataset.id;
+      if (!action || !id) return;
+      const scenario = getScenario(id);
+      if (action === 'approve') {
+        scenario.status = 'Approved';
+        addAudit(`Approved ${scenario.name}.`, 'CFO');
+      }
+      if (action === 'reject') {
+        scenario.status = 'Rejected';
+        addAudit(`Rejected ${scenario.name} due to policy risk.`, 'CFO');
+      }
+      scenario.updatedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      refreshAll();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', renderLineItems);
+    document.getElementById('filterUnit').addEventListener('change', renderLineItems);
+    document.getElementById('filterCategory').addEventListener('change', renderLineItems);
+    document.getElementById('sortBy').addEventListener('change', renderLineItems);
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const scenario = getScenario(activeScenarioId);
+      const rows = buildForecastLineItems(scenario).map((item) => [
+        item.name,
+        item.unit,
+        item.category,
+        item.base,
+        item.forecast,
+        item.variance
+      ]);
+      const header = ['Line Item', 'Unit', 'Category', 'Base ($M)', 'Forecast ($M)', 'Variance ($M)'];
+      const csv = [header, ...rows]
+        .map((row) => row.map((cell) => `"${cell}"`).join(','))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${scenario.name.replace(/\s+/g, '-').toLowerCase()}-forecast.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('resetDemo').addEventListener('click', () => {
+      scenarios = JSON.parse(JSON.stringify(seedScenarios));
+      auditTrail = JSON.parse(JSON.stringify(seedAudit));
+      activeScenarioId = 'sc-base';
+      role = 'Analyst';
+      updateForm(getScenario(activeScenarioId));
+      refreshAll();
+    });
+
+    renderFilterUnits();
+    scenarios.forEach((scenario) => computeScenarioMetrics(scenario));
+    updateForm(getScenario(activeScenarioId));
+    refreshAll();
+  </script>
+</body>
+</html>

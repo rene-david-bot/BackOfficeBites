@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Room Booking Command Center** — policy-aware room scheduling with approvals, conflict checks, and audit trail.
+**Cash Flow Forecast Command Center** — scenario-based cash flow forecasting with approvals, variance alerts, and audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

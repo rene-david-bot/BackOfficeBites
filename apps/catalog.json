@@ -266,5 +266,28 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-24",
+    "day": 15,
+    "slug": "2026-02-24-cash-flow-forecast-command-center",
+    "name": "Cash Flow Forecast Command Center",
+    "description": "Scenario-based cash flow forecasting with approvals, variance alerts, and audit trail.",
+    "category": "Finance",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "cash flow",
+      "forecast",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
