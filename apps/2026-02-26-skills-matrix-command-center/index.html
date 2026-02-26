@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skills Matrix Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+      <div class="mx-auto max-w-6xl px-4 py-6">
+        <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-3xl font-semibold text-white">Skills Matrix Command Center</h1>
+            <p class="mt-1 text-sm text-slate-300">Track workforce coverage, close skill gaps, and approve training with policy guardrails.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-xs text-slate-300">
+              Last sync: <span class="text-emerald-300" id="lastSync">just now</span>
+            </div>
+            <button id="exportCsv" class="rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300">Export CSV</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-8">
+      <section class="grid gap-4 md:grid-cols-3">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Overall coverage</p>
+          <p class="mt-2 text-3xl font-semibold" id="coverageMetric">--%</p>
+          <p class="mt-2 text-sm text-slate-400">Avg. required skills met across critical roles.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">High-risk gaps</p>
+          <p class="mt-2 text-3xl font-semibold" id="highRiskMetric">--</p>
+          <p class="mt-2 text-sm text-slate-400">Roles needing intervention in the next 30 days.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Expiring certifications</p>
+          <p class="mt-2 text-3xl font-semibold" id="expiringMetric">--</p>
+          <p class="mt-2 text-sm text-slate-400">Certs expiring within 60 days.</p>
+        </div>
+      </section>
+
+      <section class="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Team roster</h2>
+            <select id="roleView" class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200">
+              <option>Manager</option>
+              <option>HR</option>
+              <option>Team Lead</option>
+            </select>
+          </div>
+          <div class="mt-4 space-y-3">
+            <label class="block text-xs text-slate-400">Search</label>
+            <input id="searchInput" type="text" placeholder="Name or role" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-xs text-slate-400">Department</label>
+              <select id="deptFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+                <option>All</option>
+                <option>Engineering</option>
+                <option>Operations</option>
+                <option>Support</option>
+                <option>Security</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400">Risk</label>
+              <select id="riskFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+                <option>All</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs text-slate-400">Sort by</label>
+            <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+              <option value="gap">Gap score</option>
+              <option value="name">Name</option>
+              <option value="coverage">Coverage</option>
+            </select>
+          </div>
+          <button id="resetFilters" class="mt-4 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:border-amber-400 hover:text-amber-200">Reset filters</button>
+
+          <div class="mt-6 border-t border-slate-800 pt-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-200">Roster results</h3>
+              <span id="resultCount" class="text-xs text-slate-400">0</span>
+            </div>
+            <div id="rosterList" class="mt-3 space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5" id="detailPanel">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-slate-400">Selected profile</p>
+                <h2 id="detailName" class="mt-1 text-2xl font-semibold">—</h2>
+                <p id="detailMeta" class="text-sm text-slate-400">—</p>
+              </div>
+              <div class="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-sm">
+                Gap score <span id="detailGap" class="ml-2 text-amber-300">—</span>
+              </div>
+            </div>
+            <div class="mt-6 grid gap-4 lg:grid-cols-3">
+              <div class="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p class="text-xs uppercase tracking-wide text-slate-400">Coverage</p>
+                <p id="detailCoverage" class="mt-2 text-2xl font-semibold">—%</p>
+                <p class="mt-2 text-xs text-slate-500">Required skills met.</p>
+              </div>
+              <div class="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p class="text-xs uppercase tracking-wide text-slate-400">Criticality</p>
+                <p id="detailCritical" class="mt-2 text-2xl font-semibold">—</p>
+                <p class="mt-2 text-xs text-slate-500">Business impact.</p>
+              </div>
+              <div class="rounded-xl border border-slate-800 bg-slate-950 p-4" id="compBandCard">
+                <p class="text-xs uppercase tracking-wide text-slate-400">Comp band (HR)</p>
+                <p id="detailComp" class="mt-2 text-2xl font-semibold">—</p>
+                <p class="mt-2 text-xs text-slate-500">Visible to HR only.</p>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-sm font-semibold text-slate-200">Skill matrix</h3>
+              <div class="mt-3 overflow-hidden rounded-xl border border-slate-800">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-slate-950 text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th class="px-4 py-2">Skill</th>
+                      <th class="px-4 py-2">Required</th>
+                      <th class="px-4 py-2">Current</th>
+                      <th class="px-4 py-2">Last validated</th>
+                      <th class="px-4 py-2">Expiry</th>
+                    </tr>
+                  </thead>
+                  <tbody id="skillTable" class="divide-y divide-slate-800 bg-slate-900/70"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid gap-6 lg:grid-cols-2">
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-200">Training approvals</h3>
+                <span class="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300" id="approvalCount">0 pending</span>
+              </div>
+              <div id="trainingList" class="mt-4 space-y-3"></div>
+            </div>
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+              <h3 class="text-sm font-semibold text-slate-200">Audit trail</h3>
+              <ul id="auditTrail" class="mt-4 space-y-3 text-sm text-slate-300"></ul>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="pointer-events-none fixed bottom-6 right-6 hidden rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 shadow-lg">
+    <span id="toastMessage"></span>
+  </div>
+
+  <script>
+    const employees = [
+      {
+        id: 1,
+        name: "Lina Schäfer",
+        title: "Incident Lead",
+        dept: "Operations",
+        location: "Berlin",
+        criticality: "High",
+        gapScore: 82,
+        coverage: 62,
+        compBand: "P5",
+        skills: [
+          { name: "Crisis coordination", required: 5, current: 3, lastValidated: "2025-12-12", expiry: "2026-05-15" },
+          { name: "Regulatory comms", required: 4, current: 3, lastValidated: "2026-01-03", expiry: "2026-03-10" },
+          { name: "Post-mortem facilitation", required: 4, current: 2, lastValidated: "2025-11-30", expiry: "2026-02-28" }
+        ],
+        trainings: [
+          { id: "T-142", topic: "Advanced incident simulations", cost: 1800, status: "Pending" },
+          { id: "T-155", topic: "Regulatory response lab", cost: 900, status: "Pending" }
+        ]
+      },
+      {
+        id: 2,
+        name: "Mateo Rossi",
+        title: "Platform Engineer",
+        dept: "Engineering",
+        location: "Milan",
+        criticality: "Medium",
+        gapScore: 54,
+        coverage: 71,
+        compBand: "P4",
+        skills: [
+          { name: "Kubernetes ops", required: 4, current: 4, lastValidated: "2025-10-12", expiry: "2026-07-02" },
+          { name: "Terraform", required: 4, current: 3, lastValidated: "2025-12-02", expiry: "2026-04-18" },
+          { name: "SRE on-call", required: 3, current: 2, lastValidated: "2026-01-22", expiry: "2026-08-01" }
+        ],
+        trainings: [
+          { id: "T-176", topic: "Advanced Terraform patterns", cost: 1200, status: "Pending" }
+        ]
+      },
+      {
+        id: 3,
+        name: "Sofia Alvarez",
+        title: "Customer Support Lead",
+        dept: "Support",
+        location: "Madrid",
+        criticality: "High",
+        gapScore: 74,
+        coverage: 66,
+        compBand: "P4",
+        skills: [
+          { name: "Escalation handling", required: 5, current: 4, lastValidated: "2025-09-18", expiry: "2026-03-12" },
+          { name: "Knowledge base ops", required: 4, current: 3, lastValidated: "2026-01-16", expiry: "2026-06-20" },
+          { name: "Customer comms", required: 4, current: 3, lastValidated: "2025-11-24", expiry: "2026-02-27" }
+        ],
+        trainings: [
+          { id: "T-201", topic: "High-severity escalation drills", cost: 1400, status: "Pending" }
+        ]
+      },
+      {
+        id: 4,
+        name: "Noah Kim",
+        title: "Security Analyst",
+        dept: "Security",
+        location: "Seoul",
+        criticality: "High",
+        gapScore: 68,
+        coverage: 73,
+        compBand: "P5",
+        skills: [
+          { name: "Threat modeling", required: 4, current: 3, lastValidated: "2025-12-09", expiry: "2026-06-11" },
+          { name: "SIEM tuning", required: 4, current: 3, lastValidated: "2025-10-21", expiry: "2026-04-29" },
+          { name: "Incident containment", required: 5, current: 4, lastValidated: "2026-02-03", expiry: "2026-09-18" }
+        ],
+        trainings: [
+          { id: "T-233", topic: "SIEM automation clinic", cost: 1600, status: "Pending" }
+        ]
+      },
+      {
+        id: 5,
+        name: "Priya Nair",
+        title: "Ops Coordinator",
+        dept: "Operations",
+        location: "Singapore",
+        criticality: "Low",
+        gapScore: 28,
+        coverage: 88,
+        compBand: "P3",
+        skills: [
+          { name: "Vendor coordination", required: 3, current: 3, lastValidated: "2025-09-30", expiry: "2026-05-09" },
+          { name: "Workflow automation", required: 3, current: 3, lastValidated: "2026-01-10", expiry: "2026-07-28" },
+          { name: "Escalation routing", required: 3, current: 2, lastValidated: "2025-12-04", expiry: "2026-04-08" }
+        ],
+        trainings: []
+      },
+      {
+        id: 6,
+        name: "Jonas Berg",
+        title: "Field Ops Manager",
+        dept: "Operations",
+        location: "Stockholm",
+        criticality: "Medium",
+        gapScore: 47,
+        coverage: 78,
+        compBand: "P4",
+        skills: [
+          { name: "Vendor readiness", required: 4, current: 3, lastValidated: "2025-08-18", expiry: "2026-03-05" },
+          { name: "Process documentation", required: 3, current: 3, lastValidated: "2025-12-18", expiry: "2026-08-12" },
+          { name: "Remote audits", required: 4, current: 3, lastValidated: "2026-01-09", expiry: "2026-06-25" }
+        ],
+        trainings: [
+          { id: "T-244", topic: "Remote audit mastery", cost: 800, status: "Pending" }
+        ]
+      },
+      {
+        id: 7,
+        name: "Ava Kuznetsova",
+        title: "Support QA",
+        dept: "Support",
+        location: "Prague",
+        criticality: "Low",
+        gapScore: 35,
+        coverage: 82,
+        compBand: "P3",
+        skills: [
+          { name: "Quality sampling", required: 3, current: 3, lastValidated: "2025-10-14", expiry: "2026-05-30" },
+          { name: "Workflow coaching", required: 3, current: 2, lastValidated: "2026-02-05", expiry: "2026-09-10" },
+          { name: "Customer tone", required: 3, current: 3, lastValidated: "2025-11-11", expiry: "2026-07-17" }
+        ],
+        trainings: []
+      }
+    ];
+
+    const state = {
+      roleView: "Manager",
+      filters: { search: "", dept: "All", risk: "All" },
+      sortBy: "gap",
+      selectedId: employees[0].id,
+      audit: [
+        { time: "09:05", text: "System sync completed. 7 profiles refreshed." },
+        { time: "09:12", text: "Policy engine flagged 3 expiring certifications." }
+      ]
+    };
+
+    const rosterList = document.getElementById("rosterList");
+    const detailName = document.getElementById("detailName");
+    const detailMeta = document.getElementById("detailMeta");
+    const detailGap = document.getElementById("detailGap");
+    const detailCoverage = document.getElementById("detailCoverage");
+    const detailCritical = document.getElementById("detailCritical");
+    const detailComp = document.getElementById("detailComp");
+    const compBandCard = document.getElementById("compBandCard");
+    const skillTable = document.getElementById("skillTable");
+    const trainingList = document.getElementById("trainingList");
+    const auditTrail = document.getElementById("auditTrail");
+    const approvalCount = document.getElementById("approvalCount");
+    const resultCount = document.getElementById("resultCount");
+
+    const searchInput = document.getElementById("searchInput");
+    const deptFilter = document.getElementById("deptFilter");
+    const riskFilter = document.getElementById("riskFilter");
+    const sortBy = document.getElementById("sortBy");
+    const roleView = document.getElementById("roleView");
+    const resetFilters = document.getElementById("resetFilters");
+
+    const toast = document.getElementById("toast");
+    const toastMessage = document.getElementById("toastMessage");
+
+    const formatDate = (value) => new Date(value).toLocaleDateString("en-GB", { month: "short", day: "numeric" });
+
+    const computeMetrics = () => {
+      const coverage = Math.round(employees.reduce((acc, emp) => acc + emp.coverage, 0) / employees.length);
+      document.getElementById("coverageMetric").textContent = `${coverage}%`;
+      const highRisk = employees.filter(emp => emp.gapScore >= 70).length;
+      document.getElementById("highRiskMetric").textContent = highRisk;
+      const now = new Date();
+      const expiring = employees.flatMap(emp => emp.skills)
+        .filter(skill => {
+          const expiry = new Date(skill.expiry);
+          return (expiry - now) / (1000 * 60 * 60 * 24) <= 60;
+        }).length;
+      document.getElementById("expiringMetric").textContent = expiring;
+    };
+
+    const filteredEmployees = () => {
+      const search = state.filters.search.toLowerCase();
+      const risk = state.filters.risk;
+      return employees
+        .filter(emp => {
+          const matchesSearch = emp.name.toLowerCase().includes(search) || emp.title.toLowerCase().includes(search);
+          const matchesDept = state.filters.dept === "All" || emp.dept === state.filters.dept;
+          const riskBucket = emp.gapScore >= 70 ? "High" : emp.gapScore >= 45 ? "Medium" : "Low";
+          const matchesRisk = risk === "All" || riskBucket === risk;
+          return matchesSearch && matchesDept && matchesRisk;
+        })
+        .sort((a, b) => {
+          if (state.sortBy === "name") return a.name.localeCompare(b.name);
+          if (state.sortBy === "coverage") return b.coverage - a.coverage;
+          return b.gapScore - a.gapScore;
+        });
+    };
+
+    const renderRoster = () => {
+      const roster = filteredEmployees();
+      resultCount.textContent = `${roster.length} results`;
+      rosterList.innerHTML = "";
+      roster.forEach(emp => {
+        const risk = emp.gapScore >= 70 ? "High" : emp.gapScore >= 45 ? "Medium" : "Low";
+        const active = emp.id === state.selectedId;
+        const item = document.createElement("button");
+        item.className = `w-full rounded-xl border px-4 py-3 text-left transition ${active ? "border-amber-400 bg-slate-950" : "border-slate-800 bg-slate-900/70 hover:border-amber-400"}`;
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-slate-100">${emp.name}</p>
+              <p class="text-xs text-slate-400">${emp.title} • ${emp.dept}</p>
+            </div>
+            <span class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">${risk}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+            <span>Coverage ${emp.coverage}%</span>
+            <span>Gap ${emp.gapScore}</span>
+          </div>
+        `;
+        item.addEventListener("click", () => {
+          state.selectedId = emp.id;
+          addAudit(`Viewed ${emp.name} profile`);
+          render();
+        });
+        rosterList.appendChild(item);
+      });
+    };
+
+    const renderDetail = () => {
+      const emp = employees.find(e => e.id === state.selectedId) || employees[0];
+      detailName.textContent = emp.name;
+      detailMeta.textContent = `${emp.title} • ${emp.dept} • ${emp.location}`;
+      detailGap.textContent = emp.gapScore;
+      detailCoverage.textContent = `${emp.coverage}%`;
+      detailCritical.textContent = emp.criticality;
+      detailComp.textContent = emp.compBand;
+      compBandCard.classList.toggle("hidden", state.roleView !== "HR");
+
+      skillTable.innerHTML = "";
+      emp.skills.forEach(skill => {
+        const row = document.createElement("tr");
+        const gap = skill.current < skill.required;
+        row.innerHTML = `
+          <td class="px-4 py-3 font-medium text-slate-100">${skill.name}</td>
+          <td class="px-4 py-3">${skill.required}</td>
+          <td class="px-4 py-3 ${gap ? "text-amber-300" : "text-emerald-300"}">${skill.current}</td>
+          <td class="px-4 py-3 text-slate-300">${formatDate(skill.lastValidated)}</td>
+          <td class="px-4 py-3 text-slate-400">${formatDate(skill.expiry)}</td>
+        `;
+        skillTable.appendChild(row);
+      });
+
+      trainingList.innerHTML = "";
+      if (emp.trainings.length === 0) {
+        trainingList.innerHTML = '<div class="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">No pending training requests.</div>';
+      } else {
+        emp.trainings.forEach(request => {
+          const card = document.createElement("div");
+          card.className = "rounded-xl border border-slate-800 bg-slate-950 p-4";
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-100">${request.topic}</p>
+                <p class="text-xs text-slate-400">${request.id} • €${request.cost}</p>
+              </div>
+              <span class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">${request.status}</span>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button class="approveBtn rounded-lg bg-emerald-400/20 px-3 py-1 text-xs text-emerald-300" data-id="${request.id}">Approve</button>
+              <button class="denyBtn rounded-lg bg-rose-400/20 px-3 py-1 text-xs text-rose-300" data-id="${request.id}">Deny</button>
+            </div>
+          `;
+          trainingList.appendChild(card);
+        });
+      }
+
+      const pending = employees.reduce((acc, emp) => acc + emp.trainings.filter(t => t.status === "Pending").length, 0);
+      approvalCount.textContent = `${pending} pending`;
+    };
+
+    const renderAudit = () => {
+      auditTrail.innerHTML = "";
+      state.audit.slice(-6).reverse().forEach(item => {
+        const li = document.createElement("li");
+        li.className = "rounded-xl border border-slate-800 bg-slate-950 px-3 py-2";
+        li.innerHTML = `<span class="text-xs text-slate-500">${item.time}</span><p class="text-sm text-slate-200">${item.text}</p>`;
+        auditTrail.appendChild(li);
+      });
+    };
+
+    const addAudit = (text) => {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      state.audit.push({ time, text });
+    };
+
+    const showToast = (message) => {
+      toastMessage.textContent = message;
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 2200);
+    };
+
+    const bindEvents = () => {
+      searchInput.addEventListener("input", (e) => {
+        state.filters.search = e.target.value;
+        addAudit("Adjusted search filter");
+        render();
+      });
+      deptFilter.addEventListener("change", (e) => {
+        state.filters.dept = e.target.value;
+        addAudit(`Filtered department: ${state.filters.dept}`);
+        render();
+      });
+      riskFilter.addEventListener("change", (e) => {
+        state.filters.risk = e.target.value;
+        addAudit(`Filtered risk: ${state.filters.risk}`);
+        render();
+      });
+      sortBy.addEventListener("change", (e) => {
+        state.sortBy = e.target.value;
+        addAudit(`Sorted by ${state.sortBy}`);
+        render();
+      });
+      roleView.addEventListener("change", (e) => {
+        state.roleView = e.target.value;
+        addAudit(`Role view switched to ${state.roleView}`);
+        render();
+      });
+      resetFilters.addEventListener("click", () => {
+        state.filters = { search: "", dept: "All", risk: "All" };
+        searchInput.value = "";
+        deptFilter.value = "All";
+        riskFilter.value = "All";
+        state.sortBy = "gap";
+        sortBy.value = "gap";
+        addAudit("Filters reset");
+        render();
+      });
+
+      document.getElementById("exportCsv").addEventListener("click", () => {
+        const rows = filteredEmployees().map(emp => [
+          emp.name,
+          emp.title,
+          emp.dept,
+          emp.location,
+          emp.criticality,
+          emp.gapScore,
+          emp.coverage
+        ]);
+        const header = ["Name", "Role", "Department", "Location", "Criticality", "Gap Score", "Coverage %"];
+        const csv = [header, ...rows].map(row => row.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "skills-matrix.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+        addAudit("Exported roster CSV");
+        showToast("CSV exported");
+      });
+
+      trainingList.addEventListener("click", (event) => {
+        const approveBtn = event.target.closest(".approveBtn");
+        const denyBtn = event.target.closest(".denyBtn");
+        if (!approveBtn && !denyBtn) return;
+
+        const id = approveBtn ? approveBtn.dataset.id : denyBtn.dataset.id;
+        const emp = employees.find(e => e.id === state.selectedId);
+        const request = emp.trainings.find(t => t.id === id);
+
+        if (approveBtn) {
+          if (state.roleView !== "HR" && request.cost > 1500) {
+            showToast("Policy block: only HR can approve > €1,500");
+            addAudit(`Policy blocked approval for ${request.id}`);
+            return;
+          }
+          request.status = "Approved";
+          showToast("Training approved");
+          addAudit(`Approved ${request.id} for ${emp.name}`);
+        }
+
+        if (denyBtn) {
+          request.status = "Denied";
+          showToast("Training denied");
+          addAudit(`Denied ${request.id} for ${emp.name}`);
+        }
+
+        render();
+      });
+    };
+
+    const render = () => {
+      renderRoster();
+      renderDetail();
+      renderAudit();
+      computeMetrics();
+    };
+
+    bindEvents();
+    render();
+  </script>
+</body>
+</html>

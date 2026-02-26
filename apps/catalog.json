@@ -360,5 +360,28 @@
       "risk scoring"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-26",
+    "day": 19,
+    "slug": "2026-02-26-skills-matrix-command-center",
+    "name": "Skills Matrix Command Center",
+    "description": "Master-detail skills coverage with policy-aware training approvals and audit trail.",
+    "category": "HR",
+    "pattern": "Master-Detail",
+    "tags": [
+      "skills matrix",
+      "hr",
+      "master-detail",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
