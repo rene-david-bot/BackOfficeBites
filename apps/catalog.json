@@ -289,5 +289,29 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-26",
+    "day": 16,
+    "slug": "2026-02-26-license-compliance-control-grid",
+    "name": "License Compliance Control Grid",
+    "description": "Policy-driven SaaS license oversight with exception approvals, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Data Grid",
+    "tags": [
+      "license",
+      "compliance",
+      "data grid",
+      "approval workflow",
+      "audit trail",
+      "csv export",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "role-based",
+      "renewals"
+    ],
+    "thumb": ""
   }
 ]

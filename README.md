@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Cash Flow Forecast Command Center** — scenario-based cash flow forecasting with approvals, variance alerts, and audit trail.
+**License Compliance Control Grid** — policy-driven SaaS license oversight with exception approvals, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
