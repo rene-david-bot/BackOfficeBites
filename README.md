@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**OKR Check-in Wizard** — guided OKR updates with policy validation, approval routing, and an audit trail.
+**Customer Onboarding Master Desk** — master-detail onboarding orchestration with approvals, policy checks, and audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

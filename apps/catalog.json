@@ -336,5 +336,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-26",
+    "day": 18,
+    "slug": "2026-02-26-customer-onboarding-master-desk",
+    "name": "Customer Onboarding Master Desk",
+    "description": "Master-detail onboarding orchestration with approvals, policy checks, and audit trail.",
+    "category": "Sales",
+    "pattern": "Master-Detail",
+    "tags": [
+      "onboarding",
+      "sales",
+      "master-detail",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based",
+      "risk scoring"
+    ],
+    "thumb": ""
   }
 ]

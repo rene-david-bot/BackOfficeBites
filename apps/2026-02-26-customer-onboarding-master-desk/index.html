@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Onboarding Master Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-10">
+    <a class="text-xs uppercase tracking-[0.2em] text-amber-300 hover:text-amber-200" href="../../index.html">BackOfficeBites 🍔</a>
+    <div class="flex flex-wrap items-end justify-between gap-6 mt-3">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-semibold">Customer Onboarding Master Desk</h1>
+        <p class="text-slate-300 mt-2 max-w-2xl">
+          Orchestrate mid-market customer onboarding with policy checks, approvals, and an always-on audit trail.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <p class="text-xs text-slate-400">Role view</p>
+          <select id="roleSelect" class="bg-transparent text-slate-100 text-sm focus:outline-none">
+            <option>Onboarding Lead</option>
+            <option>Compliance</option>
+            <option>Sales Ops</option>
+          </select>
+        </div>
+        <button id="exportBtn" class="rounded-xl border border-amber-300/40 text-amber-200 px-4 py-3 text-sm hover:border-amber-200 hover:text-amber-100">Export CSV</button>
+      </div>
+    </div>
+
+    <div id="toast" class="hidden mt-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200"></div>
+
+    <div class="grid md:grid-cols-4 gap-4 mt-6">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <p class="text-xs text-slate-400">In Review</p>
+        <p id="statReview" class="text-2xl font-semibold mt-1">0</p>
+        <p class="text-xs text-slate-500 mt-2">Active checks</p>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <p class="text-xs text-slate-400">ARR Pending</p>
+        <p id="statArr" class="text-2xl font-semibold mt-1">$0</p>
+        <p class="text-xs text-slate-500 mt-2">Weighted pipeline</p>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <p class="text-xs text-slate-400">Risk Flagged</p>
+        <p id="statRisk" class="text-2xl font-semibold mt-1">0</p>
+        <p class="text-xs text-slate-500 mt-2">Requires escalation</p>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <p class="text-xs text-slate-400">Avg Days in Stage</p>
+        <p id="statDays" class="text-2xl font-semibold mt-1">0</p>
+        <p class="text-xs text-slate-500 mt-2">Across filtered deals</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-4 items-center mt-8">
+      <div class="flex-1 min-w-[220px]">
+        <label class="text-xs text-slate-400" for="searchInput">Search accounts</label>
+        <input id="searchInput" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/40" placeholder="Company, owner, segment" />
+      </div>
+      <div class="min-w-[180px]">
+        <label class="text-xs text-slate-400" for="stageFilter">Stage</label>
+        <select id="stageFilter" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm focus:outline-none">
+          <option value="all">All stages</option>
+        </select>
+      </div>
+      <div class="min-w-[200px]">
+        <label class="text-xs text-slate-400" for="sortSelect">Sort by</label>
+        <select id="sortSelect" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm focus:outline-none">
+          <option value="arr">ARR (high → low)</option>
+          <option value="risk">Risk (high → low)</option>
+          <option value="days">Days in stage</option>
+          <option value="golive">Go-live date</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.2fr_1.8fr] gap-6 mt-8">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+        <h2 class="text-lg font-semibold">Onboarding Queue</h2>
+        <p class="text-xs text-slate-400 mt-1">Select an account to manage approvals and tasks.</p>
+        <div id="accountList" class="mt-4 space-y-3 max-h-[520px] overflow-y-auto"></div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p id="detailStage" class="text-xs uppercase tracking-[0.2em] text-amber-300">Stage</p>
+            <h2 id="detailName" class="text-2xl font-semibold mt-2">Select an account</h2>
+            <p id="detailMeta" class="text-sm text-slate-400 mt-2">Owner · Segment · Region</p>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3">
+            <p class="text-xs text-slate-400">Risk score</p>
+            <p id="detailRisk" class="text-xl font-semibold">—</p>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4 mt-6">
+          <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <p class="text-xs text-slate-400">ARR</p>
+            <p id="detailArr" class="text-lg font-semibold mt-1">—</p>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <p class="text-xs text-slate-400">Target go-live</p>
+            <p id="detailGoLive" class="text-lg font-semibold mt-1">—</p>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <p class="text-xs text-slate-400">Days in stage</p>
+            <p id="detailDays" class="text-lg font-semibold mt-1">—</p>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-[1.2fr_1fr] gap-6 mt-6">
+          <div>
+            <h3 class="text-sm font-semibold">Policy checks</h3>
+            <div id="policyChecks" class="mt-3 space-y-3"></div>
+            <h3 class="text-sm font-semibold mt-6">Implementation tasks</h3>
+            <div id="taskList" class="mt-3 space-y-3"></div>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold">Approval workflow</h3>
+            <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm">Compliance review</span>
+                <span id="complianceStatus" class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300">Pending</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm">Security checklist</span>
+                <span id="securityStatus" class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300">Pending</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm">Commercial sign-off</span>
+                <span id="commercialStatus" class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300">Pending</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-4">
+              <button id="approveBtn" class="rounded-xl bg-emerald-500/80 hover:bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900">Approve & Advance</button>
+              <button id="infoBtn" class="rounded-xl border border-amber-300/40 px-4 py-2 text-sm text-amber-200 hover:border-amber-200">Request Info</button>
+              <button id="escalateBtn" class="rounded-xl border border-rose-400/50 px-4 py-2 text-sm text-rose-200 hover:border-rose-300">Escalate Risk</button>
+            </div>
+            <div class="mt-6">
+              <label class="text-xs text-slate-400" for="noteInput">Add onboarding note</label>
+              <textarea id="noteInput" rows="3" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/40" placeholder="Summarize decision, customer request, or risk..." ></textarea>
+              <button id="addNoteBtn" class="mt-3 w-full rounded-xl border border-slate-700 px-4 py-2 text-sm hover:border-slate-500">Add Note to Audit</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8">
+          <h3 class="text-sm font-semibold">Audit trail</h3>
+          <div id="auditTrail" class="mt-3 space-y-3 max-h-[200px] overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const accounts = [
+      {
+        id: 'ac-1001',
+        company: 'Northwind Logistics',
+        stage: 'KYC Review',
+        owner: 'Priya Shah',
+        segment: 'Mid-market',
+        region: 'DACH',
+        arr: 148000,
+        risk: 62,
+        goLive: '2026-03-12',
+        daysInStage: 9,
+        kyc: false,
+        security: 'Pending',
+        commercial: 'Pending',
+        tasks: [
+          { id: 't1', label: 'Collect legal entity docs', done: false },
+          { id: 't2', label: 'Confirm integration endpoints', done: true },
+          { id: 't3', label: 'Schedule admin training', done: false },
+        ],
+        audit: [
+          { time: '09:12', text: 'Risk review triggered due to missing KYC documents.' },
+          { time: 'Yesterday', text: 'Solution architecture call completed.' },
+        ],
+      },
+      {
+        id: 'ac-1002',
+        company: 'Helios Retail Group',
+        stage: 'Solution Fit',
+        owner: 'Marco Ilic',
+        segment: 'Enterprise',
+        region: 'UKI',
+        arr: 312000,
+        risk: 38,
+        goLive: '2026-03-25',
+        daysInStage: 6,
+        kyc: true,
+        security: 'In Review',
+        commercial: 'Pending',
+        tasks: [
+          { id: 't1', label: 'Finalize data mapping sheet', done: true },
+          { id: 't2', label: 'Confirm SSO approach', done: true },
+          { id: 't3', label: 'Provision sandbox tenant', done: false },
+        ],
+        audit: [
+          { time: '10:02', text: 'Security review kicked off with InfoSec.' },
+          { time: 'Yesterday', text: 'Customer requested additional compliance details.' },
+        ],
+      },
+      {
+        id: 'ac-1003',
+        company: 'BluePeak Software',
+        stage: 'Contracting',
+        owner: 'Lena Vogt',
+        segment: 'SMB',
+        region: 'Nordics',
+        arr: 84000,
+        risk: 24,
+        goLive: '2026-03-08',
+        daysInStage: 4,
+        kyc: true,
+        security: 'Approved',
+        commercial: 'In Review',
+        tasks: [
+          { id: 't1', label: 'Finalize order form', done: true },
+          { id: 't2', label: 'Confirm renewal terms', done: false },
+          { id: 't3', label: 'Assign success manager', done: true },
+        ],
+        audit: [
+          { time: '08:40', text: 'Commercial review started for revised pricing.' },
+          { time: 'Tuesday', text: 'Security checklist approved.' },
+        ],
+      },
+      {
+        id: 'ac-1004',
+        company: 'Veridian Health',
+        stage: 'Provisioning',
+        owner: 'Sofia Costa',
+        segment: 'Enterprise',
+        region: 'Southern EU',
+        arr: 420000,
+        risk: 44,
+        goLive: '2026-03-02',
+        daysInStage: 11,
+        kyc: true,
+        security: 'Approved',
+        commercial: 'Approved',
+        tasks: [
+          { id: 't1', label: 'Set up tenant branding', done: true },
+          { id: 't2', label: 'Migrate initial user list', done: true },
+          { id: 't3', label: 'Run go-live checklist', done: false },
+        ],
+        audit: [
+          { time: '11:01', text: 'Provisioning in progress. Go-live checklist pending.' },
+          { time: 'Monday', text: 'Commercial sign-off completed.' },
+        ],
+      },
+      {
+        id: 'ac-1005',
+        company: 'Atlas Manufacturing',
+        stage: 'Needs Info',
+        owner: 'Jordan Beck',
+        segment: 'Mid-market',
+        region: 'Benelux',
+        arr: 198000,
+        risk: 71,
+        goLive: '2026-04-01',
+        daysInStage: 12,
+        kyc: false,
+        security: 'Pending',
+        commercial: 'Pending',
+        tasks: [
+          { id: 't1', label: 'Confirm data retention policy', done: false },
+          { id: 't2', label: 'Schedule compliance workshop', done: false },
+          { id: 't3', label: 'Validate SOC2 coverage', done: false },
+        ],
+        audit: [
+          { time: 'Yesterday', text: 'Waiting on compliance documentation from customer.' },
+          { time: 'Monday', text: 'Risk escalated due to regulatory concerns.' },
+        ],
+      },
+    ];
+
+    let selectedId = accounts[0].id;
+
+    const stageFilter = document.getElementById('stageFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const accountList = document.getElementById('accountList');
+    const toast = document.getElementById('toast');
+
+    const fmtCurrency = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+
+    function stages() {
+      return [...new Set(accounts.map(a => a.stage))];
+    }
+
+    function getFiltered() {
+      const term = searchInput.value.toLowerCase();
+      const stage = stageFilter.value;
+      return accounts.filter(account => {
+        const matchTerm = [account.company, account.owner, account.segment, account.region].some(val => val.toLowerCase().includes(term));
+        const matchStage = stage === 'all' || account.stage === stage;
+        return matchTerm && matchStage;
+      }).sort((a, b) => {
+        switch (sortSelect.value) {
+          case 'risk':
+            return b.risk - a.risk;
+          case 'days':
+            return b.daysInStage - a.daysInStage;
+          case 'golive':
+            return new Date(a.goLive) - new Date(b.goLive);
+          default:
+            return b.arr - a.arr;
+        }
+      });
+    }
+
+    function showToast(message, type = 'success') {
+      toast.textContent = message;
+      toast.className = 'mt-6 rounded-xl border px-4 py-3 text-sm';
+      if (type === 'error') {
+        toast.classList.add('border-rose-400/50', 'bg-rose-500/10', 'text-rose-200');
+      } else {
+        toast.classList.add('border-emerald-500/40', 'bg-emerald-500/10', 'text-emerald-200');
+      }
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3200);
+    }
+
+    function renderStages() {
+      stages().forEach(stage => {
+        const option = document.createElement('option');
+        option.value = stage;
+        option.textContent = stage;
+        stageFilter.appendChild(option);
+      });
+    }
+
+    function renderStats(list) {
+      const reviewCount = list.filter(a => a.stage === 'KYC Review' || a.stage === 'Needs Info').length;
+      const arrTotal = list.reduce((sum, a) => sum + a.arr, 0);
+      const riskCount = list.filter(a => a.risk >= 65).length;
+      const avgDays = list.length ? Math.round(list.reduce((sum, a) => sum + a.daysInStage, 0) / list.length) : 0;
+      document.getElementById('statReview').textContent = reviewCount;
+      document.getElementById('statArr').textContent = fmtCurrency(arrTotal);
+      document.getElementById('statRisk').textContent = riskCount;
+      document.getElementById('statDays').textContent = avgDays;
+    }
+
+    function renderList() {
+      const list = getFiltered();
+      renderStats(list);
+      accountList.innerHTML = '';
+      list.forEach(account => {
+        const card = document.createElement('button');
+        card.className = `w-full text-left rounded-xl border px-4 py-3 transition ${account.id === selectedId ? 'border-amber-300/50 bg-slate-950/70' : 'border-slate-800 bg-slate-950/30 hover:border-slate-700'}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold">${account.company}</p>
+              <p class="text-xs text-slate-400">${account.owner} · ${account.segment}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full ${account.risk >= 65 ? 'bg-rose-500/20 text-rose-200' : 'bg-emerald-500/10 text-emerald-200'}">Risk ${account.risk}</span>
+          </div>
+          <div class="flex items-center justify-between mt-3 text-xs text-slate-400">
+            <span>${account.stage}</span>
+            <span>${fmtCurrency(account.arr)}</span>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          selectedId = account.id;
+          renderList();
+          renderDetail();
+        });
+        accountList.appendChild(card);
+      });
+    }
+
+    function renderDetail() {
+      const account = accounts.find(a => a.id === selectedId);
+      if (!account) return;
+
+      document.getElementById('detailStage').textContent = account.stage.toUpperCase();
+      document.getElementById('detailName').textContent = account.company;
+      document.getElementById('detailMeta').textContent = `${account.owner} · ${account.segment} · ${account.region}`;
+      document.getElementById('detailRisk').textContent = account.risk;
+      document.getElementById('detailArr').textContent = fmtCurrency(account.arr);
+      document.getElementById('detailGoLive').textContent = account.goLive;
+      document.getElementById('detailDays').textContent = `${account.daysInStage} days`;
+
+      const policyChecks = document.getElementById('policyChecks');
+      policyChecks.innerHTML = '';
+      const checks = [
+        { label: 'KYC documentation received', value: account.kyc },
+        { label: 'Security checklist', value: account.security === 'Approved' },
+        { label: 'Commercial sign-off', value: account.commercial === 'Approved' },
+      ];
+      checks.forEach((check, index) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-sm';
+        wrapper.innerHTML = `
+          <span>${check.label}</span>
+          <input type="checkbox" ${check.value ? 'checked' : ''} class="h-4 w-4 accent-amber-300" data-check="${index}" />
+        `;
+        wrapper.querySelector('input').addEventListener('change', (event) => {
+          if (index === 0) account.kyc = event.target.checked;
+          if (index === 1) account.security = event.target.checked ? 'Approved' : 'Pending';
+          if (index === 2) account.commercial = event.target.checked ? 'Approved' : 'Pending';
+          addAudit(account, `Policy check updated: ${check.label}.`);
+          renderDetail();
+        });
+        policyChecks.appendChild(wrapper);
+      });
+
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+      account.tasks.forEach(task => {
+        const item = document.createElement('label');
+        item.className = 'flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-sm';
+        item.innerHTML = `
+          <input type="checkbox" ${task.done ? 'checked' : ''} class="h-4 w-4 accent-emerald-400" data-task="${task.id}" />
+          <span class="${task.done ? 'line-through text-slate-500' : ''}">${task.label}</span>
+        `;
+        item.querySelector('input').addEventListener('change', (event) => {
+          task.done = event.target.checked;
+          addAudit(account, `${task.label} marked ${task.done ? 'complete' : 'incomplete'}.`);
+          renderDetail();
+        });
+        taskList.appendChild(item);
+      });
+
+      document.getElementById('complianceStatus').textContent = account.kyc ? 'Verified' : 'Pending';
+      document.getElementById('complianceStatus').className = `text-xs px-2 py-1 rounded-full ${account.kyc ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-300'}`;
+      document.getElementById('securityStatus').textContent = account.security;
+      document.getElementById('securityStatus').className = `text-xs px-2 py-1 rounded-full ${account.security === 'Approved' ? 'bg-emerald-500/20 text-emerald-200' : account.security === 'In Review' ? 'bg-amber-500/20 text-amber-200' : 'bg-slate-800 text-slate-300'}`;
+      document.getElementById('commercialStatus').textContent = account.commercial;
+      document.getElementById('commercialStatus').className = `text-xs px-2 py-1 rounded-full ${account.commercial === 'Approved' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-300'}`;
+
+      const auditTrail = document.getElementById('auditTrail');
+      auditTrail.innerHTML = '';
+      account.audit.slice().reverse().forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-sm';
+        row.innerHTML = `<p class="text-xs text-slate-400">${entry.time}</p><p class="mt-1">${entry.text}</p>`;
+        auditTrail.appendChild(row);
+      });
+    }
+
+    function addAudit(account, text) {
+      const now = new Date();
+      const stamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      account.audit.push({ time: stamp, text });
+    }
+
+    function canApprove(account) {
+      const tasksDone = account.tasks.every(task => task.done);
+      return account.kyc && account.security === 'Approved' && account.commercial === 'Approved' && tasksDone;
+    }
+
+    document.getElementById('approveBtn').addEventListener('click', () => {
+      const account = accounts.find(a => a.id === selectedId);
+      if (!account) return;
+      if (!canApprove(account)) {
+        showToast('Approval blocked. Complete policy checks and tasks first.', 'error');
+        return;
+      }
+      const stageMap = {
+        'KYC Review': 'Solution Fit',
+        'Solution Fit': 'Contracting',
+        'Contracting': 'Provisioning',
+        'Provisioning': 'Live',
+        'Needs Info': 'KYC Review',
+      };
+      account.stage = stageMap[account.stage] || 'Live';
+      account.daysInStage = 0;
+      addAudit(account, 'Approval granted. Stage advanced to ' + account.stage + '.');
+      showToast('Approval recorded and stage advanced.');
+      renderList();
+      renderDetail();
+    });
+
+    document.getElementById('infoBtn').addEventListener('click', () => {
+      const account = accounts.find(a => a.id === selectedId);
+      if (!account) return;
+      account.stage = 'Needs Info';
+      addAudit(account, 'Requested additional info from customer.');
+      showToast('Request sent. Stage set to Needs Info.');
+      renderList();
+      renderDetail();
+    });
+
+    document.getElementById('escalateBtn').addEventListener('click', () => {
+      const account = accounts.find(a => a.id === selectedId);
+      if (!account) return;
+      account.risk = Math.min(95, account.risk + 15);
+      addAudit(account, 'Risk escalated. Compliance escalation created.');
+      showToast('Risk escalated and logged.');
+      renderList();
+      renderDetail();
+    });
+
+    document.getElementById('addNoteBtn').addEventListener('click', () => {
+      const account = accounts.find(a => a.id === selectedId);
+      const noteInput = document.getElementById('noteInput');
+      if (!account || !noteInput.value.trim()) return;
+      addAudit(account, noteInput.value.trim());
+      noteInput.value = '';
+      showToast('Note added to audit trail.');
+      renderDetail();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const list = getFiltered();
+      const rows = [
+        ['Company', 'Stage', 'Owner', 'Segment', 'Region', 'ARR', 'Risk', 'GoLive', 'DaysInStage'],
+        ...list.map(a => [a.company, a.stage, a.owner, a.segment, a.region, a.arr, a.risk, a.goLive, a.daysInStage]),
+      ];
+      const csvContent = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'onboarding-queue.csv';
+      link.click();
+      showToast('CSV exported for current filter.');
+    });
+
+    [searchInput, stageFilter, sortSelect].forEach(el => {
+      el.addEventListener('input', () => {
+        renderList();
+        renderDetail();
+      });
+      el.addEventListener('change', () => {
+        renderList();
+        renderDetail();
+      });
+    });
+
+    renderStages();
+    renderList();
+    renderDetail();
+  </script>
+</body>
+</html>
