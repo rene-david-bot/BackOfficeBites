@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OKR Check-in Wizard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="h-full bg-slate-950 text-slate-100 antialiased">
+    <div class="min-h-screen px-6 py-8">
+      <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <a href="../../index.html" class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">BackOfficeBites 🍔</a>
+
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 class="text-3xl font-semibold text-white">OKR Check-in Wizard</h1>
+            <p class="mt-2 text-sm text-slate-300">Guided quarterly updates with policy checks, approvals, and a living audit trail.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs text-slate-300">Quarter: Q1 2026</div>
+            <button id="exportCsv" class="rounded-full bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30">Export CSV</button>
+            <div class="flex items-center rounded-full border border-slate-800 bg-slate-900/70 p-1 text-xs">
+              <button data-role="Contributor" class="role-toggle rounded-full px-3 py-1 font-semibold text-white">Contributor</button>
+              <button data-role="Manager" class="role-toggle rounded-full px-3 py-1 font-semibold text-slate-400">Manager</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-3">
+          <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg lg:col-span-1">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white">OKR Portfolio</h2>
+              <span class="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300" id="okrCount"></span>
+            </div>
+            <div class="mt-4 space-y-3">
+              <label class="block text-xs font-semibold text-slate-400" for="search">Search objective or owner</label>
+              <input id="search" class="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none" placeholder="Search OKRs" />
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400" for="statusFilter">Status</label>
+                <select id="statusFilter" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100">
+                  <option value="all">All</option>
+                  <option value="On Track">On Track</option>
+                  <option value="At Risk">At Risk</option>
+                  <option value="Off Track">Off Track</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400" for="sortBy">Sort by</label>
+                <select id="sortBy" class="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100">
+                  <option value="progress">Progress</option>
+                  <option value="due">Due date</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="okrList" class="mt-5 space-y-3"></div>
+          </section>
+
+          <div class="space-y-6 lg:col-span-2">
+            <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-lg font-semibold text-white">Check-in Wizard</h2>
+                  <p class="text-xs text-slate-400" id="okrSubtitle">Select an OKR to start.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                  <span class="rounded-full bg-slate-800 px-3 py-1">Policy: blockers required &lt; 40%</span>
+                  <span class="rounded-full bg-slate-800 px-3 py-1">Manager review: low confidence</span>
+                </div>
+              </div>
+
+              <div class="mt-4 flex flex-wrap items-center gap-2 text-xs" id="stepIndicators"></div>
+
+              <div class="mt-6 space-y-6">
+                <div data-step="1" class="wizard-step">
+                  <h3 class="text-sm font-semibold text-emerald-200">Step 1 — Progress update</h3>
+                  <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                    <label class="block text-xs font-semibold text-slate-400" for="progressRange">Progress</label>
+                    <div class="mt-3 flex items-center gap-4">
+                      <input id="progressRange" type="range" min="0" max="100" value="50" class="h-2 w-full accent-emerald-400" />
+                      <span class="text-lg font-semibold text-white" id="progressValue">50%</span>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-400">Previous check-in: <span id="previousProgress">—</span></p>
+                  </div>
+                  <div class="mt-4">
+                    <label class="block text-xs font-semibold text-slate-400" for="summary">Summary</label>
+                    <textarea id="summary" rows="3" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100" placeholder="Highlight key wins or changes."></textarea>
+                  </div>
+                </div>
+
+                <div data-step="2" class="wizard-step hidden">
+                  <h3 class="text-sm font-semibold text-emerald-200">Step 2 — Blockers & risks</h3>
+                  <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                    <label class="block text-xs font-semibold text-slate-400" for="blockerInput">Add blocker</label>
+                    <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input id="blockerInput" class="flex-1 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2 text-sm text-slate-100" placeholder="e.g., Waiting on legal review" />
+                      <button id="addBlocker" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white">Add</button>
+                    </div>
+                    <div class="mt-4 space-y-2" id="blockerList"></div>
+                  </div>
+                </div>
+
+                <div data-step="3" class="wizard-step hidden">
+                  <h3 class="text-sm font-semibold text-emerald-200">Step 3 — Confidence & next actions</h3>
+                  <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                      <label class="block text-xs font-semibold text-slate-400" for="confidence">Confidence</label>
+                      <select id="confidence" class="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100">
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                      </select>
+                      <p class="mt-3 text-xs text-slate-400">Low confidence auto-routes to manager review.</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                      <label class="block text-xs font-semibold text-slate-400" for="actionInput">Next action</label>
+                      <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <input id="actionInput" class="flex-1 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2 text-sm text-slate-100" placeholder="e.g., Launch webinar series" />
+                        <button id="addAction" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white">Add</button>
+                      </div>
+                      <div class="mt-3 space-y-2" id="actionList"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div data-step="4" class="wizard-step hidden">
+                  <h3 class="text-sm font-semibold text-emerald-200">Step 4 — Review & submit</h3>
+                  <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                    <div id="reviewPanel" class="space-y-3 text-sm text-slate-200"></div>
+                    <div id="policyAlert" class="mt-3 hidden rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200"></div>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                      <button id="submitCheckin" class="rounded-xl bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-200">Submit check-in</button>
+                      <button id="resetWizard" class="rounded-xl border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300">Reset</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 flex items-center justify-between">
+                <button id="prevStep" class="rounded-xl border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300">Previous</button>
+                <button id="nextStep" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white">Next</button>
+              </div>
+            </section>
+
+            <div class="grid gap-6 md:grid-cols-2">
+              <section id="approvalCard" class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold text-white">Approval Queue</h3>
+                  <span class="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300" id="approvalCount"></span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400" id="approvalHint">Manager view required to approve.</p>
+                <div id="approvalList" class="mt-4 space-y-3"></div>
+              </section>
+
+              <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold text-white">Audit Trail</h3>
+                  <span class="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300" id="auditCount"></span>
+                </div>
+                <div id="auditList" class="mt-4 space-y-3 text-xs text-slate-300"></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const okrs = [
+        {
+          id: 'OKR-312',
+          team: 'Growth',
+          owner: 'Maya Chen',
+          objective: 'Expand mid-market pipeline coverage',
+          progress: 58,
+          previousProgress: 52,
+          confidence: 'Medium',
+          due: '2026-03-30',
+          status: 'On Track',
+          lastCheckIn: '2026-02-18',
+          keyResults: ['KR1: +$2.4M qualified pipeline', 'KR2: 3 co-marketed events', 'KR3: 12 partner referrals'],
+        },
+        {
+          id: 'OKR-318',
+          team: 'Product',
+          owner: 'Ibrahim Saleh',
+          objective: 'Reduce onboarding time to first value',
+          progress: 42,
+          previousProgress: 48,
+          confidence: 'Low',
+          due: '2026-03-20',
+          status: 'At Risk',
+          lastCheckIn: '2026-02-16',
+          keyResults: ['KR1: 40% of accounts activated in 7 days', 'KR2: 5 core workflows automated', 'KR3: NPS 35+ for onboarding'],
+        },
+        {
+          id: 'OKR-325',
+          team: 'Customer Success',
+          owner: 'Priya Raman',
+          objective: 'Improve renewal readiness for top 50 accounts',
+          progress: 71,
+          previousProgress: 66,
+          confidence: 'High',
+          due: '2026-04-05',
+          status: 'On Track',
+          lastCheckIn: '2026-02-19',
+          keyResults: ['KR1: 90% adoption of new playbooks', 'KR2: 20 joint roadmap sessions', 'KR3: 12 upsell pilots'],
+        },
+        {
+          id: 'OKR-331',
+          team: 'Revenue Ops',
+          owner: 'Diego Alvarez',
+          objective: 'Lift forecast accuracy for Q2',
+          progress: 33,
+          previousProgress: 38,
+          confidence: 'Medium',
+          due: '2026-03-28',
+          status: 'Off Track',
+          lastCheckIn: '2026-02-15',
+          keyResults: ['KR1: Stage hygiene above 85%', 'KR2: Weekly manager calibration', 'KR3: Slack alerts for deal slippage'],
+        },
+        {
+          id: 'OKR-339',
+          team: 'Operations',
+          owner: 'Lena Hoffmann',
+          objective: 'Operationalize OKR review cadence',
+          progress: 64,
+          previousProgress: 60,
+          confidence: 'High',
+          due: '2026-03-26',
+          status: 'On Track',
+          lastCheckIn: '2026-02-17',
+          keyResults: ['KR1: 100% team check-ins', 'KR2: 4 cross-functional reviews', 'KR3: Quarterly retro insights logged'],
+        },
+      ];
+
+      let role = 'Contributor';
+      let selectedOkr = okrs[0];
+      let wizardStep = 1;
+      let blockers = [];
+      let actions = [];
+      const approvalQueue = [
+        { id: 'REQ-204', okr: 'OKR-318', owner: 'Ibrahim Saleh', reason: 'Confidence low', status: 'Pending' },
+        { id: 'REQ-207', okr: 'OKR-331', owner: 'Diego Alvarez', reason: 'Progress < 40%', status: 'Pending' },
+      ];
+      const auditTrail = [
+        { id: 1, time: '10:02', message: 'OKR-312 check-in submitted by Maya Chen.', type: 'info' },
+        { id: 2, time: '09:55', message: 'REQ-204 routed to manager due to low confidence.', type: 'warning' },
+        { id: 3, time: '09:41', message: 'OKR-325 progress increased to 71%.', type: 'success' },
+      ];
+
+      const statusColors = {
+        'On Track': 'bg-emerald-500/20 text-emerald-200',
+        'At Risk': 'bg-amber-500/20 text-amber-200',
+        'Off Track': 'bg-rose-500/20 text-rose-200',
+      };
+
+      const okrList = document.getElementById('okrList');
+      const okrCount = document.getElementById('okrCount');
+      const search = document.getElementById('search');
+      const statusFilter = document.getElementById('statusFilter');
+      const sortBy = document.getElementById('sortBy');
+      const progressRange = document.getElementById('progressRange');
+      const progressValue = document.getElementById('progressValue');
+      const previousProgress = document.getElementById('previousProgress');
+      const summary = document.getElementById('summary');
+      const blockerInput = document.getElementById('blockerInput');
+      const blockerList = document.getElementById('blockerList');
+      const actionInput = document.getElementById('actionInput');
+      const actionList = document.getElementById('actionList');
+      const confidence = document.getElementById('confidence');
+      const reviewPanel = document.getElementById('reviewPanel');
+      const policyAlert = document.getElementById('policyAlert');
+      const submitCheckin = document.getElementById('submitCheckin');
+      const resetWizard = document.getElementById('resetWizard');
+      const prevStep = document.getElementById('prevStep');
+      const nextStep = document.getElementById('nextStep');
+      const stepIndicators = document.getElementById('stepIndicators');
+      const approvalList = document.getElementById('approvalList');
+      const approvalCount = document.getElementById('approvalCount');
+      const approvalHint = document.getElementById('approvalHint');
+      const auditList = document.getElementById('auditList');
+      const auditCount = document.getElementById('auditCount');
+      const okrSubtitle = document.getElementById('okrSubtitle');
+
+      function formatDate(dateStr) {
+        const [year, month, day] = dateStr.split('-');
+        return `${month}/${day}/${year}`;
+      }
+
+      function computeStatus(progress, confidenceValue) {
+        if (progress >= 70 && confidenceValue !== 'Low') return 'On Track';
+        if (progress >= 40 && confidenceValue === 'Low') return 'At Risk';
+        if (progress >= 40) return 'At Risk';
+        return 'Off Track';
+      }
+
+      function setRole(newRole) {
+        role = newRole;
+        document.querySelectorAll('.role-toggle').forEach((btn) => {
+          if (btn.dataset.role === role) {
+            btn.classList.add('bg-emerald-500/20', 'text-emerald-200');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('bg-emerald-500/20', 'text-emerald-200');
+            btn.classList.add('text-slate-400');
+          }
+        });
+        approvalHint.textContent = role === 'Manager' ? 'Approve or reject pending check-ins.' : 'Manager view required to approve.';
+        renderApprovals();
+      }
+
+      function renderOkrs() {
+        let filtered = [...okrs];
+        const term = search.value.toLowerCase();
+        if (term) {
+          filtered = filtered.filter((okr) =>
+            [okr.objective, okr.owner, okr.team].some((field) => field.toLowerCase().includes(term))
+          );
+        }
+        if (statusFilter.value !== 'all') {
+          filtered = filtered.filter((okr) => okr.status === statusFilter.value);
+        }
+        if (sortBy.value === 'progress') {
+          filtered.sort((a, b) => b.progress - a.progress);
+        } else if (sortBy.value === 'due') {
+          filtered.sort((a, b) => a.due.localeCompare(b.due));
+        } else {
+          filtered.sort((a, b) => a.owner.localeCompare(b.owner));
+        }
+
+        okrCount.textContent = `${filtered.length} active`;
+        okrList.innerHTML = '';
+        filtered.forEach((okr) => {
+          const button = document.createElement('button');
+          button.className = `w-full rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-left transition hover:border-emerald-400 ${
+            selectedOkr && selectedOkr.id === okr.id ? 'border-emerald-400' : ''
+          }`;
+          button.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-white">${okr.objective}</p>
+                <p class="text-xs text-slate-400">${okr.owner} • ${okr.team}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-semibold text-white">${okr.progress}%</p>
+                <p class="text-xs text-slate-400">Due ${formatDate(okr.due)}</p>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span class="rounded-full px-2 py-1 ${statusColors[okr.status]}">${okr.status}</span>
+              <span class="rounded-full bg-slate-800 px-2 py-1 text-slate-300">Confidence ${okr.confidence}</span>
+              <span class="rounded-full bg-slate-800 px-2 py-1 text-slate-300">Last ${formatDate(okr.lastCheckIn)}</span>
+            </div>
+          `;
+          button.addEventListener('click', () => selectOkr(okr.id));
+          okrList.appendChild(button);
+        });
+      }
+
+      function selectOkr(id) {
+        selectedOkr = okrs.find((okr) => okr.id === id);
+        wizardStep = 1;
+        blockers = [];
+        actions = [];
+        progressRange.value = selectedOkr.progress;
+        progressValue.textContent = `${selectedOkr.progress}%`;
+        previousProgress.textContent = `${selectedOkr.previousProgress}% on ${formatDate(selectedOkr.lastCheckIn)}`;
+        summary.value = '';
+        confidence.value = selectedOkr.confidence;
+        renderBlockers();
+        renderActions();
+        updateReview();
+        updateSteps();
+        renderOkrs();
+        okrSubtitle.textContent = `${selectedOkr.id} • ${selectedOkr.owner} • ${selectedOkr.team}`;
+      }
+
+      function renderBlockers() {
+        blockerList.innerHTML = '';
+        blockers.forEach((blocker, index) => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-200';
+          row.innerHTML = `<span>${blocker}</span><button class="text-rose-300" data-index="${index}">Remove</button>`;
+          row.querySelector('button').addEventListener('click', () => {
+            blockers.splice(index, 1);
+            renderBlockers();
+            updateReview();
+          });
+          blockerList.appendChild(row);
+        });
+      }
+
+      function renderActions() {
+        actionList.innerHTML = '';
+        actions.forEach((action, index) => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-200';
+          row.innerHTML = `<span>${action}</span><button class="text-rose-300" data-index="${index}">Remove</button>`;
+          row.querySelector('button').addEventListener('click', () => {
+            actions.splice(index, 1);
+            renderActions();
+            updateReview();
+          });
+          actionList.appendChild(row);
+        });
+      }
+
+      function updateReview() {
+        if (!selectedOkr) return;
+        const progressValueInt = parseInt(progressRange.value, 10);
+        const confidenceValue = confidence.value;
+        const status = computeStatus(progressValueInt, confidenceValue);
+        const requiresApproval = progressValueInt < 40 || confidenceValue === 'Low' || progressValueInt < selectedOkr.previousProgress - 10;
+        reviewPanel.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded-full bg-slate-800 px-2 py-1 text-xs">${selectedOkr.id}</span>
+            <span class="rounded-full ${statusColors[status]} px-2 py-1 text-xs">${status}</span>
+            <span class="rounded-full bg-slate-800 px-2 py-1 text-xs">Progress ${progressValueInt}%</span>
+            <span class="rounded-full bg-slate-800 px-2 py-1 text-xs">Confidence ${confidenceValue}</span>
+            ${requiresApproval ? '<span class="rounded-full bg-amber-500/20 px-2 py-1 text-xs text-amber-200">Manager review</span>' : ''}
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Summary</p>
+            <p class="mt-1 text-sm text-slate-200">${summary.value || 'No summary added yet.'}</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Blockers</p>
+            <p class="mt-1 text-sm text-slate-200">${blockers.length ? blockers.join('; ') : 'None listed.'}</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Next actions</p>
+            <p class="mt-1 text-sm text-slate-200">${actions.length ? actions.join('; ') : 'No next actions yet.'}</p>
+          </div>
+        `;
+
+        if (progressValueInt < 40 && blockers.length === 0) {
+          policyAlert.textContent = 'Policy check: add at least one blocker when progress is below 40%.';
+          policyAlert.classList.remove('hidden');
+          submitCheckin.disabled = true;
+          submitCheckin.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+          policyAlert.classList.add('hidden');
+          submitCheckin.disabled = false;
+          submitCheckin.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }
+
+      function updateSteps() {
+        document.querySelectorAll('.wizard-step').forEach((step) => {
+          step.classList.toggle('hidden', parseInt(step.dataset.step, 10) !== wizardStep);
+        });
+        prevStep.disabled = wizardStep === 1;
+        prevStep.classList.toggle('opacity-50', wizardStep === 1);
+        nextStep.disabled = wizardStep === 4;
+        nextStep.classList.toggle('opacity-50', wizardStep === 4);
+
+        stepIndicators.innerHTML = '';
+        ['Progress', 'Blockers', 'Confidence', 'Review'].forEach((label, index) => {
+          const number = index + 1;
+          const badge = document.createElement('span');
+          badge.className = `rounded-full px-3 py-1 ${number === wizardStep ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-400'}`;
+          badge.textContent = `${number}. ${label}`;
+          stepIndicators.appendChild(badge);
+        });
+      }
+
+      function renderApprovals() {
+        approvalCount.textContent = `${approvalQueue.length} pending`;
+        approvalList.innerHTML = '';
+        approvalQueue.forEach((request) => {
+          const card = document.createElement('div');
+          card.className = 'rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs';
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-white">${request.okr}</p>
+                <p class="text-xs text-slate-400">${request.owner} • ${request.reason}</p>
+              </div>
+              <span class="rounded-full bg-amber-500/20 px-2 py-1 text-xs text-amber-200">${request.status}</span>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <button class="approve-btn rounded-lg bg-emerald-500/20 px-3 py-1 text-xs text-emerald-200" data-id="${request.id}">Approve</button>
+              <button class="reject-btn rounded-lg bg-rose-500/20 px-3 py-1 text-xs text-rose-200" data-id="${request.id}">Reject</button>
+            </div>
+          `;
+          if (role !== 'Manager') {
+            card.classList.add('opacity-60');
+            card.querySelectorAll('button').forEach((btn) => (btn.disabled = true));
+          }
+          card.querySelector('.approve-btn').addEventListener('click', () => handleApproval(request.id, true));
+          card.querySelector('.reject-btn').addEventListener('click', () => handleApproval(request.id, false));
+          approvalList.appendChild(card);
+        });
+      }
+
+      function renderAudit() {
+        auditCount.textContent = `${auditTrail.length} updates`;
+        auditList.innerHTML = '';
+        auditTrail.forEach((entry) => {
+          const row = document.createElement('div');
+          row.className = 'rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2';
+          row.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">${entry.time}</span>
+              <span class="rounded-full px-2 py-0.5 text-[10px] ${entry.type === 'warning' ? 'bg-amber-500/20 text-amber-200' : entry.type === 'success' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-300'}">${entry.type}</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-200">${entry.message}</p>
+          `;
+          auditList.appendChild(row);
+        });
+      }
+
+      function handleApproval(id, approved) {
+        const index = approvalQueue.findIndex((request) => request.id === id);
+        if (index === -1) return;
+        const request = approvalQueue.splice(index, 1)[0];
+        auditTrail.unshift({
+          id: Date.now(),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          message: `${request.okr} ${approved ? 'approved' : 'rejected'} by manager.`,
+          type: approved ? 'success' : 'warning',
+        });
+        renderApprovals();
+        renderAudit();
+      }
+
+      function handleSubmit() {
+        if (!selectedOkr) return;
+        const newProgress = parseInt(progressRange.value, 10);
+        const confidenceValue = confidence.value;
+        const status = computeStatus(newProgress, confidenceValue);
+        const requiresApproval = newProgress < 40 || confidenceValue === 'Low' || newProgress < selectedOkr.previousProgress - 10;
+
+        selectedOkr.previousProgress = selectedOkr.progress;
+        selectedOkr.progress = newProgress;
+        selectedOkr.confidence = confidenceValue;
+        selectedOkr.status = status;
+        selectedOkr.lastCheckIn = new Date().toISOString().slice(0, 10);
+
+        auditTrail.unshift({
+          id: Date.now(),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          message: `${selectedOkr.id} check-in submitted by ${selectedOkr.owner}.`,
+          type: 'info',
+        });
+
+        if (requiresApproval) {
+          approvalQueue.unshift({
+            id: `REQ-${Math.floor(Math.random() * 900 + 100)}`,
+            okr: selectedOkr.id,
+            owner: selectedOkr.owner,
+            reason: newProgress < 40 ? 'Progress < 40%' : confidenceValue === 'Low' ? 'Confidence low' : 'Progress drop > 10%',
+            status: 'Pending',
+          });
+          auditTrail.unshift({
+            id: Date.now() + 1,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            message: `${selectedOkr.id} routed for manager review.`,
+            type: 'warning',
+          });
+        }
+
+        blockers = [];
+        actions = [];
+        summary.value = '';
+        renderBlockers();
+        renderActions();
+        renderOkrs();
+        renderApprovals();
+        renderAudit();
+        updateReview();
+      }
+
+      function exportCsv() {
+        const headers = ['ID', 'Objective', 'Owner', 'Team', 'Progress', 'Confidence', 'Status', 'Due', 'Last Check-in'];
+        const rows = okrs.map((okr) => [
+          okr.id,
+          okr.objective,
+          okr.owner,
+          okr.team,
+          `${okr.progress}%`,
+          okr.confidence,
+          okr.status,
+          okr.due,
+          okr.lastCheckIn,
+        ]);
+        const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'okr-portfolio.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      document.getElementById('addBlocker').addEventListener('click', () => {
+        if (!blockerInput.value.trim()) return;
+        blockers.push(blockerInput.value.trim());
+        blockerInput.value = '';
+        renderBlockers();
+        updateReview();
+      });
+
+      document.getElementById('addAction').addEventListener('click', () => {
+        if (!actionInput.value.trim()) return;
+        actions.push(actionInput.value.trim());
+        actionInput.value = '';
+        renderActions();
+        updateReview();
+      });
+
+      search.addEventListener('input', renderOkrs);
+      statusFilter.addEventListener('change', renderOkrs);
+      sortBy.addEventListener('change', renderOkrs);
+      progressRange.addEventListener('input', () => {
+        progressValue.textContent = `${progressRange.value}%`;
+        updateReview();
+      });
+      summary.addEventListener('input', updateReview);
+      confidence.addEventListener('change', updateReview);
+      prevStep.addEventListener('click', () => {
+        if (wizardStep > 1) {
+          wizardStep -= 1;
+          updateSteps();
+        }
+      });
+      nextStep.addEventListener('click', () => {
+        if (wizardStep < 4) {
+          wizardStep += 1;
+          updateSteps();
+        }
+      });
+      submitCheckin.addEventListener('click', handleSubmit);
+      resetWizard.addEventListener('click', () => selectOkr(selectedOkr.id));
+      document.querySelectorAll('.role-toggle').forEach((button) => {
+        button.addEventListener('click', () => setRole(button.dataset.role));
+      });
+      document.getElementById('exportCsv').addEventListener('click', exportCsv);
+
+      selectOkr(okrs[0].id);
+      renderApprovals();
+      renderAudit();
+      setRole('Contributor');
+      updateSteps();
+    </script>
+  </body>
+</html>

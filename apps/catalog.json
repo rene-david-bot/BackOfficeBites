@@ -313,5 +313,28 @@
       "renewals"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-26",
+    "day": 17,
+    "slug": "2026-02-26-okr-checkin-wizard",
+    "name": "OKR Check-in Wizard",
+    "description": "Guided OKR updates with policy validation, approval routing, and an audit trail.",
+    "category": "Planning",
+    "pattern": "Wizard",
+    "tags": [
+      "okr",
+      "planning",
+      "wizard",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "role-based",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
