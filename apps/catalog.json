@@ -383,5 +383,28 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-27",
+    "day": 20,
+    "slug": "2026-02-27-shipment-control-tower",
+    "name": "Shipment Control Tower",
+    "description": "Control tower for at-risk shipments with policy validation and exception approvals.",
+    "category": "Supply Chain",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "shipment tracker",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
