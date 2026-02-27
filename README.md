@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Shipment Control Tower** — control tower for at-risk shipments with policy validation and exception approvals.
+**Clause Review Dragboard** — drag-and-drop clause review with policy gates and exception approvals.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

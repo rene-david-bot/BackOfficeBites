@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clause Review Dragboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100">
+    <div class="min-h-screen">
+      <div class="max-w-7xl mx-auto px-6 py-10">
+        <a href="../../index.html" class="text-sm uppercase tracking-[0.25em] text-slate-400 hover:text-slate-200">BackOfficeBites 🍔</a>
+        <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 class="text-3xl font-semibold text-white">Clause Review Dragboard</h1>
+            <p class="mt-2 text-slate-300 max-w-2xl">
+              Triage contract clauses with drag-and-drop workflow lanes, policy validation, and exception approvals.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button id="exportCsv" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium">Export CSV</button>
+            <button id="syncQueue" class="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 text-sm font-medium">Sync Intake Queue</button>
+          </div>
+        </div>
+
+        <section class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Total Clauses</p>
+            <p id="statTotal" class="mt-3 text-3xl font-semibold">0</p>
+            <p class="mt-2 text-sm text-slate-400">Active items in flight</p>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">High Risk</p>
+            <p id="statHigh" class="mt-3 text-3xl font-semibold">0</p>
+            <p class="mt-2 text-sm text-slate-400">Requires legal escalation</p>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Exceptions Pending</p>
+            <p id="statExceptions" class="mt-3 text-3xl font-semibold">0</p>
+            <p class="mt-2 text-sm text-slate-400">Awaiting approval</p>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Avg Review Cycle</p>
+            <p id="statCycle" class="mt-3 text-3xl font-semibold">0.0d</p>
+            <p class="mt-2 text-sm text-slate-400">Last 14 decisions</p>
+          </div>
+        </section>
+
+        <section class="mt-8 bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+          <div class="grid grid-cols-1 lg:grid-cols-7 gap-4">
+            <div class="lg:col-span-2">
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Search</label>
+              <input id="searchInput" type="text" placeholder="Clause title, counterparty, owner..." class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Risk</label>
+              <select id="riskFilter" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="All">All</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Clause Type</label>
+              <select id="typeFilter" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="All">All</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Stage Focus</label>
+              <select id="stageFilter" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="All">All</option>
+                <option value="Intake">Intake</option>
+                <option value="Review">Review</option>
+                <option value="Negotiation">Negotiation</option>
+                <option value="Approved">Approved</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Role View</label>
+              <select id="roleSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>Legal Ops</option>
+                <option>Reviewer</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Sort</label>
+              <select id="sortSelect" class="mt-2 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="due">Due date</option>
+                <option value="risk">Risk level</option>
+                <option value="value">Contract value</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input id="exceptionsOnly" type="checkbox" class="accent-indigo-400" />
+              Only show policy exceptions
+            </label>
+            <div class="text-xs text-slate-400">Reviewer view filters to Alex Lee’s queue.</div>
+          </div>
+        </section>
+
+        <section class="mt-8 grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div class="xl:col-span-3 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="board"></div>
+
+            <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h2 class="text-lg font-semibold">Quick Intake</h2>
+                  <p class="text-sm text-slate-400">Add a new clause to the intake queue.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                  <span class="px-2 py-1 rounded-full bg-slate-800">Auto-policy check</span>
+                  <span class="px-2 py-1 rounded-full bg-slate-800">Audit trail</span>
+                </div>
+              </div>
+              <form id="intakeForm" class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+                <input id="intakeTitle" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Clause title" required />
+                <input id="intakeCounterparty" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Counterparty" required />
+                <select id="intakeType" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" required>
+                  <option value="">Clause type</option>
+                  <option>Liability</option>
+                  <option>Data Protection</option>
+                  <option>IP Ownership</option>
+                  <option>Termination</option>
+                  <option>Payment Terms</option>
+                </select>
+                <select id="intakeRisk" class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" required>
+                  <option value="">Risk</option>
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+                <button type="submit" class="rounded-lg bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 text-sm font-medium">Add to Intake</button>
+              </form>
+            </div>
+          </div>
+
+          <aside class="space-y-6">
+            <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold">Clause Details</h2>
+                <span id="selectedBadge" class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300">Selected</span>
+              </div>
+              <div id="detailPanel" class="mt-4 space-y-4 text-sm text-slate-200"></div>
+              <div class="mt-4 grid grid-cols-1 gap-2">
+                <button id="approveException" class="rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 text-sm font-medium">Approve Exception</button>
+                <button id="promoteStage" class="rounded-lg bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 text-sm font-medium">Promote to Next Stage</button>
+                <button id="requestChanges" class="rounded-lg bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 text-sm font-medium">Request Changes</button>
+              </div>
+            </div>
+
+            <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold">Audit Trail</h2>
+                <span class="text-xs text-slate-400">Latest 6 events</span>
+              </div>
+              <ul id="auditList" class="mt-4 space-y-3 text-sm text-slate-300"></ul>
+              <div class="mt-4">
+                <label class="text-xs uppercase tracking-[0.2em] text-slate-400">Add note</label>
+                <div class="mt-2 flex gap-2">
+                  <input id="auditNote" class="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Record a decision or policy note..." />
+                  <button id="auditAdd" class="rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium px-3">Log</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl text-sm shadow-xl opacity-0 translate-y-4 transition-all"></div>
+
+    <script>
+      const stages = ["Intake", "Review", "Negotiation", "Approved"];
+      const riskOrder = { Low: 1, Medium: 2, High: 3 };
+      const sampleClauses = [
+        {
+          id: "CL-241",
+          title: "Mutual NDA carve-outs",
+          counterparty: "Helios Cloud",
+          type: "Data Protection",
+          owner: "Morgan V.",
+          reviewer: "Alex Lee",
+          status: "Intake",
+          risk: "Medium",
+          jurisdiction: "DE",
+          due: "2026-03-02",
+          value: 2.6,
+          exceptionRequired: false,
+          exceptionApproved: false,
+          summary: "Clarify retention and subprocessor notification timelines.",
+        },
+        {
+          id: "CL-255",
+          title: "Limitation of liability cap",
+          counterparty: "Northbay Energy",
+          type: "Liability",
+          owner: "Priya S.",
+          reviewer: "Alex Lee",
+          status: "Review",
+          risk: "High",
+          jurisdiction: "US",
+          due: "2026-03-01",
+          value: 8.4,
+          exceptionRequired: true,
+          exceptionApproved: false,
+          summary: "Counterparty requests 6x fees cap with consequential damages carve-out.",
+        },
+        {
+          id: "CL-248",
+          title: "IP assignment schedule",
+          counterparty: "Okada Robotics",
+          type: "IP Ownership",
+          owner: "Luis R.",
+          reviewer: "Dana Brook",
+          status: "Negotiation",
+          risk: "Medium",
+          jurisdiction: "JP",
+          due: "2026-03-04",
+          value: 5.1,
+          exceptionRequired: false,
+          exceptionApproved: false,
+          summary: "Clarify joint development ownership and royalty triggers.",
+        },
+        {
+          id: "CL-233",
+          title: "Termination for convenience",
+          counterparty: "Amberline Retail",
+          type: "Termination",
+          owner: "Sasha P.",
+          reviewer: "Alex Lee",
+          status: "Approved",
+          risk: "Low",
+          jurisdiction: "UK",
+          due: "2026-02-25",
+          value: 1.2,
+          exceptionRequired: false,
+          exceptionApproved: false,
+          summary: "Standard 30-day notice accepted with wind-down playbook.",
+        },
+        {
+          id: "CL-260",
+          title: "Payment term variance",
+          counterparty: "Novo Retail",
+          type: "Payment Terms",
+          owner: "Riley M.",
+          reviewer: "Alex Lee",
+          status: "Review",
+          risk: "Medium",
+          jurisdiction: "FR",
+          due: "2026-02-28",
+          value: 3.3,
+          exceptionRequired: true,
+          exceptionApproved: true,
+          summary: "Net-90 request approved with 2% early pay discount.",
+        },
+        {
+          id: "CL-262",
+          title: "Subprocessor escalation clause",
+          counterparty: "Vertex Health",
+          type: "Data Protection",
+          owner: "Morgan V.",
+          reviewer: "Dana Brook",
+          status: "Intake",
+          risk: "High",
+          jurisdiction: "EU",
+          due: "2026-03-05",
+          value: 6.7,
+          exceptionRequired: true,
+          exceptionApproved: false,
+          summary: "Requires 7-day breach notification and DPIA addendum.",
+        },
+        {
+          id: "CL-245",
+          title: "Indemnity scope update",
+          counterparty: "Silvergate Logistics",
+          type: "Liability",
+          owner: "Priya S.",
+          reviewer: "Alex Lee",
+          status: "Negotiation",
+          risk: "High",
+          jurisdiction: "US",
+          due: "2026-03-03",
+          value: 9.1,
+          exceptionRequired: true,
+          exceptionApproved: false,
+          summary: "Vendor requests cyber indemnity broadening beyond policy.",
+        },
+        {
+          id: "CL-239",
+          title: "Assignment restrictions",
+          counterparty: "Ionix Labs",
+          type: "Termination",
+          owner: "Sasha P.",
+          reviewer: "Alex Lee",
+          status: "Review",
+          risk: "Low",
+          jurisdiction: "DE",
+          due: "2026-03-01",
+          value: 1.6,
+          exceptionRequired: false,
+          exceptionApproved: false,
+          summary: "Confirm M&A assignment notice requirements.",
+        }
+      ];
+
+      const state = {
+        clauses: [...sampleClauses],
+        selectedId: sampleClauses[0].id,
+        role: "Legal Ops",
+        filters: {
+          search: "",
+          risk: "All",
+          type: "All",
+          stage: "All",
+          exceptionsOnly: false,
+          sort: "due",
+        },
+        audit: [
+          { time: "09:05", text: "CL-255 flagged for exception approval (risk: High)." },
+          { time: "08:52", text: "CL-233 approved by Dana Brook." },
+          { time: "08:40", text: "CL-248 moved to Negotiation lane." },
+        ],
+      };
+
+      const board = document.getElementById("board");
+      const statTotal = document.getElementById("statTotal");
+      const statHigh = document.getElementById("statHigh");
+      const statExceptions = document.getElementById("statExceptions");
+      const statCycle = document.getElementById("statCycle");
+      const typeFilter = document.getElementById("typeFilter");
+      const detailPanel = document.getElementById("detailPanel");
+      const auditList = document.getElementById("auditList");
+      const toast = document.getElementById("toast");
+
+      const inputs = {
+        searchInput: document.getElementById("searchInput"),
+        riskFilter: document.getElementById("riskFilter"),
+        stageFilter: document.getElementById("stageFilter"),
+        roleSelect: document.getElementById("roleSelect"),
+        sortSelect: document.getElementById("sortSelect"),
+        exceptionsOnly: document.getElementById("exceptionsOnly"),
+      };
+
+      function formatDate(dateStr) {
+        const date = new Date(dateStr + "T00:00:00");
+        return date.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
+      }
+
+      function updateStats() {
+        statTotal.textContent = state.clauses.length;
+        statHigh.textContent = state.clauses.filter((c) => c.risk === "High").length;
+        statExceptions.textContent = state.clauses.filter((c) => c.exceptionRequired && !c.exceptionApproved).length;
+        statCycle.textContent = "2." + Math.floor(Math.random() * 6) + "d";
+      }
+
+      function showToast(message, tone = "info") {
+        toast.textContent = message;
+        toast.className = "fixed bottom-6 right-6 px-4 py-3 rounded-xl text-sm shadow-xl transition-all";
+        const base = "bg-slate-900 border border-slate-700 text-slate-100";
+        const warn = "bg-amber-500/20 border border-amber-400/40 text-amber-100";
+        const danger = "bg-rose-500/20 border border-rose-400/40 text-rose-100";
+        toast.className += " " + (tone === "warn" ? warn : tone === "danger" ? danger : base);
+        requestAnimationFrame(() => {
+          toast.classList.remove("opacity-0", "translate-y-4");
+        });
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => {
+          toast.classList.add("opacity-0", "translate-y-4");
+        }, 2200);
+      }
+
+      function addAudit(text) {
+        const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        state.audit.unshift({ time, text });
+        state.audit = state.audit.slice(0, 6);
+        renderAudit();
+      }
+
+      function renderAudit() {
+        auditList.innerHTML = "";
+        state.audit.forEach((item) => {
+          const li = document.createElement("li");
+          li.className = "flex gap-3";
+          li.innerHTML = `
+            <span class="text-xs text-slate-400">${item.time}</span>
+            <span>${item.text}</span>
+          `;
+          auditList.appendChild(li);
+        });
+      }
+
+      function getFilteredClauses() {
+        const search = state.filters.search.toLowerCase();
+        return state.clauses
+          .filter((clause) => {
+            if (state.filters.risk !== "All" && clause.risk !== state.filters.risk) return false;
+            if (state.filters.type !== "All" && clause.type !== state.filters.type) return false;
+            if (state.filters.exceptionsOnly && !(clause.exceptionRequired && !clause.exceptionApproved)) return false;
+            if (state.role === "Reviewer" && clause.reviewer !== "Alex Lee") return false;
+            if (!search) return true;
+            return (
+              clause.title.toLowerCase().includes(search) ||
+              clause.counterparty.toLowerCase().includes(search) ||
+              clause.owner.toLowerCase().includes(search) ||
+              clause.type.toLowerCase().includes(search)
+            );
+          })
+          .sort((a, b) => {
+            if (state.filters.sort === "due") return new Date(a.due) - new Date(b.due);
+            if (state.filters.sort === "risk") return riskOrder[b.risk] - riskOrder[a.risk];
+            return b.value - a.value;
+          });
+      }
+
+      function renderBoard() {
+        board.innerHTML = "";
+        const filtered = getFilteredClauses();
+        stages.forEach((stage) => {
+          const column = document.createElement("div");
+          column.className = "bg-slate-900/60 border border-slate-800 rounded-2xl p-4 min-h-[320px] flex flex-col gap-3";
+          column.dataset.stage = stage;
+          if (state.filters.stage !== "All" && state.filters.stage !== stage) {
+            column.classList.add("hidden");
+          }
+          column.innerHTML = `
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">${stage}</h3>
+              <span class="text-xs text-slate-400">${filtered.filter((c) => c.status === stage).length}</span>
+            </div>
+            <div class="space-y-3" id="lane-${stage}"></div>
+          `;
+          board.appendChild(column);
+
+          const lane = column.querySelector(`#lane-${stage}`);
+          filtered
+            .filter((clause) => clause.status === stage)
+            .forEach((clause) => {
+              const card = document.createElement("button");
+              card.className = "w-full text-left bg-slate-950 border border-slate-800 rounded-xl p-3 hover:border-indigo-400/60 transition";
+              card.draggable = true;
+              card.dataset.id = clause.id;
+              card.innerHTML = `
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-white">${clause.title}</h4>
+                  <span class="text-xs px-2 py-1 rounded-full ${clause.risk === "High" ? "bg-rose-500/20 text-rose-200" : clause.risk === "Medium" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"}">${clause.risk}</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400">${clause.counterparty} • ${clause.type}</p>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                  <span>Due ${formatDate(clause.due)}</span>
+                  <span>${clause.exceptionRequired ? (clause.exceptionApproved ? "Exception ok" : "Exception needed") : "Policy ok"}</span>
+                </div>
+              `;
+              card.addEventListener("click", () => {
+                state.selectedId = clause.id;
+                renderDetail();
+              });
+              card.addEventListener("dragstart", (event) => {
+                event.dataTransfer.setData("text/plain", clause.id);
+              });
+              lane.appendChild(card);
+            });
+
+          column.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            column.classList.add("border-indigo-400/50");
+          });
+          column.addEventListener("dragleave", () => column.classList.remove("border-indigo-400/50"));
+          column.addEventListener("drop", (event) => {
+            event.preventDefault();
+            column.classList.remove("border-indigo-400/50");
+            const id = event.dataTransfer.getData("text/plain");
+            moveClause(id, stage);
+          });
+        });
+      }
+
+      function renderDetail() {
+        const clause = state.clauses.find((item) => item.id === state.selectedId) || state.clauses[0];
+        if (!clause) return;
+        state.selectedId = clause.id;
+        detailPanel.innerHTML = `
+          <div>
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">${clause.id}</p>
+            <h3 class="mt-2 text-lg font-semibold text-white">${clause.title}</h3>
+            <p class="text-sm text-slate-400">${clause.counterparty} • ${clause.type} • ${clause.jurisdiction}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <p class="text-xs text-slate-400">Owner</p>
+              <p class="text-sm">${clause.owner}</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Reviewer</p>
+              <p class="text-sm">${clause.reviewer}</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Stage</p>
+              <p class="text-sm">${clause.status}</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Due</p>
+              <p class="text-sm">${formatDate(clause.due)}</p>
+            </div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300">
+            ${clause.summary}
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Policy checks</p>
+            <ul class="mt-2 space-y-2 text-sm">
+              <li class="flex items-center justify-between">
+                <span>Exception required</span>
+                <span class="text-xs px-2 py-1 rounded-full ${clause.exceptionRequired ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"}">${clause.exceptionRequired ? "Yes" : "No"}</span>
+              </li>
+              <li class="flex items-center justify-between">
+                <span>Exception approved</span>
+                <span class="text-xs px-2 py-1 rounded-full ${clause.exceptionApproved ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200"}">${clause.exceptionApproved ? "Approved" : "Pending"}</span>
+              </li>
+              <li class="flex items-center justify-between">
+                <span>Risk band</span>
+                <span class="text-xs px-2 py-1 rounded-full ${clause.risk === "High" ? "bg-rose-500/20 text-rose-200" : clause.risk === "Medium" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"}">${clause.risk}</span>
+              </li>
+            </ul>
+          </div>
+        `;
+
+        document.getElementById("approveException").disabled = !clause.exceptionRequired || clause.exceptionApproved;
+      }
+
+      function moveClause(id, targetStage) {
+        const clause = state.clauses.find((item) => item.id === id);
+        if (!clause || clause.status === targetStage) return;
+        if (targetStage === "Approved" && clause.exceptionRequired && !clause.exceptionApproved) {
+          showToast("Exception approval required before approval.", "warn");
+          addAudit(`${clause.id} blocked from approval (missing exception).`);
+          return;
+        }
+        const prev = clause.status;
+        clause.status = targetStage;
+        addAudit(`${clause.id} moved from ${prev} → ${targetStage}.`);
+        updateStats();
+        renderBoard();
+        renderDetail();
+      }
+
+      function hydrateTypes() {
+        const types = Array.from(new Set(state.clauses.map((c) => c.type)));
+        types.forEach((type) => {
+          const opt = document.createElement("option");
+          opt.value = type;
+          opt.textContent = type;
+          typeFilter.appendChild(opt);
+        });
+      }
+
+      function wireEvents() {
+        inputs.searchInput.addEventListener("input", (event) => {
+          state.filters.search = event.target.value;
+          renderBoard();
+        });
+        inputs.riskFilter.addEventListener("change", (event) => {
+          state.filters.risk = event.target.value;
+          renderBoard();
+        });
+        typeFilter.addEventListener("change", (event) => {
+          state.filters.type = event.target.value;
+          renderBoard();
+        });
+        inputs.stageFilter.addEventListener("change", (event) => {
+          state.filters.stage = event.target.value;
+          renderBoard();
+        });
+        inputs.roleSelect.addEventListener("change", (event) => {
+          state.role = event.target.value;
+          renderBoard();
+          renderDetail();
+        });
+        inputs.sortSelect.addEventListener("change", (event) => {
+          state.filters.sort = event.target.value;
+          renderBoard();
+        });
+        inputs.exceptionsOnly.addEventListener("change", (event) => {
+          state.filters.exceptionsOnly = event.target.checked;
+          renderBoard();
+        });
+
+        document.getElementById("exportCsv").addEventListener("click", () => {
+          const rows = ["ID,Title,Counterparty,Type,Stage,Risk,Due,Owner,Reviewer,ExceptionRequired,ExceptionApproved"];
+          getFilteredClauses().forEach((clause) => {
+            rows.push([
+              clause.id,
+              clause.title,
+              clause.counterparty,
+              clause.type,
+              clause.status,
+              clause.risk,
+              clause.due,
+              clause.owner,
+              clause.reviewer,
+              clause.exceptionRequired,
+              clause.exceptionApproved,
+            ].map((value) => `"${String(value).replace(/\"/g, "\"\"")}"`).join(","));
+          });
+          const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "clause_review_queue.csv";
+          link.click();
+          URL.revokeObjectURL(url);
+          showToast("CSV exported.");
+        });
+
+        document.getElementById("syncQueue").addEventListener("click", () => {
+          showToast("Intake queue synced.");
+          addAudit("Intake queue synced from contract inbox.");
+        });
+
+        document.getElementById("approveException").addEventListener("click", () => {
+          const clause = state.clauses.find((item) => item.id === state.selectedId);
+          if (!clause || clause.exceptionApproved) return;
+          clause.exceptionApproved = true;
+          addAudit(`${clause.id} exception approved by Legal Ops.`);
+          updateStats();
+          renderBoard();
+          renderDetail();
+        });
+
+        document.getElementById("promoteStage").addEventListener("click", () => {
+          const clause = state.clauses.find((item) => item.id === state.selectedId);
+          if (!clause) return;
+          const idx = stages.indexOf(clause.status);
+          const next = stages[Math.min(idx + 1, stages.length - 1)];
+          if (next === clause.status) {
+            showToast("Clause already in final stage.", "warn");
+            return;
+          }
+          moveClause(clause.id, next);
+        });
+
+        document.getElementById("requestChanges").addEventListener("click", () => {
+          const clause = state.clauses.find((item) => item.id === state.selectedId);
+          if (!clause) return;
+          moveClause(clause.id, "Negotiation");
+          addAudit(`${clause.id} sent back for negotiation.`);
+        });
+
+        document.getElementById("auditAdd").addEventListener("click", () => {
+          const note = document.getElementById("auditNote").value.trim();
+          if (!note) return;
+          addAudit(note);
+          document.getElementById("auditNote").value = "";
+        });
+
+        document.getElementById("intakeForm").addEventListener("submit", (event) => {
+          event.preventDefault();
+          const title = document.getElementById("intakeTitle").value.trim();
+          const counterparty = document.getElementById("intakeCounterparty").value.trim();
+          const type = document.getElementById("intakeType").value;
+          const risk = document.getElementById("intakeRisk").value;
+          if (!title || !counterparty || !type || !risk) return;
+          const id = `CL-${Math.floor(200 + Math.random() * 100)}`;
+          state.clauses.unshift({
+            id,
+            title,
+            counterparty,
+            type,
+            owner: "Intake Bot",
+            reviewer: "Alex Lee",
+            status: "Intake",
+            risk,
+            jurisdiction: "EU",
+            due: "2026-03-06",
+            value: 1.0,
+            exceptionRequired: risk === "High",
+            exceptionApproved: false,
+            summary: "Auto-generated intake record. Awaiting reviewer notes.",
+          });
+          addAudit(`${id} added to Intake by Intake Bot.`);
+          event.target.reset();
+          renderBoard();
+          renderDetail();
+          updateStats();
+        });
+      }
+
+      function init() {
+        hydrateTypes();
+        wireEvents();
+        updateStats();
+        renderBoard();
+        renderDetail();
+        renderAudit();
+      }
+
+      init();
+    </script>
+  </body>
+</html>

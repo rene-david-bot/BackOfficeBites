@@ -406,5 +406,28 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-27",
+    "day": 21,
+    "slug": "2026-02-27-clause-review-dragboard",
+    "name": "Clause Review Dragboard",
+    "description": "Drag-and-drop clause review with policy gates and exception approvals.",
+    "category": "Legal",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "legal",
+      "contract clauses",
+      "drag-and-drop",
+      "policy validation",
+      "exception approvals",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
