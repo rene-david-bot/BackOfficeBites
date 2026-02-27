@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Change Request Timeline Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { height: 10px; width: 10px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="min-h-screen">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200">BackOfficeBites 🍔</a>
+      <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight">Change Request Timeline Hub</h1>
+          <p class="text-slate-400 mt-2 max-w-2xl">Track IT change requests across review, approval, and rollout milestones with policy validation and audit coverage.</p>
+        </div>
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-3">
+          <div class="text-xs text-slate-400 uppercase tracking-wide mb-2">Active Role</div>
+          <div class="flex flex-wrap gap-2" id="roleButtons"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-8" id="summaryCards"></div>
+
+      <div class="mt-8 grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold">Change Queue</h2>
+              <p class="text-xs text-slate-400">Search, filter, and prioritize upcoming changes.</p>
+            </div>
+            <button id="exportBtn" class="text-xs px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30">Export CSV</button>
+          </div>
+          <div class="mt-4 flex flex-col gap-3">
+            <label class="text-xs text-slate-400" for="searchInput">Search</label>
+            <input id="searchInput" type="text" placeholder="Search by title, system, or ID" class="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-slate-400" for="environmentFilter">Environment</label>
+                <select id="environmentFilter" class="mt-1 w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                  <option value="All">All</option>
+                  <option value="Prod">Prod</option>
+                  <option value="Staging">Staging</option>
+                  <option value="Dev">Dev</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400" for="riskFilter">Risk</label>
+                <select id="riskFilter" class="mt-1 w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                  <option value="All">All</option>
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-slate-400" for="statusFilter">Status</label>
+                <select id="statusFilter" class="mt-1 w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                  <option value="All">All</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Review">Review</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Rolled Back">Rolled Back</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400" for="sortSelect">Sort</label>
+                <select id="sortSelect" class="mt-1 w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                  <option value="scheduled">Scheduled Date</option>
+                  <option value="risk">Risk</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 space-y-3 max-h-[560px] overflow-y-auto pr-2" id="queueList"></div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6" id="detailPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const roles = [
+      { id: 'Change Manager', accent: 'emerald' },
+      { id: 'CAB Lead', accent: 'violet' },
+      { id: 'Security Reviewer', accent: 'amber' },
+      { id: 'Release Engineer', accent: 'sky' }
+    ];
+
+    const statusColors = {
+      'Draft': 'bg-slate-500/20 text-slate-200 border-slate-500/40',
+      'Review': 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+      'Approved': 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+      'Scheduled': 'bg-sky-500/20 text-sky-200 border-sky-500/40',
+      'In Progress': 'bg-violet-500/20 text-violet-200 border-violet-500/40',
+      'Completed': 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+      'Rolled Back': 'bg-rose-500/20 text-rose-200 border-rose-500/40'
+    };
+
+    const riskOrder = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+    const statusOrder = { Draft: 1, Review: 2, Approved: 3, Scheduled: 4, 'In Progress': 5, Completed: 6, 'Rolled Back': 7 };
+
+    const state = {
+      role: 'Change Manager',
+      search: '',
+      environment: 'All',
+      risk: 'All',
+      status: 'All',
+      sort: 'scheduled',
+      selectedId: 'CR-3412',
+      data: [
+        {
+          id: 'CR-3412',
+          title: 'CRM Identity Sync Patch',
+          system: 'Salesforce',
+          owner: 'M. Vega',
+          environment: 'Prod',
+          risk: 'High',
+          status: 'Review',
+          scheduled: '2026-03-01 22:00',
+          window: '2h',
+          impact: 'SSO login refresh + API token rotation',
+          approvals: { cab: 'Pending', security: 'Approved', ops: 'Pending' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: false },
+            { id: 'sox', label: 'SOX validation complete', done: false }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-25', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-26', status: 'current' },
+            { label: 'Scheduled', date: '2026-03-01', status: 'upcoming' },
+            { label: 'Execution', date: '2026-03-01', status: 'upcoming' },
+            { label: 'Post-Check', date: '2026-03-02', status: 'upcoming' }
+          ],
+          notes: ['Security sign-off granted. Awaiting CAB approval.'],
+          audit: [
+            '2026-02-25 09:14 — Change request created by M. Vega',
+            '2026-02-26 11:30 — Security review completed by L. Chen',
+            '2026-02-26 16:05 — CAB meeting scheduled for next cycle'
+          ]
+        },
+        {
+          id: 'CR-3407',
+          title: 'Payroll Engine Hotfix',
+          system: 'Workday',
+          owner: 'T. Rossi',
+          environment: 'Prod',
+          risk: 'Critical',
+          status: 'Approved',
+          scheduled: '2026-02-28 01:00',
+          window: '1h',
+          impact: 'Fixes overtime calculation for EU payroll run',
+          approvals: { cab: 'Approved', security: 'Approved', ops: 'Approved' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: true },
+            { id: 'sox', label: 'SOX validation complete', done: true }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-22', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-23', status: 'done' },
+            { label: 'Scheduled', date: '2026-02-28', status: 'current' },
+            { label: 'Execution', date: '2026-02-28', status: 'upcoming' },
+            { label: 'Post-Check', date: '2026-02-28', status: 'upcoming' }
+          ],
+          notes: ['Requires finance leadership on bridge.'],
+          audit: [
+            '2026-02-22 08:18 — Change request created by T. Rossi',
+            '2026-02-23 15:45 — CAB approved emergency hotfix',
+            '2026-02-24 09:20 — Rollout checklist completed'
+          ]
+        },
+        {
+          id: 'CR-3391',
+          title: 'VPN Gateway Certificate Rotation',
+          system: 'Palo Alto',
+          owner: 'J. Holm',
+          environment: 'Prod',
+          risk: 'Medium',
+          status: 'Scheduled',
+          scheduled: '2026-03-03 03:00',
+          window: '45m',
+          impact: 'Short VPN reconnect for remote users',
+          approvals: { cab: 'Approved', security: 'Approved', ops: 'Approved' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: true },
+            { id: 'sox', label: 'SOX validation complete', done: false }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-18', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-19', status: 'done' },
+            { label: 'Scheduled', date: '2026-03-03', status: 'current' },
+            { label: 'Execution', date: '2026-03-03', status: 'upcoming' },
+            { label: 'Post-Check', date: '2026-03-03', status: 'upcoming' }
+          ],
+          notes: ['Certificate renewal aligned with vendor maintenance window.'],
+          audit: [
+            '2026-02-18 10:02 — Change request created by J. Holm',
+            '2026-02-19 14:10 — CAB approval recorded',
+            '2026-02-20 17:42 — Stakeholder comms sent'
+          ]
+        },
+        {
+          id: 'CR-3384',
+          title: 'Data Lake Index Rebuild',
+          system: 'Snowflake',
+          owner: 'R. Kim',
+          environment: 'Staging',
+          risk: 'Low',
+          status: 'Draft',
+          scheduled: '2026-03-05 18:00',
+          window: '3h',
+          impact: 'Staging performance tune-up, no prod impact',
+          approvals: { cab: 'Not Required', security: 'Pending', ops: 'Pending' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: false },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: false },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: false },
+            { id: 'sox', label: 'SOX validation complete', done: false }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-27', status: 'current' },
+            { label: 'CAB Review', date: '2026-03-01', status: 'upcoming' },
+            { label: 'Scheduled', date: '2026-03-05', status: 'upcoming' },
+            { label: 'Execution', date: '2026-03-05', status: 'upcoming' },
+            { label: 'Post-Check', date: '2026-03-06', status: 'upcoming' }
+          ],
+          notes: ['Waiting on benchmark data from analytics team.'],
+          audit: [
+            '2026-02-27 09:12 — Draft created by R. Kim'
+          ]
+        },
+        {
+          id: 'CR-3379',
+          title: 'Endpoint DLP Policy Rollout',
+          system: 'Microsoft Purview',
+          owner: 'A. Nouri',
+          environment: 'Prod',
+          risk: 'High',
+          status: 'In Progress',
+          scheduled: '2026-02-27 21:00',
+          window: '4h',
+          impact: 'Enforces new USB controls in EMEA region',
+          approvals: { cab: 'Approved', security: 'Approved', ops: 'Approved' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: true },
+            { id: 'sox', label: 'SOX validation complete', done: true }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-20', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-21', status: 'done' },
+            { label: 'Scheduled', date: '2026-02-27', status: 'done' },
+            { label: 'Execution', date: '2026-02-27', status: 'current' },
+            { label: 'Post-Check', date: '2026-02-28', status: 'upcoming' }
+          ],
+          notes: ['Helpdesk on standby for policy exceptions.'],
+          audit: [
+            '2026-02-20 13:32 — Change request created by A. Nouri',
+            '2026-02-21 16:44 — CAB approved change',
+            '2026-02-27 21:05 — Rollout started'
+          ]
+        },
+        {
+          id: 'CR-3372',
+          title: 'Network Segmentation Tag Update',
+          system: 'Cisco ACI',
+          owner: 'S. Decker',
+          environment: 'Prod',
+          risk: 'Medium',
+          status: 'Completed',
+          scheduled: '2026-02-24 02:00',
+          window: '90m',
+          impact: 'Refines traffic tagging for finance VLANs',
+          approvals: { cab: 'Approved', security: 'Approved', ops: 'Approved' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: true },
+            { id: 'sox', label: 'SOX validation complete', done: true }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-18', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-19', status: 'done' },
+            { label: 'Scheduled', date: '2026-02-24', status: 'done' },
+            { label: 'Execution', date: '2026-02-24', status: 'done' },
+            { label: 'Post-Check', date: '2026-02-24', status: 'done' }
+          ],
+          notes: ['No incidents reported post-change.'],
+          audit: [
+            '2026-02-18 08:55 — Change request created by S. Decker',
+            '2026-02-19 10:00 — CAB approval recorded',
+            '2026-02-24 03:40 — Post-check complete'
+          ]
+        },
+        {
+          id: 'CR-3361',
+          title: 'ServiceNow Form Layout Refresh',
+          system: 'ServiceNow',
+          owner: 'P. Laurent',
+          environment: 'Dev',
+          risk: 'Low',
+          status: 'Rolled Back',
+          scheduled: '2026-02-23 19:00',
+          window: '2h',
+          impact: 'Form UX updates for internal ticketing',
+          approvals: { cab: 'Approved', security: 'Approved', ops: 'Approved' },
+          checks: [
+            { id: 'backout', label: 'Backout plan documented', done: true },
+            { id: 'monitoring', label: 'Monitoring dashboard updated', done: true },
+            { id: 'stakeholders', label: 'Stakeholder comms drafted', done: true },
+            { id: 'sox', label: 'SOX validation complete', done: true }
+          ],
+          milestones: [
+            { label: 'Draft', date: '2026-02-15', status: 'done' },
+            { label: 'CAB Review', date: '2026-02-16', status: 'done' },
+            { label: 'Scheduled', date: '2026-02-23', status: 'done' },
+            { label: 'Execution', date: '2026-02-23', status: 'done' },
+            { label: 'Post-Check', date: '2026-02-24', status: 'done' }
+          ],
+          notes: ['Rolled back due to form rendering defects in QA.'],
+          audit: [
+            '2026-02-15 11:22 — Change request created by P. Laurent',
+            '2026-02-16 09:05 — CAB approval recorded',
+            '2026-02-23 21:10 — Rolled back after QA verification'
+          ]
+        }
+      ]
+    };
+
+    const elements = {
+      roleButtons: document.getElementById('roleButtons'),
+      summaryCards: document.getElementById('summaryCards'),
+      queueList: document.getElementById('queueList'),
+      detailPanel: document.getElementById('detailPanel'),
+      searchInput: document.getElementById('searchInput'),
+      environmentFilter: document.getElementById('environmentFilter'),
+      riskFilter: document.getElementById('riskFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      sortSelect: document.getElementById('sortSelect'),
+      exportBtn: document.getElementById('exportBtn')
+    };
+
+    const actions = [
+      { label: 'Approve', next: 'Approved', roles: ['Change Manager', 'CAB Lead'], when: ['Draft', 'Review'] },
+      { label: 'Schedule', next: 'Scheduled', roles: ['Change Manager'], when: ['Approved'] },
+      { label: 'Start Change', next: 'In Progress', roles: ['Release Engineer'], when: ['Scheduled'] },
+      { label: 'Mark Complete', next: 'Completed', roles: ['Release Engineer'], when: ['In Progress'] },
+      { label: 'Rollback', next: 'Rolled Back', roles: ['Release Engineer'], when: ['In Progress'] },
+      { label: 'Request Changes', next: 'Review', roles: ['Security Reviewer', 'CAB Lead', 'Change Manager'], when: ['Approved', 'Scheduled'] }
+    ];
+
+    const formatDate = (value) => {
+      const [date, time] = value.split(' ');
+      return `${date} • ${time}`;
+    };
+
+    const getFilteredData = () => {
+      return state.data.filter(item => {
+        const matchesSearch = `${item.id} ${item.title} ${item.system} ${item.owner}`.toLowerCase().includes(state.search.toLowerCase());
+        const matchesEnv = state.environment === 'All' || item.environment === state.environment;
+        const matchesRisk = state.risk === 'All' || item.risk === state.risk;
+        const matchesStatus = state.status === 'All' || item.status === state.status;
+        return matchesSearch && matchesEnv && matchesRisk && matchesStatus;
+      }).sort((a, b) => {
+        if (state.sort === 'scheduled') {
+          return a.scheduled.localeCompare(b.scheduled);
+        }
+        if (state.sort === 'risk') {
+          return riskOrder[b.risk] - riskOrder[a.risk];
+        }
+        return statusOrder[a.status] - statusOrder[b.status];
+      });
+    };
+
+    const getSelected = () => state.data.find(item => item.id === state.selectedId) || state.data[0];
+
+    const renderRoles = () => {
+      elements.roleButtons.innerHTML = roles.map(role => {
+        const active = role.id === state.role;
+        const classes = active
+          ? `bg-${role.accent}-500/30 text-${role.accent}-200 border-${role.accent}-500/50`
+          : 'bg-slate-950/60 text-slate-300 border-slate-800 hover:text-slate-100';
+        return `<button class="text-xs px-3 py-1.5 rounded-full border ${classes}" data-role="${role.id}">${role.id}</button>`;
+      }).join('');
+      elements.roleButtons.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.role = btn.dataset.role;
+          render();
+        });
+      });
+    };
+
+    const renderSummary = () => {
+      const filtered = getFilteredData();
+      const pending = filtered.filter(item => ['Draft', 'Review'].includes(item.status)).length;
+      const highRisk = filtered.filter(item => ['High', 'Critical'].includes(item.risk)).length;
+      const nextWindow = filtered
+        .filter(item => !['Completed', 'Rolled Back'].includes(item.status))
+        .sort((a, b) => a.scheduled.localeCompare(b.scheduled))[0];
+      const prodChanges = filtered.filter(item => item.environment === 'Prod').length;
+
+      const cards = [
+        { label: 'Open Changes', value: filtered.length, helper: `${prodChanges} in Prod` },
+        { label: 'Needs Approval', value: pending, helper: 'Draft + Review' },
+        { label: 'High Risk', value: highRisk, helper: 'High / Critical' },
+        { label: 'Next Window', value: nextWindow ? nextWindow.scheduled.split(' ')[0] : '—', helper: nextWindow ? nextWindow.title : 'No upcoming' }
+      ];
+
+      elements.summaryCards.innerHTML = cards.map(card => `
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <div class="text-xs text-slate-400 uppercase tracking-wide">${card.label}</div>
+          <div class="text-2xl font-semibold mt-2">${card.value}</div>
+          <div class="text-xs text-slate-500 mt-2">${card.helper}</div>
+        </div>
+      `).join('');
+    };
+
+    const renderQueue = () => {
+      const filtered = getFilteredData();
+      if (!filtered.length) {
+        elements.queueList.innerHTML = '<div class="text-sm text-slate-400">No changes match the current filters.</div>';
+        return;
+      }
+      elements.queueList.innerHTML = filtered.map(item => {
+        const active = item.id === state.selectedId;
+        const statusClass = statusColors[item.status] || 'bg-slate-500/20 text-slate-200 border-slate-500/40';
+        return `
+          <button class="w-full text-left border rounded-2xl p-4 transition ${active ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'}" data-id="${item.id}">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <div class="font-semibold">${item.title}</div>
+                <div class="text-xs text-slate-400 mt-1">${item.system} • ${item.environment} • ${item.owner}</div>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full border ${statusClass}">${item.status}</span>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+              <span class="px-2 py-1 rounded-full bg-slate-900/80 border border-slate-800">${item.risk} risk</span>
+              <span class="px-2 py-1 rounded-full bg-slate-900/80 border border-slate-800">${formatDate(item.scheduled)}</span>
+              <span class="px-2 py-1 rounded-full bg-slate-900/80 border border-slate-800">Window ${item.window}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      elements.queueList.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    };
+
+    const renderDetail = () => {
+      const selected = getSelected();
+      if (!selected) return;
+
+      const statusClass = statusColors[selected.status] || 'bg-slate-500/20 text-slate-200 border-slate-500/40';
+      const policyScore = selected.checks.filter(check => check.done).length;
+      const policyTotal = selected.checks.length;
+      const canToggle = ['Change Manager', 'Security Reviewer'].includes(state.role);
+
+      const actionButtons = actions.filter(action => action.when.includes(selected.status)).map(action => {
+        const disabled = !action.roles.includes(state.role);
+        return `
+          <button class="text-xs px-3 py-1.5 rounded-full border ${disabled ? 'border-slate-700 text-slate-500 cursor-not-allowed' : 'border-emerald-500/50 text-emerald-200 hover:bg-emerald-500/20'}" data-action="${action.label}" ${disabled ? 'disabled' : ''}>${action.label}</button>
+        `;
+      }).join('');
+
+      elements.detailPanel.innerHTML = `
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div>
+              <div class="text-sm text-slate-400">${selected.id} • ${selected.system}</div>
+              <h2 class="text-2xl font-semibold mt-2">${selected.title}</h2>
+              <p class="text-sm text-slate-400 mt-2">${selected.impact}</p>
+            </div>
+            <div class="flex flex-col items-start gap-2">
+              <span class="text-xs px-3 py-1 rounded-full border ${statusClass}">${selected.status}</span>
+              <span class="text-xs text-slate-400">Owner: ${selected.owner}</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+            <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+              <div class="text-xs text-slate-400">Environment</div>
+              <div class="font-semibold mt-1">${selected.environment}</div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+              <div class="text-xs text-slate-400">Risk</div>
+              <div class="font-semibold mt-1">${selected.risk}</div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+              <div class="text-xs text-slate-400">Scheduled</div>
+              <div class="font-semibold mt-1">${formatDate(selected.scheduled)}</div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+              <div class="text-xs text-slate-400">Window</div>
+              <div class="font-semibold mt-1">${selected.window}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold">Timeline Milestones</h3>
+                  <p class="text-xs text-slate-400">Status progression across change phases.</p>
+                </div>
+                <div class="text-xs text-slate-400">Policy ${policyScore}/${policyTotal}</div>
+              </div>
+              <div class="mt-4 space-y-3">
+                ${selected.milestones.map(step => {
+                  const badge = step.status === 'done'
+                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
+                    : step.status === 'current'
+                    ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                    : 'bg-slate-700/40 text-slate-300 border-slate-600/40';
+                  return `
+                    <div class="flex items-center gap-3">
+                      <span class="text-xs px-2 py-1 rounded-full border ${badge}">${step.status}</span>
+                      <div>
+                        <div class="text-sm font-semibold">${step.label}</div>
+                        <div class="text-xs text-slate-400">${step.date}</div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
+              <h3 class="text-sm font-semibold">Policy & Approvals</h3>
+              <p class="text-xs text-slate-400">Guardrails and sign-offs required before execution.</p>
+              <div class="mt-4 space-y-3">
+                ${selected.checks.map(check => `
+                  <label class="flex items-center justify-between text-sm">
+                    <span>${check.label}</span>
+                    <input type="checkbox" data-check="${check.id}" ${check.done ? 'checked' : ''} ${canToggle ? '' : 'disabled'} class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500" />
+                  </label>
+                `).join('')}
+              </div>
+              <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 text-center">
+                  <div class="text-slate-400">CAB</div>
+                  <div class="mt-1 font-semibold">${selected.approvals.cab}</div>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 text-center">
+                  <div class="text-slate-400">Security</div>
+                  <div class="mt-1 font-semibold">${selected.approvals.security}</div>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 text-center">
+                  <div class="text-slate-400">Ops</div>
+                  <div class="mt-1 font-semibold">${selected.approvals.ops}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold">Workflow Actions</h3>
+                <p class="text-xs text-slate-400">Actions depend on your role and current status.</p>
+              </div>
+              <div class="flex flex-wrap gap-2" id="actionButtons">${actionButtons || '<span class="text-xs text-slate-500">No actions available.</span>'}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
+              <h3 class="text-sm font-semibold">Notes</h3>
+              <p class="text-xs text-slate-400">Capture updates and handoffs.</p>
+              <div class="mt-3 flex gap-2">
+                <input id="noteInput" type="text" placeholder="Add a note" class="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm" />
+                <button id="noteBtn" class="text-xs px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 border border-emerald-500/40">Save</button>
+              </div>
+              <div class="mt-4 space-y-2 text-sm text-slate-300">
+                ${selected.notes.map(note => `<div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2">${note}</div>`).join('')}
+              </div>
+            </div>
+
+            <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4">
+              <h3 class="text-sm font-semibold">Audit Trail</h3>
+              <p class="text-xs text-slate-400">Every action is logged for compliance.</p>
+              <ul class="mt-3 space-y-2 text-xs text-slate-300">
+                ${selected.audit.map(entry => `<li class="border border-slate-800 rounded-xl px-3 py-2 bg-slate-900/60">${entry}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const actionContainer = document.getElementById('actionButtons');
+      if (actionContainer) {
+        actionContainer.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => handleAction(btn.dataset.action));
+        });
+      }
+
+      elements.detailPanel.querySelectorAll('input[data-check]').forEach(box => {
+        box.addEventListener('change', () => {
+          const check = selected.checks.find(item => item.id === box.dataset.check);
+          if (!check || !canToggle) return;
+          check.done = box.checked;
+          addAudit(`${state.role} updated policy check: ${check.label}`);
+          render();
+        });
+      });
+
+      const noteBtn = document.getElementById('noteBtn');
+      if (noteBtn) {
+        noteBtn.addEventListener('click', () => {
+          const input = document.getElementById('noteInput');
+          if (!input.value.trim()) return;
+          selected.notes.unshift(input.value.trim());
+          addAudit(`${state.role} added a note`);
+          input.value = '';
+          render();
+        });
+      }
+    };
+
+    const addAudit = (entry) => {
+      const selected = getSelected();
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      selected.audit.unshift(`${timestamp} — ${entry}`);
+    };
+
+    const handleAction = (label) => {
+      const action = actions.find(item => item.label === label);
+      if (!action) return;
+      const selected = getSelected();
+      selected.status = action.next;
+      addAudit(`${state.role} set status to ${action.next}`);
+      render();
+    };
+
+    const exportCsv = () => {
+      const rows = [
+        ['ID', 'Title', 'System', 'Owner', 'Environment', 'Risk', 'Status', 'Scheduled', 'Window']
+      ];
+      getFilteredData().forEach(item => {
+        rows.push([item.id, item.title, item.system, item.owner, item.environment, item.risk, item.status, item.scheduled, item.window]);
+      });
+      const csv = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'change-requests.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const bindInputs = () => {
+      elements.searchInput.addEventListener('input', (event) => {
+        state.search = event.target.value;
+        render();
+      });
+      elements.environmentFilter.addEventListener('change', (event) => {
+        state.environment = event.target.value;
+        render();
+      });
+      elements.riskFilter.addEventListener('change', (event) => {
+        state.risk = event.target.value;
+        render();
+      });
+      elements.statusFilter.addEventListener('change', (event) => {
+        state.status = event.target.value;
+        render();
+      });
+      elements.sortSelect.addEventListener('change', (event) => {
+        state.sort = event.target.value;
+        render();
+      });
+      elements.exportBtn.addEventListener('click', exportCsv);
+    };
+
+    const render = () => {
+      renderRoles();
+      renderSummary();
+      renderQueue();
+      renderDetail();
+    };
+
+    bindInputs();
+    render();
+  </script>
+</body>
+</html>

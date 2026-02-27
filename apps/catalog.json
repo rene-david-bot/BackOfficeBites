@@ -452,5 +452,27 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-27",
+    "day": 23,
+    "slug": "2026-02-27-change-request-timeline",
+    "name": "Change Request Timeline Hub",
+    "description": "Timeline view for IT change requests with policy validation, approvals, and audit trail coverage.",
+    "category": "IT Ops",
+    "pattern": "Timeline",
+    "tags": [
+      "change requests",
+      "timeline",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
