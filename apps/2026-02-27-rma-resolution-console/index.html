@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RMA Resolution Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { height: 10px; width: 10px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="min-h-screen">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200">BackOfficeBites 🍔</a>
+      <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight">RMA Resolution Console</h1>
+          <p class="text-slate-400 mt-2 max-w-2xl">Master-detail returns triage with policy validation, approval workflow, and audit trail coverage.</p>
+        </div>
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-3">
+          <div class="text-xs text-slate-400 uppercase tracking-wide mb-2">Active Role</div>
+          <div class="flex gap-2" id="roleButtons"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-8" id="summaryCards"></div>
+
+      <div class="mt-8 grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold">RMA Queue</h2>
+              <p class="text-xs text-slate-400">Search, filter, and prioritize open cases.</p>
+            </div>
+            <button id="exportBtn" class="text-xs px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30">Export CSV</button>
+          </div>
+          <div class="mt-4 flex flex-col gap-3">
+            <input id="searchInput" type="text" placeholder="Search by customer, ID, or reason" class="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+            <div class="grid grid-cols-2 gap-3">
+              <select id="statusFilter" class="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                <option value="All">All Status</option>
+                <option value="Submitted">Submitted</option>
+                <option value="QA Review">QA Review</option>
+                <option value="Finance Review">Finance Review</option>
+                <option value="Need Info">Need Info</option>
+                <option value="Approved">Approved</option>
+                <option value="Denied">Denied</option>
+                <option value="Refund Issued">Refund Issued</option>
+              </select>
+              <select id="priorityFilter" class="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+                <option value="All">All Priority</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <select id="sortSelect" class="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-sm">
+              <option value="priority">Sort: Priority</option>
+              <option value="amount">Sort: Amount</option>
+              <option value="sla">Sort: SLA Date</option>
+              <option value="submitted">Sort: Submitted</option>
+            </select>
+          </div>
+          <div class="mt-4 space-y-3 max-h-[580px] overflow-y-auto pr-2" id="queueList"></div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6" id="detailPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      role: 'Agent',
+      search: '',
+      status: 'All',
+      priority: 'All',
+      sort: 'priority',
+      selectedId: 'RMA-2041',
+      data: [
+        {
+          id: 'RMA-2041',
+          customer: 'Northwind Labs',
+          channel: 'Enterprise',
+          region: 'DACH',
+          submitted: '2026-02-26',
+          purchaseDate: '2026-01-12',
+          sla: '2026-02-28',
+          reason: 'Damaged on arrival',
+          priority: 'Critical',
+          amount: 8420,
+          status: 'Finance Review',
+          photos: 3,
+          items: [
+            { sku: 'NW-AX9', name: 'Precision Analyzer', qty: 1, condition: 'Damaged', reason: 'Cracked casing' },
+            { sku: 'NW-KIT-2', name: 'Calibration Kit', qty: 2, condition: 'Unopened', reason: 'Box crushed' }
+          ],
+          notes: ['Courier inspection report attached by QA.'],
+          audit: [
+            '2026-02-26 09:10 — Submitted by Northwind Labs',
+            '2026-02-26 12:42 — QA Review completed by J. Adler',
+            '2026-02-26 15:05 — Escalated to Finance (High value)'
+          ]
+        },
+        {
+          id: 'RMA-2047',
+          customer: 'Helios Foods',
+          channel: 'Retail',
+          region: 'UKI',
+          submitted: '2026-02-25',
+          purchaseDate: '2025-12-10',
+          sla: '2026-02-27',
+          reason: 'Late return window',
+          priority: 'High',
+          amount: 2100,
+          status: 'Need Info',
+          photos: 1,
+          items: [
+            { sku: 'HF-COLD-5', name: 'Cold Chain Sensor', qty: 4, condition: 'Like new', reason: 'Ordered wrong spec' }
+          ],
+          notes: ['Requested proof of unopened packaging.'],
+          audit: [
+            '2026-02-25 11:22 — Submitted by Helios Foods',
+            '2026-02-25 12:10 — Need Info (Return window exceeded)'
+          ]
+        },
+        {
+          id: 'RMA-2052',
+          customer: 'Vantage Aero',
+          channel: 'Enterprise',
+          region: 'US',
+          submitted: '2026-02-25',
+          purchaseDate: '2026-02-05',
+          sla: '2026-02-29',
+          reason: 'Missing components',
+          priority: 'Medium',
+          amount: 1275,
+          status: 'QA Review',
+          photos: 0,
+          items: [
+            { sku: 'VA-DRN-11', name: 'Telemetry Drone Kit', qty: 1, condition: 'Incomplete', reason: 'Missing rotor kit' }
+          ],
+          notes: ['Warehouse checking pick list accuracy.'],
+          audit: [
+            '2026-02-25 08:40 — Submitted by Vantage Aero',
+            '2026-02-25 09:30 — QA Review started'
+          ]
+        },
+        {
+          id: 'RMA-2059',
+          customer: 'BrightCell Energy',
+          channel: 'Distributor',
+          region: 'Nordics',
+          submitted: '2026-02-24',
+          purchaseDate: '2026-01-30',
+          sla: '2026-02-28',
+          reason: 'Batch recall',
+          priority: 'High',
+          amount: 5200,
+          status: 'Submitted',
+          photos: 2,
+          items: [
+            { sku: 'BC-500', name: 'Battery Module', qty: 6, condition: 'Sealed', reason: 'Recall batch 4B' }
+          ],
+          notes: ['Recall notice #RC-884 issued by QA.'],
+          audit: [
+            '2026-02-24 14:18 — Submitted by BrightCell Energy'
+          ]
+        },
+        {
+          id: 'RMA-2064',
+          customer: 'Mariner Logistics',
+          channel: 'Enterprise',
+          region: 'US',
+          submitted: '2026-02-23',
+          purchaseDate: '2025-12-02',
+          sla: '2026-02-27',
+          reason: 'Damaged in transit',
+          priority: 'Critical',
+          amount: 9800,
+          status: 'Approved',
+          photos: 4,
+          items: [
+            { sku: 'ML-FTL-88', name: 'Freight Telemetry Unit', qty: 3, condition: 'Damaged', reason: 'Shock impact' }
+          ],
+          notes: ['Carrier claim filed. Awaiting payout.'],
+          audit: [
+            '2026-02-23 10:05 — Submitted by Mariner Logistics',
+            '2026-02-23 13:42 — QA Review completed',
+            '2026-02-24 09:15 — Approved by Manager L. Hart'
+          ]
+        },
+        {
+          id: 'RMA-2068',
+          customer: 'Atlas Medical',
+          channel: 'Retail',
+          region: 'Benelux',
+          submitted: '2026-02-22',
+          purchaseDate: '2026-01-18',
+          sla: '2026-02-26',
+          reason: 'Wrong item shipped',
+          priority: 'Medium',
+          amount: 645,
+          status: 'Refund Issued',
+          photos: 2,
+          items: [
+            { sku: 'AM-TRK-7', name: 'Specimen Tracker', qty: 2, condition: 'Unopened', reason: 'Incorrect SKU' }
+          ],
+          notes: ['Refund processed on 2026-02-24.'],
+          audit: [
+            '2026-02-22 09:55 — Submitted by Atlas Medical',
+            '2026-02-22 12:15 — QA Review completed',
+            '2026-02-23 10:45 — Approved by Manager R. Möller',
+            '2026-02-24 15:22 — Refund issued by Finance'
+          ]
+        },
+        {
+          id: 'RMA-2071',
+          customer: 'Vertex Works',
+          channel: 'Distributor',
+          region: 'APAC',
+          submitted: '2026-02-21',
+          purchaseDate: '2026-01-05',
+          sla: '2026-02-26',
+          reason: 'Packaging failure',
+          priority: 'Low',
+          amount: 890,
+          status: 'Denied',
+          photos: 1,
+          items: [
+            { sku: 'VW-LID-2', name: 'Seal Kit', qty: 12, condition: 'Opened', reason: 'Packaging compromised' }
+          ],
+          notes: ['Denied: damage consistent with warehouse handling.'],
+          audit: [
+            '2026-02-21 11:40 — Submitted by Vertex Works',
+            '2026-02-22 08:30 — QA Review completed',
+            '2026-02-22 09:10 — Denied by Manager J. Singh'
+          ]
+        },
+        {
+          id: 'RMA-2075',
+          customer: 'Orchid SmartHome',
+          channel: 'Enterprise',
+          region: 'UKI',
+          submitted: '2026-02-21',
+          purchaseDate: '2026-02-10',
+          sla: '2026-02-27',
+          reason: 'Software incompatibility',
+          priority: 'High',
+          amount: 3100,
+          status: 'QA Review',
+          photos: 0,
+          items: [
+            { sku: 'OS-HUB-3', name: 'SmartHub Pro', qty: 5, condition: 'Unopened', reason: 'Firmware mismatch' }
+          ],
+          notes: ['Engineering verifying firmware compatibility.'],
+          audit: [
+            '2026-02-21 08:05 — Submitted by Orchid SmartHome',
+            '2026-02-21 09:15 — QA Review started'
+          ]
+        }
+      ]
+    };
+
+    const priorityRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+    const roleOptions = ['Agent', 'Manager', 'Finance'];
+
+    const roleButtons = document.getElementById('roleButtons');
+    const summaryCards = document.getElementById('summaryCards');
+    const queueList = document.getElementById('queueList');
+    const detailPanel = document.getElementById('detailPanel');
+
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const priorityFilter = document.getElementById('priorityFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const exportBtn = document.getElementById('exportBtn');
+
+    function daysBetween(dateA, dateB) {
+      const diff = new Date(dateB) - new Date(dateA);
+      return Math.round(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function policyFlags(rma) {
+      const daysSincePurchase = daysBetween(rma.purchaseDate, rma.submitted);
+      return {
+        highValue: rma.amount > 5000,
+        lateReturn: daysSincePurchase > 30,
+        missingPhotos: rma.reason.toLowerCase().includes('damaged') && rma.photos < 2,
+        recall: rma.reason.toLowerCase().includes('recall')
+      };
+    }
+
+    function filteredCases() {
+      return state.data
+        .filter((rma) => {
+          const query = state.search.toLowerCase();
+          const matchesQuery = [rma.id, rma.customer, rma.reason].some((field) =>
+            field.toLowerCase().includes(query)
+          );
+          const matchesStatus = state.status === 'All' || rma.status === state.status;
+          const matchesPriority = state.priority === 'All' || rma.priority === state.priority;
+          return matchesQuery && matchesStatus && matchesPriority;
+        })
+        .sort((a, b) => {
+          if (state.sort === 'priority') {
+            return priorityRank[b.priority] - priorityRank[a.priority];
+          }
+          if (state.sort === 'amount') {
+            return b.amount - a.amount;
+          }
+          if (state.sort === 'sla') {
+            return new Date(a.sla) - new Date(b.sla);
+          }
+          return new Date(b.submitted) - new Date(a.submitted);
+        });
+    }
+
+    function summaryStats() {
+      const open = state.data.filter((rma) => !['Denied', 'Refund Issued'].includes(rma.status));
+      const highValue = state.data.filter((rma) => rma.amount > 5000);
+      const slaRisk = state.data.filter((rma) => daysBetween(new Date(), rma.sla) <= 2);
+      const approvals = state.data.filter((rma) => ['QA Review', 'Finance Review'].includes(rma.status));
+      return [
+        { label: 'Open RMAs', value: open.length, tone: 'emerald' },
+        { label: 'High Value', value: highValue.length, tone: 'amber' },
+        { label: 'SLA Risk (≤2d)', value: slaRisk.length, tone: 'rose' },
+        { label: 'In Review', value: approvals.length, tone: 'sky' }
+      ];
+    }
+
+    function renderRoleButtons() {
+      roleButtons.innerHTML = roleOptions
+        .map((role) => {
+          const active = role === state.role;
+          return `<button data-role="${role}" class="px-3 py-1.5 rounded-full text-xs border ${active ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-200' : 'border-slate-700 text-slate-300 hover:border-slate-500'}">${role}</button>`;
+        })
+        .join('');
+      roleButtons.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.role = btn.dataset.role;
+          render();
+        });
+      });
+    }
+
+    function renderSummary() {
+      summaryCards.innerHTML = summaryStats()
+        .map((card) => {
+          return `<div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-500">${card.label}</div>
+            <div class="mt-2 text-2xl font-semibold text-${card.tone}-200">${card.value}</div>
+          </div>`;
+        })
+        .join('');
+    }
+
+    function renderQueue() {
+      const list = filteredCases();
+      if (!list.find((item) => item.id === state.selectedId) && list.length > 0) {
+        state.selectedId = list[0].id;
+      }
+      if (list.length === 0) {
+        queueList.innerHTML = '<div class="text-sm text-slate-400">No RMAs match your filters.</div>';
+        return;
+      }
+      queueList.innerHTML = list
+        .map((rma) => {
+          const active = rma.id === state.selectedId;
+          const flags = policyFlags(rma);
+          return `<button data-id="${rma.id}" class="w-full text-left border rounded-2xl p-3 transition ${active ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-slate-800 hover:border-slate-600'}">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-semibold">${rma.customer}</div>
+                <div class="text-xs text-slate-400">${rma.id} · ${rma.reason}</div>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-200">${rma.status}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span>${rma.priority} · €${rma.amount.toLocaleString()}</span>
+              <span>SLA ${rma.sla}</span>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+              ${flags.highValue ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200">High Value</span>' : ''}
+              ${flags.lateReturn ? '<span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-200">Late Window</span>' : ''}
+              ${flags.missingPhotos ? '<span class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200">Missing Photos</span>' : ''}
+              ${flags.recall ? '<span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">Recall</span>' : ''}
+            </div>
+          </button>`;
+        })
+        .join('');
+      queueList.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          renderDetail();
+        });
+      });
+    }
+
+    function allowedActions(rma) {
+      const actions = [];
+      const flags = policyFlags(rma);
+      const role = state.role;
+
+      if (['Submitted'].includes(rma.status) && ['Agent', 'Manager'].includes(role)) {
+        actions.push({ key: 'qa', label: 'Move to QA Review' });
+      }
+      if (['Submitted', 'QA Review', 'Finance Review'].includes(rma.status) && ['Agent', 'Manager', 'Finance'].includes(role)) {
+        actions.push({ key: 'info', label: 'Request Info' });
+      }
+      if (['QA Review'].includes(rma.status) && ['Agent', 'Manager'].includes(role)) {
+        actions.push({ key: 'finance', label: 'Escalate to Finance' });
+      }
+      if (['QA Review', 'Finance Review'].includes(rma.status)) {
+        if (!flags.highValue && ['Manager', 'Finance'].includes(role)) {
+          actions.push({ key: 'approve', label: 'Approve RMA' });
+        }
+        if (flags.highValue && role === 'Manager') {
+          actions.push({ key: 'approve', label: 'Manager Approve' });
+        }
+      }
+      if (['Submitted', 'QA Review', 'Finance Review', 'Need Info'].includes(rma.status) && ['Manager', 'Finance'].includes(role)) {
+        actions.push({ key: 'deny', label: 'Deny RMA' });
+      }
+      if (rma.status === 'Approved' && role === 'Finance') {
+        actions.push({ key: 'refund', label: 'Issue Refund' });
+      }
+      return actions;
+    }
+
+    function applyAction(rma, actionKey) {
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      if (actionKey === 'qa') {
+        rma.status = 'QA Review';
+        rma.audit.unshift(`${timestamp} — QA Review started by ${state.role}`);
+      }
+      if (actionKey === 'info') {
+        rma.status = 'Need Info';
+        rma.audit.unshift(`${timestamp} — Info requested by ${state.role}`);
+      }
+      if (actionKey === 'finance') {
+        rma.status = 'Finance Review';
+        rma.audit.unshift(`${timestamp} — Escalated to Finance by ${state.role}`);
+      }
+      if (actionKey === 'approve') {
+        rma.status = 'Approved';
+        rma.audit.unshift(`${timestamp} — Approved by ${state.role}`);
+      }
+      if (actionKey === 'deny') {
+        rma.status = 'Denied';
+        rma.audit.unshift(`${timestamp} — Denied by ${state.role}`);
+      }
+      if (actionKey === 'refund') {
+        rma.status = 'Refund Issued';
+        rma.audit.unshift(`${timestamp} — Refund issued by Finance`);
+      }
+    }
+
+    function renderWorkflow(rma) {
+      const steps = ['Submitted', 'QA Review', 'Finance Review', 'Approved', 'Refund Issued'];
+      return `<div class="flex flex-wrap gap-2 text-xs">
+        ${steps
+          .map((step) => {
+            const active = rma.status === step;
+            const complete = steps.indexOf(step) < steps.indexOf(rma.status) || rma.status === 'Refund Issued';
+            const tone = active ? 'bg-emerald-500/20 text-emerald-200' : complete ? 'bg-slate-800 text-slate-300' : 'bg-slate-900 text-slate-500';
+            return `<span class="px-2 py-1 rounded-full border border-slate-800 ${tone}">${step}</span>`;
+          })
+          .join('')}
+      </div>`;
+    }
+
+    function renderDetail() {
+      const rma = state.data.find((item) => item.id === state.selectedId) || state.data[0];
+      if (!rma) return;
+      const flags = policyFlags(rma);
+      const actions = allowedActions(rma);
+      const policyRows = [
+        { label: 'High value (> €5k) needs manager approval', ok: !flags.highValue },
+        { label: 'Return window ≤ 30 days', ok: !flags.lateReturn },
+        { label: 'Damage claims need ≥ 2 photos', ok: !flags.missingPhotos },
+        { label: 'Recall items auto-prioritized', ok: flags.recall }
+      ];
+
+      detailPanel.innerHTML = `
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide">${rma.id}</div>
+            <h2 class="text-2xl font-semibold mt-1">${rma.customer}</h2>
+            <div class="mt-2 text-sm text-slate-400">${rma.channel} · ${rma.region} · Submitted ${rma.submitted}</div>
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            <span class="px-3 py-1 rounded-full bg-slate-800 text-sm">${rma.status}</span>
+            <span class="text-sm text-slate-300">€${rma.amount.toLocaleString()} · ${rma.priority} priority</span>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Reason</div>
+            <div class="mt-2 font-semibold">${rma.reason}</div>
+            <div class="mt-2 text-sm text-slate-400">SLA due: ${rma.sla}</div>
+            <div class="mt-4 text-xs text-slate-500 uppercase tracking-wide">Workflow</div>
+            <div class="mt-2">${renderWorkflow(rma)}</div>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Policy Checks</div>
+            <ul class="mt-3 space-y-2 text-sm">
+              ${policyRows
+                .map((row) => {
+                  const tone = row.ok ? 'text-emerald-200' : 'text-rose-200';
+                  const icon = row.ok ? '●' : '●';
+                  return `<li class="flex items-center gap-2 ${tone}"><span>${icon}</span><span>${row.label}</span></li>`;
+                })
+                .join('')}
+            </ul>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Role Lens</div>
+            <div class="mt-3 text-sm text-slate-300">${state.role === 'Agent'
+              ? 'Focus on intake completeness, photo evidence, and routing.'
+              : state.role === 'Manager'
+              ? 'Review exceptions, high-value approvals, and policy compliance.'
+              : 'Validate refund exposure, GL routing, and settlement timing.'}
+            </div>
+            <div class="mt-4 text-xs text-slate-500 uppercase tracking-wide">Notes</div>
+            <ul class="mt-2 text-sm text-slate-300 space-y-2">
+              ${rma.notes.map((note) => `<li>• ${note}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Items</div>
+            <div class="mt-3 space-y-3">
+              ${rma.items
+                .map((item) => {
+                  return `<div class="border border-slate-800 rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                      <div class="font-semibold">${item.name}</div>
+                      <div class="text-xs text-slate-400">${item.sku}</div>
+                    </div>
+                    <div class="mt-2 text-sm text-slate-400">Qty ${item.qty} · ${item.condition} · ${item.reason}</div>
+                  </div>`;
+                })
+                .join('')}
+            </div>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Audit Trail</div>
+            <div class="mt-3 space-y-2 text-sm text-slate-300 max-h-56 overflow-y-auto pr-2">
+              ${rma.audit.map((entry) => `<div class="border-b border-slate-800 pb-2">${entry}</div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4">
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Actions</div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              ${actions.length === 0 ? '<div class="text-sm text-slate-400">No actions available for this role.</div>' : actions
+                .map((action) => `<button data-action="${action.key}" class="px-3 py-1.5 rounded-full text-xs bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-500/30">${action.label}</button>`)
+                .join('')}
+            </div>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wide">Add Note</div>
+            <form id="noteForm" class="mt-3 space-y-2">
+              <textarea id="noteInput" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" placeholder="Log a handoff, policy exception, or customer update" required></textarea>
+              <div class="flex items-center justify-between">
+                <div id="noteError" class="text-xs text-rose-200"></div>
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 hover:bg-slate-700">Save Note</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      const actionButtons = detailPanel.querySelectorAll('[data-action]');
+      actionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          applyAction(rma, button.dataset.action);
+          render();
+        });
+      });
+
+      const noteForm = document.getElementById('noteForm');
+      const noteInput = document.getElementById('noteInput');
+      const noteError = document.getElementById('noteError');
+      noteForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!noteInput.value.trim()) {
+          noteError.textContent = 'Note is required.';
+          return;
+        }
+        noteError.textContent = '';
+        rma.notes.unshift(noteInput.value.trim());
+        const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        rma.audit.unshift(`${stamp} — Note added by ${state.role}`);
+        noteInput.value = '';
+        render();
+      });
+    }
+
+    function exportCsv() {
+      const rows = filteredCases();
+      const header = ['ID', 'Customer', 'Reason', 'Status', 'Priority', 'Amount', 'Submitted', 'SLA'];
+      const lines = [header.join(',')];
+      rows.forEach((rma) => {
+        lines.push([
+          rma.id,
+          rma.customer,
+          rma.reason,
+          rma.status,
+          rma.priority,
+          rma.amount,
+          rma.submitted,
+          rma.sla
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rma_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      renderRoleButtons();
+      renderSummary();
+      renderQueue();
+      renderDetail();
+    }
+
+    searchInput.addEventListener('input', (event) => {
+      state.search = event.target.value;
+      renderQueue();
+    });
+    statusFilter.addEventListener('change', (event) => {
+      state.status = event.target.value;
+      renderQueue();
+      renderDetail();
+    });
+    priorityFilter.addEventListener('change', (event) => {
+      state.priority = event.target.value;
+      renderQueue();
+      renderDetail();
+    });
+    sortSelect.addEventListener('change', (event) => {
+      state.sort = event.target.value;
+      renderQueue();
+    });
+    exportBtn.addEventListener('click', exportCsv);
+
+    render();
+  </script>
+</body>
+</html>

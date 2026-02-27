@@ -429,5 +429,28 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-27",
+    "day": 22,
+    "slug": "2026-02-27-rma-resolution-console",
+    "name": "RMA Resolution Console",
+    "description": "Master-detail returns triage with policy validation, approvals, and audit trail coverage.",
+    "category": "Supply Chain",
+    "pattern": "Master-Detail",
+    "tags": [
+      "rma",
+      "returns",
+      "master-detail",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
