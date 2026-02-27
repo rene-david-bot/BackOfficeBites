@@ -492,5 +492,28 @@
       "csv"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-02-27",
+    "day": 25,
+    "slug": "2026-02-27-renewal-forecast-calendar",
+    "name": "Renewal Forecast Calendar",
+    "description": "Calendar-first renewal forecast with policy checks, approvals, and audit trail coverage.",
+    "category": "Sales",
+    "pattern": "Calendar",
+    "tags": [
+      "renewals",
+      "calendar",
+      "forecast",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
