@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Change Request Timeline Hub** — timeline view for IT change requests with policy validation, approvals, and audit trail coverage.
+**Onboarding Task Kanban** — kanban board for onboarding tasks with role-based views, policy checks, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

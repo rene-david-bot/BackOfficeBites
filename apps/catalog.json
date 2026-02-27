@@ -474,5 +474,23 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-27",
+    "day": 24,
+    "slug": "2026-02-27-onboarding-task-kanban",
+    "name": "Onboarding Task Kanban",
+    "description": "Kanban board for onboarding tasks with policy checks, role views, and audit trail.",
+    "category": "HR",
+    "pattern": "Kanban",
+    "tags": [
+      "onboarding",
+      "hr",
+      "kanban",
+      "policy",
+      "audit",
+      "csv"
+    ],
+    "thumb": "thumb.png"
   }
 ]

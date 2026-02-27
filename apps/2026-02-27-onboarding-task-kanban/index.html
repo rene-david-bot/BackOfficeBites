@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onboarding Task Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">Onboarding Task Kanban</h1>
+        <p class="text-slate-400">Coordinate HR, IT Ops, and managers with policy checks, audit trails, and drag-and-drop status updates.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="exportCsv" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-amber-300 hover:text-amber-200">Export CSV</button>
+        <button id="newTaskBtn" class="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Add Task</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-200">New Hire Profile</h2>
+          <span class="rounded-full bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200">Offer Accepted</span>
+        </div>
+        <div class="mt-4 space-y-2 text-sm text-slate-300">
+          <p><span class="text-slate-500">Name:</span> Mila Koch</p>
+          <p><span class="text-slate-500">Role:</span> Data Analyst</p>
+          <p><span class="text-slate-500">Start date:</span> 2026-03-04</p>
+          <p><span class="text-slate-500">Manager:</span> Jonas Weber</p>
+          <p><span class="text-slate-500">Location:</span> Dresden HQ</p>
+        </div>
+        <div class="mt-4 rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-400">
+          <p class="font-semibold text-slate-200">Quick actions</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button class="quick-action rounded-md border border-slate-700 px-2 py-1 hover:border-amber-300" data-action="welcome">Generate welcome packet</button>
+            <button class="quick-action rounded-md border border-slate-700 px-2 py-1 hover:border-amber-300" data-action="it">Auto-assign IT tasks</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Onboarding KPIs</h2>
+        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+            <p class="text-slate-400">Tasks complete</p>
+            <p id="kpiComplete" class="mt-2 text-2xl font-semibold">0</p>
+          </div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+            <p class="text-slate-400">Due in 3 days</p>
+            <p id="kpiDue" class="mt-2 text-2xl font-semibold">0</p>
+          </div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+            <p class="text-slate-400">Overdue</p>
+            <p id="kpiOverdue" class="mt-2 text-2xl font-semibold text-rose-300">0</p>
+          </div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+            <p class="text-slate-400">Policy warnings</p>
+            <p id="kpiWarnings" class="mt-2 text-2xl font-semibold text-amber-300">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Policy Alerts</h2>
+        <div id="policyAlerts" class="mt-4 space-y-3 text-sm text-slate-300"></div>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="grid gap-3 md:grid-cols-4">
+        <div>
+          <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search tasks</label>
+          <input id="searchInput" type="text" placeholder="Search by title, tag, or ID" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+        </div>
+        <div>
+          <label for="roleFilter" class="text-xs uppercase tracking-wide text-slate-400">Role filter</label>
+          <select id="roleFilter" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All roles</option>
+            <option value="HR">HR</option>
+            <option value="IT Ops">IT Ops</option>
+            <option value="Manager">Manager</option>
+          </select>
+        </div>
+        <div>
+          <label for="viewAs" class="text-xs uppercase tracking-wide text-slate-400">View as</label>
+          <select id="viewAs" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All roles</option>
+            <option value="HR">HR view</option>
+            <option value="IT Ops">IT Ops view</option>
+            <option value="Manager">Manager view</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-xs uppercase tracking-wide text-slate-400">Sort by</label>
+          <select id="sortBy" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="priority">Priority</option>
+            <option value="due">Due date</option>
+            <option value="owner">Owner</option>
+          </select>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-slate-500">Role-based view dims tasks outside your responsibility; policy alerts always surface critical items.</p>
+    </section>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-4">
+      <div class="kanban-column rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-status="Preboarding">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Preboarding</h3>
+          <span class="text-xs text-slate-400" data-count></span>
+        </div>
+        <div class="drop-zone mt-4 space-y-3" data-drop="Preboarding"></div>
+      </div>
+      <div class="kanban-column rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-status="Day 1">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Day 1</h3>
+          <span class="text-xs text-slate-400" data-count></span>
+        </div>
+        <div class="drop-zone mt-4 space-y-3" data-drop="Day 1"></div>
+      </div>
+      <div class="kanban-column rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-status="Week 1">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Week 1</h3>
+          <span class="text-xs text-slate-400" data-count></span>
+        </div>
+        <div class="drop-zone mt-4 space-y-3" data-drop="Week 1"></div>
+      </div>
+      <div class="kanban-column rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-status="Complete">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Complete</h3>
+          <span class="text-xs text-slate-400" data-count></span>
+        </div>
+        <div class="drop-zone mt-4 space-y-3" data-drop="Complete"></div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Audit Trail</h2>
+        <div id="auditTrail" class="mt-4 space-y-2 text-sm text-slate-300"></div>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Onboarding Notes</h2>
+        <ul class="mt-4 space-y-2 text-sm text-slate-300">
+          <li>• Security training must be completed before access approvals close.</li>
+          <li>• Laptop and badge pickup scheduled for 09:00 on start day.</li>
+          <li>• Welcome buddy: Nina Schmidt.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-slate-950/80 px-4">
+    <div class="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 p-6">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold">Add onboarding task</h3>
+        <button id="closeModal" class="text-slate-400 hover:text-slate-200">✕</button>
+      </div>
+      <form id="taskForm" class="mt-4 space-y-4">
+        <div>
+          <label class="text-xs uppercase tracking-wide text-slate-400">Task title</label>
+          <input required name="title" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200" placeholder="Schedule stakeholder introduction" />
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <div>
+            <label class="text-xs uppercase tracking-wide text-slate-400">Owner</label>
+            <select name="owner" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
+              <option>HR</option>
+              <option>IT Ops</option>
+              <option>Manager</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wide text-slate-400">Priority</label>
+            <select name="priority" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <div>
+            <label class="text-xs uppercase tracking-wide text-slate-400">Due date</label>
+            <input required type="date" name="due" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+            <select name="status" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
+              <option>Preboarding</option>
+              <option>Day 1</option>
+              <option>Week 1</option>
+              <option>Complete</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs uppercase tracking-wide text-slate-400">Tags (comma-separated)</label>
+          <input name="tags" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200" placeholder="policy, access" />
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" id="cancelModal" class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500">Cancel</button>
+          <button type="submit" class="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Add task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const tasks = [
+      { id: "OB-101", title: "Collect signed contract + IDs", owner: "HR", due: "2026-03-02", priority: "High", status: "Preboarding", tags: ["policy", "documents"], blockedBy: [] },
+      { id: "OB-102", title: "Create email + SSO account", owner: "IT Ops", due: "2026-03-02", priority: "High", status: "Preboarding", tags: ["access", "security"], blockedBy: ["OB-101"] },
+      { id: "OB-103", title: "Provision laptop + accessories", owner: "IT Ops", due: "2026-03-03", priority: "High", status: "Preboarding", tags: ["equipment"], blockedBy: ["OB-101"] },
+      { id: "OB-104", title: "Schedule Day 1 agenda", owner: "Manager", due: "2026-03-03", priority: "Medium", status: "Day 1", tags: ["planning"], blockedBy: [] },
+      { id: "OB-105", title: "Security training completion", owner: "HR", due: "2026-03-05", priority: "High", status: "Day 1", tags: ["policy", "training"], blockedBy: [] },
+      { id: "OB-106", title: "Finance system access approval", owner: "IT Ops", due: "2026-03-05", priority: "Medium", status: "Week 1", tags: ["access", "approval"], blockedBy: ["OB-105"] },
+      { id: "OB-107", title: "Team intro meeting", owner: "Manager", due: "2026-03-06", priority: "Low", status: "Week 1", tags: ["culture"], blockedBy: [] },
+      { id: "OB-108", title: "Buddy check-in review", owner: "HR", due: "2026-03-08", priority: "Low", status: "Complete", tags: ["follow-up"], blockedBy: [] }
+    ];
+
+    const auditTrail = [
+      { time: "18:05", message: "Offer acceptance logged by HR." },
+      { time: "18:15", message: "IT Ops auto-assigned access setup tasks." },
+      { time: "18:30", message: "Manager scheduled Day 1 agenda." }
+    ];
+
+    const priorityOrder = { High: 1, Medium: 2, Low: 3 };
+    const statusOrder = ["Preboarding", "Day 1", "Week 1", "Complete"];
+
+    const searchInput = document.getElementById("searchInput");
+    const roleFilter = document.getElementById("roleFilter");
+    const viewAs = document.getElementById("viewAs");
+    const sortBy = document.getElementById("sortBy");
+
+    function daysUntil(dateStr) {
+      const today = new Date("2026-02-27T00:00:00");
+      const date = new Date(dateStr + "T00:00:00");
+      return Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function isBlocked(task) {
+      return task.blockedBy.some(id => {
+        const dep = tasks.find(t => t.id === id);
+        return dep && dep.status !== "Complete";
+      });
+    }
+
+    function filteredTasks() {
+      const query = searchInput.value.toLowerCase();
+      const role = roleFilter.value;
+      const sorted = [...tasks].filter(task => {
+        const matchesRole = role === "All" || task.owner === role;
+        const haystack = [task.title, task.id, task.owner, ...task.tags].join(" ").toLowerCase();
+        return matchesRole && haystack.includes(query);
+      });
+
+      const sorter = sortBy.value;
+      sorted.sort((a, b) => {
+        if (sorter === "due") return a.due.localeCompare(b.due);
+        if (sorter === "owner") return a.owner.localeCompare(b.owner);
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+      return sorted;
+    }
+
+    function renderBoard() {
+      document.querySelectorAll(".drop-zone").forEach(zone => zone.innerHTML = "");
+      const focus = viewAs.value;
+      const tasksToRender = filteredTasks();
+
+      statusOrder.forEach(status => {
+        const zone = document.querySelector(`[data-drop='${status}']`);
+        const statusTasks = tasksToRender.filter(task => task.status === status);
+        const countTag = zone.closest(".kanban-column").querySelector("[data-count]");
+        countTag.textContent = `${statusTasks.length} tasks`;
+
+        statusTasks.forEach(task => {
+          const blocked = isBlocked(task);
+          const dueIn = daysUntil(task.due);
+          const overdue = dueIn < 0 && task.status !== "Complete";
+          const dim = focus !== "All" && task.owner !== focus;
+          const card = document.createElement("div");
+          card.className = `task-card rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-sm shadow-sm ${dim ? "opacity-40" : ""}`;
+          card.setAttribute("draggable", "true");
+          card.dataset.id = task.id;
+          card.innerHTML = `
+            <div class='flex items-start justify-between gap-2'>
+              <div>
+                <p class='font-semibold text-slate-100'>${task.title}</p>
+                <p class='text-xs text-slate-400 mt-1'>${task.id} • ${task.owner} • Due ${task.due}</p>
+              </div>
+              <span class='text-xs rounded-full px-2 py-1 ${task.priority === "High" ? "bg-rose-500/20 text-rose-200" : task.priority === "Medium" ? "bg-amber-400/20 text-amber-200" : "bg-emerald-400/20 text-emerald-200"}'>${task.priority}</span>
+            </div>
+            <div class='mt-2 flex flex-wrap gap-2 text-xs text-slate-300'>
+              ${task.tags.map(tag => `<span class='rounded-full border border-slate-700 px-2 py-1'>${tag}</span>`).join("")}
+            </div>
+            ${blocked ? `<p class='mt-2 text-xs text-amber-300'>Blocked by ${task.blockedBy.join(", ")}</p>` : ""}
+            ${overdue ? `<p class='mt-2 text-xs text-rose-300'>Overdue by ${Math.abs(dueIn)} days</p>` : ""}
+          `;
+          zone.appendChild(card);
+        });
+      });
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById("policyAlerts");
+      const alerts = tasks.filter(task => {
+        const dueIn = daysUntil(task.due);
+        return (isBlocked(task) && task.status !== "Complete") || (dueIn <= 2 && task.status !== "Complete");
+      });
+
+      container.innerHTML = alerts.length ? "" : `<p class='text-xs text-slate-500'>No active policy alerts.</p>`;
+      alerts.forEach(task => {
+        const dueIn = daysUntil(task.due);
+        const warning = isBlocked(task) ? "Blocked dependency" : `Due in ${dueIn} days`;
+        const el = document.createElement("div");
+        el.className = "rounded-lg border border-slate-800 bg-slate-950/70 p-3";
+        el.innerHTML = `
+          <p class='text-sm font-semibold text-slate-100'>${task.title}</p>
+          <p class='mt-1 text-xs text-amber-200'>${warning}</p>
+          <p class='mt-1 text-xs text-slate-400'>Owner: ${task.owner} • ${task.id}</p>
+        `;
+        container.appendChild(el);
+      });
+    }
+
+    function renderAudit() {
+      const container = document.getElementById("auditTrail");
+      container.innerHTML = "";
+      auditTrail.slice().reverse().forEach(entry => {
+        const row = document.createElement("div");
+        row.className = "flex items-start gap-3";
+        row.innerHTML = `
+          <span class='text-xs text-slate-500'>${entry.time}</span>
+          <p class='text-sm text-slate-300'>${entry.message}</p>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function updateKPIs() {
+      const complete = tasks.filter(t => t.status === "Complete").length;
+      const dueSoon = tasks.filter(t => t.status !== "Complete" && daysUntil(t.due) <= 3).length;
+      const overdue = tasks.filter(t => t.status !== "Complete" && daysUntil(t.due) < 0).length;
+      const warnings = tasks.filter(t => isBlocked(t) && t.status !== "Complete").length;
+      document.getElementById("kpiComplete").textContent = complete;
+      document.getElementById("kpiDue").textContent = dueSoon;
+      document.getElementById("kpiOverdue").textContent = overdue;
+      document.getElementById("kpiWarnings").textContent = warnings;
+    }
+
+    function logAudit(message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      auditTrail.push({ time, message });
+      renderAudit();
+    }
+
+    function refresh() {
+      renderBoard();
+      renderAlerts();
+      renderAudit();
+      updateKPIs();
+    }
+
+    function setupDragAndDrop() {
+      document.addEventListener("dragstart", event => {
+        if (event.target.classList.contains("task-card")) {
+          event.dataTransfer.setData("text/plain", event.target.dataset.id);
+        }
+      });
+
+      document.querySelectorAll(".drop-zone").forEach(zone => {
+        zone.addEventListener("dragover", event => event.preventDefault());
+        zone.addEventListener("drop", event => {
+          event.preventDefault();
+          const id = event.dataTransfer.getData("text/plain");
+          const task = tasks.find(t => t.id === id);
+          if (!task) return;
+          const newStatus = zone.dataset.drop;
+          if (task.status !== newStatus) {
+            task.status = newStatus;
+            if (isBlocked(task) && newStatus !== "Preboarding") {
+              logAudit(`Policy warning: ${task.id} moved to ${newStatus} with unresolved dependency.`);
+            } else {
+              logAudit(`Status updated: ${task.id} moved to ${newStatus}.`);
+            }
+          }
+          refresh();
+        });
+      });
+    }
+
+    function setupFilters() {
+      [searchInput, roleFilter, viewAs, sortBy].forEach(el => {
+        el.addEventListener("input", refresh);
+        el.addEventListener("change", refresh);
+      });
+    }
+
+    function setupModal() {
+      const modal = document.getElementById("modal");
+      const openBtn = document.getElementById("newTaskBtn");
+      const closeBtn = document.getElementById("closeModal");
+      const cancelBtn = document.getElementById("cancelModal");
+      const form = document.getElementById("taskForm");
+
+      const closeModal = () => modal.classList.add("hidden");
+      const openModal = () => modal.classList.remove("hidden");
+
+      openBtn.addEventListener("click", openModal);
+      closeBtn.addEventListener("click", closeModal);
+      cancelBtn.addEventListener("click", closeModal);
+
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const newTask = {
+          id: `OB-${Math.floor(Math.random() * 900 + 200)}`,
+          title: data.get("title"),
+          owner: data.get("owner"),
+          due: data.get("due"),
+          priority: data.get("priority"),
+          status: data.get("status"),
+          tags: data.get("tags").split(",").map(tag => tag.trim()).filter(Boolean),
+          blockedBy: []
+        };
+        tasks.push(newTask);
+        logAudit(`New task created: ${newTask.id} assigned to ${newTask.owner}.`);
+        form.reset();
+        closeModal();
+        refresh();
+      });
+    }
+
+    function setupQuickActions() {
+      document.querySelectorAll(".quick-action").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (btn.dataset.action === "welcome") {
+            tasks.push({ id: "OB-110", title: "Send welcome packet", owner: "HR", due: "2026-03-02", priority: "Medium", status: "Preboarding", tags: ["culture"], blockedBy: [] });
+            logAudit("Quick action: Welcome packet task generated.");
+          }
+          if (btn.dataset.action === "it") {
+            tasks.push({ id: "OB-111", title: "Configure VPN + MFA", owner: "IT Ops", due: "2026-03-03", priority: "High", status: "Preboarding", tags: ["access", "policy"], blockedBy: ["OB-101"] });
+            logAudit("Quick action: IT Ops auto-assigned VPN + MFA setup.");
+          }
+          refresh();
+        });
+      });
+    }
+
+    function setupCsvExport() {
+      document.getElementById("exportCsv").addEventListener("click", () => {
+        const headers = ["ID", "Title", "Owner", "Due", "Priority", "Status", "Tags"];
+        const rows = tasks.map(t => [t.id, t.title, t.owner, t.due, t.priority, t.status, t.tags.join("|")]);
+        const csv = [headers, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "onboarding_tasks.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+        logAudit("CSV export generated for onboarding tasks.");
+      });
+    }
+
+    setupDragAndDrop();
+    setupFilters();
+    setupModal();
+    setupQuickActions();
+    setupCsvExport();
+    refresh();
+  </script>
+</body>
+</html>
