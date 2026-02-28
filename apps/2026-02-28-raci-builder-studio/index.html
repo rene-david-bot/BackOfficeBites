@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RACI Builder Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">RACI Builder Studio</h1>
+        <p class="text-slate-400">Master-detail planning hub to assign accountable owners, validate coverage, and push approvals on RACI plans.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="exportCsv" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-amber-300 hover:text-amber-200">Export CSV</button>
+        <button id="requestApproval" class="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Request Approval</button>
+        <button id="approvePlan" class="rounded-lg border border-emerald-400/50 px-4 py-2 text-sm font-semibold text-emerald-200 hover:border-emerald-300">Approve</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-4">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Active initiatives</p>
+        <p id="kpiTotal" class="mt-2 text-3xl font-semibold">0</p>
+        <p class="text-xs text-slate-500">RACI packs in flight</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Missing accountable</p>
+        <p id="kpiAccountable" class="mt-2 text-3xl font-semibold text-rose-300">0</p>
+        <p class="text-xs text-slate-500">Tasks without an owner</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Approvals pending</p>
+        <p id="kpiApprovals" class="mt-2 text-3xl font-semibold text-amber-300">0</p>
+        <p class="text-xs text-slate-500">Waiting on sign-off</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Due in 30 days</p>
+        <p id="kpiDueSoon" class="mt-2 text-3xl font-semibold">0</p>
+        <p class="text-xs text-slate-500">Plans nearing kickoff</p>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="grid gap-3 md:grid-cols-5">
+        <div>
+          <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="Initiative, owner, ID" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+        </div>
+        <div>
+          <label for="deptFilter" class="text-xs uppercase tracking-wide text-slate-400">Department</label>
+          <select id="deptFilter" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All departments</option>
+            <option value="IT Ops">IT Ops</option>
+            <option value="Finance">Finance</option>
+            <option value="Supply Chain">Supply Chain</option>
+            <option value="HR">HR</option>
+            <option value="Legal">Legal</option>
+            <option value="Planning">Planning</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+          <select id="statusFilter" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Review">Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Published">Published</option>
+          </select>
+        </div>
+        <div>
+          <label for="viewAs" class="text-xs uppercase tracking-wide text-slate-400">View as</label>
+          <select id="viewAs" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All roles</option>
+            <option value="Program Manager">Program Manager</option>
+            <option value="Finance Lead">Finance Lead</option>
+            <option value="Operations">Operations</option>
+            <option value="Legal">Legal</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-xs uppercase tracking-wide text-slate-400">Sort by</label>
+          <select id="sortBy" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="due">Kickoff date</option>
+            <option value="priority">Priority</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-slate-500">Role-based view dims initiatives outside your scope but keeps policy alerts visible.</p>
+    </section>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-200">Initiatives</h2>
+          <span id="listCount" class="text-xs text-slate-500">0 initiatives</span>
+        </div>
+        <div id="initiativeList" class="mt-4 space-y-3"></div>
+      </div>
+
+      <div class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-center justify-between">
+          <h2 id="detailTitle" class="text-lg font-semibold text-slate-100">Initiative Detail</h2>
+          <span id="detailStatus" class="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-300">Draft</span>
+        </div>
+        <p id="detailSubtitle" class="mt-1 text-sm text-slate-400"></p>
+        <div id="detailMeta" class="mt-4 grid gap-3 md:grid-cols-3 text-sm text-slate-300"></div>
+        <p id="roleHint" class="mt-3 text-xs text-slate-500"></p>
+
+        <div class="mt-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-200">RACI Matrix</h3>
+            <span id="taskCount" class="text-xs text-slate-500">0 tasks</span>
+          </div>
+          <div class="mt-3 overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th class="py-2 text-left">Task</th>
+                  <th class="py-2 text-left">Accountable</th>
+                  <th class="py-2 text-left">Responsible</th>
+                  <th class="py-2 text-left">Consulted</th>
+                  <th class="py-2 text-left">Informed</th>
+                </tr>
+              </thead>
+              <tbody id="taskBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <form id="taskForm" class="mt-5 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+          <div class="grid gap-3 md:grid-cols-3">
+            <div>
+              <label for="taskName" class="text-xs uppercase tracking-wide text-slate-400">New task</label>
+              <input id="taskName" type="text" placeholder="e.g., Data cutover validation" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+            </div>
+            <div>
+              <label for="taskDue" class="text-xs uppercase tracking-wide text-slate-400">Due date</label>
+              <input id="taskDue" type="date" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+            </div>
+            <div class="flex items-end">
+              <button type="submit" class="w-full rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-300 hover:text-amber-200">Add task</button>
+            </div>
+          </div>
+          <p id="taskError" class="mt-3 text-xs text-rose-300 hidden">Task name and due date are required.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Policy Alerts</h2>
+        <ul id="policyAlerts" class="mt-4 space-y-2 text-sm text-amber-200"></ul>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Audit Trail</h2>
+        <div id="auditTrail" class="mt-4 space-y-2 text-sm text-slate-300"></div>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Steering Notes</h2>
+        <ul class="mt-4 space-y-2 text-sm text-slate-300">
+          <li>• Each task needs exactly one accountable leader before approval.</li>
+          <li>• Finance sign-off required when budget impact exceeds €250k.</li>
+          <li>• Published plans must include a communication owner.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const initiatives = [
+      {
+        id: 'RB-201',
+        name: 'ERP Upgrade Wave 3',
+        department: 'IT Ops',
+        owner: 'Lena Vogt',
+        due: '2026-04-18',
+        status: 'Draft',
+        priority: 'High',
+        approval: 'Not Requested',
+        roles: ['Program Manager', 'Operations', 'Finance Lead'],
+        stakeholders: ['Lena Vogt', 'Ayla Demir', 'Marco Stein', 'Jonas Richter', 'Nina Bauer', 'Tariq Mansour'],
+        tasks: [
+          { task: 'Data migration plan', due: '2026-03-15', accountable: 'Lena Vogt', responsible: 'Ayla Demir', consulted: 'Marco Stein', informed: 'Jonas Richter' },
+          { task: 'Legacy system cutoff', due: '2026-03-28', accountable: 'Jonas Richter', responsible: 'Tariq Mansour', consulted: 'Nina Bauer', informed: 'Lena Vogt' },
+          { task: 'Validation & sign-off', due: '2026-04-05', accountable: 'Lena Vogt', responsible: 'Ayla Demir', consulted: 'Marco Stein', informed: 'Nina Bauer' }
+        ],
+        audit: [
+          { time: '08:10', text: 'RACI created by Program Manager.' },
+          { time: '08:45', text: 'Finance Lead added validation task.' }
+        ]
+      },
+      {
+        id: 'RB-202',
+        name: 'Quarterly Budget Reset',
+        department: 'Finance',
+        owner: 'Marco Stein',
+        due: '2026-03-22',
+        status: 'Review',
+        priority: 'Medium',
+        approval: 'Pending',
+        roles: ['Finance Lead', 'Program Manager'],
+        stakeholders: ['Marco Stein', 'Klara Weiss', 'Mina Ito', 'Sven Koch', 'Lena Vogt'],
+        tasks: [
+          { task: 'Baseline budget review', due: '2026-03-05', accountable: 'Marco Stein', responsible: 'Klara Weiss', consulted: 'Lena Vogt', informed: 'Sven Koch' },
+          { task: 'Cost center alignment', due: '2026-03-12', accountable: 'Marco Stein', responsible: 'Mina Ito', consulted: 'Klara Weiss', informed: 'Lena Vogt' },
+          { task: 'Exec approval memo', due: '2026-03-20', accountable: 'Marco Stein', responsible: 'Mina Ito', consulted: 'Sven Koch', informed: 'Lena Vogt' }
+        ],
+        audit: [
+          { time: '09:00', text: 'Review requested from Finance Director.' },
+          { time: '09:30', text: 'Cost center owners aligned.' }
+        ]
+      },
+      {
+        id: 'RB-203',
+        name: 'Supplier Resilience Program',
+        department: 'Supply Chain',
+        owner: 'Nina Bauer',
+        due: '2026-05-02',
+        status: 'Draft',
+        priority: 'High',
+        approval: 'Not Requested',
+        roles: ['Operations', 'Legal'],
+        stakeholders: ['Nina Bauer', 'Omar Haddad', 'Greta Lind', 'Tariq Mansour', 'Marco Stein'],
+        tasks: [
+          { task: 'Tier-1 supplier scoring', due: '2026-03-25', accountable: 'Nina Bauer', responsible: 'Omar Haddad', consulted: 'Greta Lind', informed: 'Tariq Mansour' },
+          { task: 'Contract resilience clauses', due: '2026-04-10', accountable: 'Greta Lind', responsible: 'Tariq Mansour', consulted: 'Marco Stein', informed: 'Nina Bauer' },
+          { task: 'Dual-source rollout plan', due: '2026-04-22', accountable: 'Nina Bauer', responsible: 'Omar Haddad', consulted: 'Greta Lind', informed: 'Marco Stein' }
+        ],
+        audit: [
+          { time: '08:25', text: 'Legal added clause template.' },
+          { time: '08:50', text: 'Operations flagged regional dependency risk.' }
+        ]
+      },
+      {
+        id: 'RB-204',
+        name: 'People Analytics Revamp',
+        department: 'HR',
+        owner: 'Ayla Demir',
+        due: '2026-04-08',
+        status: 'Approved',
+        priority: 'Low',
+        approval: 'Approved',
+        roles: ['Program Manager', 'Operations'],
+        stakeholders: ['Ayla Demir', 'Lena Vogt', 'Sven Koch', 'Greta Lind', 'Klara Weiss'],
+        tasks: [
+          { task: 'Data dictionary refresh', due: '2026-03-18', accountable: 'Ayla Demir', responsible: 'Lena Vogt', consulted: 'Klara Weiss', informed: 'Sven Koch' },
+          { task: 'Policy & privacy review', due: '2026-03-27', accountable: 'Greta Lind', responsible: 'Ayla Demir', consulted: 'Klara Weiss', informed: 'Lena Vogt' },
+          { task: 'Dashboard QA', due: '2026-04-03', accountable: 'Ayla Demir', responsible: 'Sven Koch', consulted: 'Lena Vogt', informed: 'Greta Lind' }
+        ],
+        audit: [
+          { time: '07:45', text: 'Approved by HR Director.' },
+          { time: '08:05', text: 'Dashboard QA assigned to analytics team.' }
+        ]
+      }
+    ];
+
+    let selectedId = initiatives[0].id;
+
+    const elements = {
+      kpiTotal: document.getElementById('kpiTotal'),
+      kpiAccountable: document.getElementById('kpiAccountable'),
+      kpiApprovals: document.getElementById('kpiApprovals'),
+      kpiDueSoon: document.getElementById('kpiDueSoon'),
+      searchInput: document.getElementById('searchInput'),
+      deptFilter: document.getElementById('deptFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      viewAs: document.getElementById('viewAs'),
+      sortBy: document.getElementById('sortBy'),
+      listCount: document.getElementById('listCount'),
+      initiativeList: document.getElementById('initiativeList'),
+      detailTitle: document.getElementById('detailTitle'),
+      detailSubtitle: document.getElementById('detailSubtitle'),
+      detailStatus: document.getElementById('detailStatus'),
+      detailMeta: document.getElementById('detailMeta'),
+      roleHint: document.getElementById('roleHint'),
+      taskCount: document.getElementById('taskCount'),
+      taskBody: document.getElementById('taskBody'),
+      policyAlerts: document.getElementById('policyAlerts'),
+      auditTrail: document.getElementById('auditTrail'),
+      taskForm: document.getElementById('taskForm'),
+      taskName: document.getElementById('taskName'),
+      taskDue: document.getElementById('taskDue'),
+      taskError: document.getElementById('taskError'),
+      exportCsv: document.getElementById('exportCsv'),
+      requestApproval: document.getElementById('requestApproval'),
+      approvePlan: document.getElementById('approvePlan')
+    };
+
+    const priorityRank = { High: 1, Medium: 2, Low: 3 };
+
+    function daysBetween(dateA, dateB) {
+      const diff = dateB.getTime() - dateA.getTime();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function computeKpis() {
+      const total = initiatives.length;
+      let missingAccountable = 0;
+      let approvalsPending = 0;
+      let dueSoon = 0;
+      const today = new Date();
+
+      initiatives.forEach(item => {
+        if (item.approval === 'Pending') approvalsPending += 1;
+        const due = new Date(item.due + 'T00:00:00');
+        const diff = daysBetween(today, due);
+        if (diff >= 0 && diff <= 30) dueSoon += 1;
+
+        item.tasks.forEach(task => {
+          if (!task.accountable || task.accountable === 'Unassigned') {
+            missingAccountable += 1;
+          }
+        });
+      });
+
+      elements.kpiTotal.textContent = total;
+      elements.kpiAccountable.textContent = missingAccountable;
+      elements.kpiApprovals.textContent = approvalsPending;
+      elements.kpiDueSoon.textContent = dueSoon;
+    }
+
+    function getFilteredInitiatives() {
+      const search = elements.searchInput.value.trim().toLowerCase();
+      const dept = elements.deptFilter.value;
+      const status = elements.statusFilter.value;
+      const sortBy = elements.sortBy.value;
+
+      let filtered = initiatives.filter(item => {
+        const matchesSearch = !search || item.name.toLowerCase().includes(search) || item.owner.toLowerCase().includes(search) || item.id.toLowerCase().includes(search);
+        const matchesDept = dept === 'All' || item.department === dept;
+        const matchesStatus = status === 'All' || item.status === status;
+        return matchesSearch && matchesDept && matchesStatus;
+      });
+
+      filtered = filtered.sort((a, b) => {
+        if (sortBy === 'name') {
+          return a.name.localeCompare(b.name);
+        }
+        if (sortBy === 'priority') {
+          return priorityRank[a.priority] - priorityRank[b.priority];
+        }
+        return new Date(a.due) - new Date(b.due);
+      });
+
+      return filtered;
+    }
+
+    function renderList() {
+      const viewRole = elements.viewAs.value;
+      const list = getFilteredInitiatives();
+      elements.listCount.textContent = `${list.length} initiative${list.length === 1 ? '' : 's'}`;
+
+      if (!list.find(item => item.id === selectedId)) {
+        selectedId = list[0]?.id || '';
+      }
+
+      if (list.length === 0) {
+        elements.initiativeList.innerHTML = '<p class="text-sm text-slate-500">No initiatives match the current filters.</p>';
+        renderDetail(null);
+        return;
+      }
+
+      elements.initiativeList.innerHTML = list.map(item => {
+        const isSelected = item.id === selectedId;
+        const dimmed = viewRole !== 'All' && !item.roles.includes(viewRole);
+        const statusTone = item.status === 'Approved' ? 'text-emerald-200' : item.status === 'Review' ? 'text-amber-200' : 'text-slate-300';
+        return `
+          <button data-id="${item.id}" class="w-full text-left rounded-lg border px-4 py-3 transition ${isSelected ? 'border-amber-300 bg-slate-900' : 'border-slate-800 hover:border-slate-700'} ${dimmed ? 'opacity-50' : ''}">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-slate-100">${item.name}</p>
+              <span class="text-xs ${statusTone}">${item.status}</span>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span>${item.id}</span>
+              <span>•</span>
+              <span>${item.department}</span>
+              <span>•</span>
+              <span>Due ${item.due}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      renderDetail(initiatives.find(item => item.id === selectedId));
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        elements.detailTitle.textContent = 'Select an initiative';
+        elements.detailSubtitle.textContent = '';
+        elements.detailStatus.textContent = '';
+        elements.detailMeta.innerHTML = '';
+        elements.roleHint.textContent = '';
+        elements.taskBody.innerHTML = '';
+        elements.taskCount.textContent = '0 tasks';
+        elements.policyAlerts.innerHTML = '';
+        elements.auditTrail.innerHTML = '';
+        return;
+      }
+
+      elements.detailTitle.textContent = item.name;
+      elements.detailSubtitle.textContent = `${item.id} • Owner ${item.owner}`;
+      elements.detailStatus.textContent = item.status;
+      elements.detailMeta.innerHTML = `
+        <div><span class="text-xs text-slate-500">Department</span><div class="mt-1">${item.department}</div></div>
+        <div><span class="text-xs text-slate-500">Priority</span><div class="mt-1">${item.priority}</div></div>
+        <div><span class="text-xs text-slate-500">Kickoff date</span><div class="mt-1">${item.due}</div></div>
+        <div><span class="text-xs text-slate-500">Approval</span><div class="mt-1">${item.approval}</div></div>
+        <div><span class="text-xs text-slate-500">Stakeholders</span><div class="mt-1">${item.stakeholders.length}</div></div>
+        <div><span class="text-xs text-slate-500">Coverage</span><div class="mt-1">${item.roles.join(', ')}</div></div>
+      `;
+
+      const viewRole = elements.viewAs.value;
+      elements.roleHint.textContent = viewRole === 'All'
+        ? 'Viewing full RACI plan.'
+        : item.roles.includes(viewRole)
+          ? `Viewing as ${viewRole}. You are mapped to this initiative.`
+          : `Viewing as ${viewRole}. This initiative is outside your core scope.`;
+
+      renderTasks(item);
+      renderPolicyAlerts(item);
+      renderAudit(item);
+    }
+
+    function renderTasks(item) {
+      const options = ['Unassigned', ...item.stakeholders];
+      elements.taskCount.textContent = `${item.tasks.length} task${item.tasks.length === 1 ? '' : 's'}`;
+
+      elements.taskBody.innerHTML = item.tasks.map((task, index) => `
+        <tr>
+          <td class="py-2 pr-4">
+            <div class="text-sm text-slate-100">${task.task}</div>
+            <div class="text-xs text-slate-500">Due ${task.due}</div>
+          </td>
+          ${['accountable', 'responsible', 'consulted', 'informed'].map(field => `
+            <td class="py-2 pr-4">
+              <select data-index="${index}" data-field="${field}" class="w-full rounded-md border border-slate-700 bg-slate-950/70 px-2 py-1 text-xs text-slate-200">
+                ${options.map(option => `<option value="${option}" ${task[field] === option ? 'selected' : ''}>${option}</option>`).join('')}
+              </select>
+            </td>
+          `).join('')}
+        </tr>
+      `).join('');
+    }
+
+    function renderPolicyAlerts(item) {
+      const alerts = [];
+      item.tasks.forEach(task => {
+        if (!task.accountable || task.accountable === 'Unassigned') {
+          alerts.push(`Task "${task.task}" is missing an accountable owner.`);
+        }
+        if (!task.responsible || task.responsible === 'Unassigned') {
+          alerts.push(`Task "${task.task}" needs at least one responsible lead.`);
+        }
+      });
+      if (item.approval === 'Pending' && item.status === 'Draft') {
+        alerts.push('Approval request is pending but status is still Draft.');
+      }
+      if (item.priority === 'High' && item.approval !== 'Approved') {
+        alerts.push('High priority initiatives require approved RACI before kickoff.');
+      }
+      alerts.push('Export CSV for stakeholder sign-off packages.');
+
+      elements.policyAlerts.innerHTML = alerts.map(alert => `<li>• ${alert}</li>`).join('');
+    }
+
+    function renderAudit(item) {
+      elements.auditTrail.innerHTML = item.audit.map(entry => `
+        <div class="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+          <div class="text-xs text-slate-500">${entry.time}</div>
+          <div class="text-sm text-slate-200">${entry.text}</div>
+        </div>
+      `).join('');
+    }
+
+    function addAudit(item, text) {
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      item.audit.unshift({ time: timestamp, text });
+    }
+
+    elements.initiativeList.addEventListener('click', event => {
+      const button = event.target.closest('[data-id]');
+      if (!button) return;
+      selectedId = button.dataset.id;
+      renderList();
+    });
+
+    elements.taskBody.addEventListener('change', event => {
+      const select = event.target;
+      if (!(select instanceof HTMLSelectElement)) return;
+      const index = parseInt(select.dataset.index, 10);
+      const field = select.dataset.field;
+      const item = initiatives.find(entry => entry.id === selectedId);
+      if (!item || !item.tasks[index]) return;
+      item.tasks[index][field] = select.value;
+      addAudit(item, `Updated ${field} on "${item.tasks[index].task}" to ${select.value}.`);
+      renderDetail(item);
+    });
+
+    elements.taskForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const item = initiatives.find(entry => entry.id === selectedId);
+      if (!item) return;
+      const name = elements.taskName.value.trim();
+      const due = elements.taskDue.value;
+      if (!name || !due) {
+        elements.taskError.classList.remove('hidden');
+        return;
+      }
+      elements.taskError.classList.add('hidden');
+      const defaultOwner = item.stakeholders[0] || 'Unassigned';
+      item.tasks.push({
+        task: name,
+        due,
+        accountable: defaultOwner,
+        responsible: defaultOwner,
+        consulted: 'Unassigned',
+        informed: 'Unassigned'
+      });
+      addAudit(item, `Added task "${name}" with due date ${due}.`);
+      elements.taskName.value = '';
+      elements.taskDue.value = '';
+      renderDetail(item);
+      computeKpis();
+    });
+
+    [elements.searchInput, elements.deptFilter, elements.statusFilter, elements.viewAs, elements.sortBy].forEach(input => {
+      input.addEventListener('input', () => renderList());
+      input.addEventListener('change', () => renderList());
+    });
+
+    elements.exportCsv.addEventListener('click', () => {
+      const item = initiatives.find(entry => entry.id === selectedId);
+      if (!item) return;
+      const rows = [
+        ['Task', 'Due', 'Accountable', 'Responsible', 'Consulted', 'Informed'],
+        ...item.tasks.map(task => [task.task, task.due, task.accountable, task.responsible, task.consulted, task.informed])
+      ];
+      const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${item.id}-raci.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addAudit(item, 'Exported RACI matrix to CSV.');
+      renderAudit(item);
+    });
+
+    elements.requestApproval.addEventListener('click', () => {
+      const item = initiatives.find(entry => entry.id === selectedId);
+      if (!item) return;
+      item.approval = 'Pending';
+      item.status = item.status === 'Approved' ? 'Approved' : 'Review';
+      addAudit(item, 'Approval request sent to steering committee.');
+      renderDetail(item);
+      computeKpis();
+    });
+
+    elements.approvePlan.addEventListener('click', () => {
+      const item = initiatives.find(entry => entry.id === selectedId);
+      if (!item) return;
+      item.approval = 'Approved';
+      item.status = 'Approved';
+      addAudit(item, 'RACI plan approved and locked for execution.');
+      renderDetail(item);
+      computeKpis();
+    });
+
+    computeKpis();
+    renderList();
+  </script>
+</body>
+</html>

@@ -515,5 +515,28 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-02-28",
+    "day": 26,
+    "slug": "2026-02-28-raci-builder-studio",
+    "name": "RACI Builder Studio",
+    "description": "Master-detail RACI planning with approval workflow, policy validation, and audit trail coverage.",
+    "category": "Planning",
+    "pattern": "Master-Detail",
+    "tags": [
+      "raci",
+      "planning",
+      "master-detail",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": "thumb.png"
   }
 ]
