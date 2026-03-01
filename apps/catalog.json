@@ -538,5 +538,23 @@
       "role-based"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-03-01",
+    "day": 27,
+    "slug": "2026-03-01-invoice-dispute-timeline-hub",
+    "name": "Invoice Dispute Timeline Hub",
+    "description": "Timeline-driven invoice dispute resolution with approvals, policy checks, and audit trail updates.",
+    "category": "Finance",
+    "pattern": "Timeline",
+    "tags": [
+      "invoice dispute",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export",
+      "timeline"
+    ],
+    "thumb": ""
   }
 ]

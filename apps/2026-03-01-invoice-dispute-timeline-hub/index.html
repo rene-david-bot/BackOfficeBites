@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Dispute Timeline Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-full bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Invoice Dispute Timeline Hub</h1>
+        <p class="mt-2 text-slate-300 max-w-2xl">
+          Track invoice disputes across the full approval lifecycle with policy checks, audit trails, and SLA timelines.
+          Prioritize risk, coordinate vendors, and close disputes with consistent resolution playbooks.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="exportBtn" class="px-4 py-2 rounded-lg bg-amber-400 text-slate-950 font-semibold hover:bg-amber-300">Export CSV</button>
+        <button id="newDisputeBtn" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-200 hover:border-amber-400">Log New Dispute</button>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-4">
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs uppercase text-slate-400">Open Disputes</p>
+        <p id="openCount" class="mt-2 text-2xl font-semibold">0</p>
+        <p class="text-xs text-slate-500">Across all vendors</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs uppercase text-slate-400">SLA At Risk</p>
+        <p id="slaRisk" class="mt-2 text-2xl font-semibold">0</p>
+        <p class="text-xs text-slate-500">Due in ≤ 3 days</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs uppercase text-slate-400">Credit Pending</p>
+        <p id="creditPending" class="mt-2 text-2xl font-semibold">€0</p>
+        <p class="text-xs text-slate-500">Awaiting approvals</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs uppercase text-slate-400">Avg. Resolution</p>
+        <p class="mt-2 text-2xl font-semibold">5.4 days</p>
+        <p class="text-xs text-slate-500">Last 14 days</p>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-6">
+      <div class="lg:col-span-2">
+        <label class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="Vendor, invoice, dispute ID" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+          <option>All</option>
+          <option>New</option>
+          <option>Pending Docs</option>
+          <option>Under Review</option>
+          <option>Credit Approved</option>
+          <option>Escalated</option>
+          <option>Resolved</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase text-slate-400">Priority</label>
+        <select id="priorityFilter" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+          <option>All</option>
+          <option>Critical</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase text-slate-400">Region</label>
+        <select id="regionFilter" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+          <option>All</option>
+          <option>DE</option>
+          <option>US</option>
+          <option>UK</option>
+          <option>FR</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase text-slate-400">Sort by</label>
+        <select id="sortFilter" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+          <option>SLA Soonest</option>
+          <option>Amount High-Low</option>
+          <option>Amount Low-High</option>
+          <option>Newest</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase text-slate-400">Role View</label>
+        <select id="roleFilter" class="mt-2 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm">
+          <option>AP Lead</option>
+          <option>Controller</option>
+          <option>Legal</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <div class="lg:col-span-1">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Dispute Queue</h2>
+          <span id="resultCount" class="text-xs text-slate-400">0 results</span>
+        </div>
+        <div id="disputeList" class="mt-4 space-y-3"></div>
+      </div>
+
+      <div class="lg:col-span-2">
+        <div id="detailCard" class="rounded-xl bg-slate-900 border border-slate-800 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p id="detailId" class="text-xs uppercase text-slate-400">DSP-0000</p>
+              <h3 id="detailVendor" class="text-2xl font-semibold">Vendor</h3>
+              <p id="detailInvoice" class="text-slate-400 text-sm">Invoice</p>
+            </div>
+            <div class="text-right">
+              <p id="detailAmount" class="text-xl font-semibold">€0</p>
+              <p id="detailStatus" class="text-xs uppercase text-amber-300">Status</p>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-4 md:grid-cols-3">
+            <div class="rounded-lg bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs uppercase text-slate-400">Owner</p>
+              <p id="detailOwner" class="mt-1 font-medium">—</p>
+            </div>
+            <div class="rounded-lg bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs uppercase text-slate-400">SLA Due</p>
+              <p id="detailSla" class="mt-1 font-medium">—</p>
+            </div>
+            <div class="rounded-lg bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs uppercase text-slate-400">Priority</p>
+              <p id="detailPriority" class="mt-1 font-medium">—</p>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-4 lg:grid-cols-3">
+            <div class="lg:col-span-2">
+              <h4 class="text-sm font-semibold text-slate-200">Timeline</h4>
+              <div id="timeline" class="mt-3 space-y-4"></div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-slate-200">Policy Checks</h4>
+              <div id="policyChecks" class="mt-3 space-y-2"></div>
+              <h4 class="text-sm font-semibold text-slate-200 mt-6">Resolution Inputs</h4>
+              <div class="mt-3 space-y-3">
+                <div>
+                  <label class="text-xs uppercase text-slate-400">Credit Amount (€)</label>
+                  <input id="creditAmount" type="number" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label class="text-xs uppercase text-slate-400">Reason</label>
+                  <input id="creditReason" type="text" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm" placeholder="e.g., Price mismatch on line 4" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h4 class="text-sm font-semibold text-slate-200">Status Path</h4>
+            <div id="statusPath" class="mt-3 flex flex-wrap gap-2"></div>
+          </div>
+
+          <div class="mt-6 grid gap-4 md:grid-cols-2">
+            <div>
+              <h4 class="text-sm font-semibold text-slate-200">Actions</h4>
+              <div id="actionButtons" class="mt-3 flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-slate-200">Add Note</h4>
+              <div class="mt-3 flex gap-2">
+                <input id="noteInput" type="text" class="flex-1 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm" placeholder="Add an internal note" />
+                <button id="addNoteBtn" class="px-3 py-2 rounded-lg bg-slate-700 text-slate-100">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <h4 class="text-sm font-semibold text-slate-200">Audit Trail</h4>
+            <div id="auditTrail" class="mt-3 space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const disputes = [
+      {
+        id: 'DSP-4821',
+        vendor: 'AeroParts GmbH',
+        invoice: 'INV-8742',
+        amount: 18240,
+        currency: 'EUR',
+        region: 'DE',
+        opened: '2026-02-20',
+        due: '2026-03-03',
+        status: 'Pending Docs',
+        priority: 'High',
+        owner: 'Lina K.',
+        policyHold: true,
+        creditRequested: 3200,
+        timeline: [
+          { date: '2026-02-20', label: 'Dispute opened', by: 'AP Bot', detail: 'Mismatch between PO and invoice line 3.' },
+          { date: '2026-02-22', label: 'Vendor contacted', by: 'Lina K.', detail: 'Requested signed delivery note.' },
+          { date: '2026-02-24', label: 'Docs overdue', by: 'System', detail: 'SLA risk triggered.' }
+        ]
+      },
+      {
+        id: 'DSP-4835',
+        vendor: 'Northline Logistics',
+        invoice: 'INV-8799',
+        amount: 6420,
+        currency: 'EUR',
+        region: 'UK',
+        opened: '2026-02-23',
+        due: '2026-03-06',
+        status: 'Under Review',
+        priority: 'Medium',
+        owner: 'Ravi M.',
+        policyHold: false,
+        creditRequested: 1200,
+        timeline: [
+          { date: '2026-02-23', label: 'Dispute opened', by: 'AP Bot', detail: 'Freight rate higher than contract.' },
+          { date: '2026-02-24', label: 'Contract pulled', by: 'Ravi M.', detail: 'Matched with 2026 rate sheet.' },
+          { date: '2026-02-26', label: 'Credit proposed', by: 'Ravi M.', detail: 'Credit note drafted for €1,200.' }
+        ]
+      },
+      {
+        id: 'DSP-4841',
+        vendor: 'Lumina Optics',
+        invoice: 'INV-8820',
+        amount: 29150,
+        currency: 'EUR',
+        region: 'DE',
+        opened: '2026-02-25',
+        due: '2026-03-04',
+        status: 'Escalated',
+        priority: 'Critical',
+        owner: 'Sophie W.',
+        policyHold: true,
+        creditRequested: 5200,
+        timeline: [
+          { date: '2026-02-25', label: 'Dispute opened', by: 'AP Bot', detail: 'Quantity variance on 3 pallets.' },
+          { date: '2026-02-26', label: 'Warehouse count verified', by: 'Ops', detail: 'Short shipment confirmed.' },
+          { date: '2026-02-27', label: 'Escalated to Legal', by: 'Sophie W.', detail: 'Vendor contesting shortage.' }
+        ]
+      },
+      {
+        id: 'DSP-4848',
+        vendor: 'Helix Systems',
+        invoice: 'INV-8833',
+        amount: 11790,
+        currency: 'EUR',
+        region: 'US',
+        opened: '2026-02-26',
+        due: '2026-03-09',
+        status: 'New',
+        priority: 'Low',
+        owner: 'Marco P.',
+        policyHold: false,
+        creditRequested: 780,
+        timeline: [
+          { date: '2026-02-26', label: 'Dispute opened', by: 'AP Bot', detail: 'Duplicate invoice suspected.' }
+        ]
+      },
+      {
+        id: 'DSP-4856',
+        vendor: 'Vento Manufacturing',
+        invoice: 'INV-8847',
+        amount: 9800,
+        currency: 'EUR',
+        region: 'FR',
+        opened: '2026-02-27',
+        due: '2026-03-07',
+        status: 'Credit Approved',
+        priority: 'Medium',
+        owner: 'Lina K.',
+        policyHold: false,
+        creditRequested: 1500,
+        timeline: [
+          { date: '2026-02-27', label: 'Dispute opened', by: 'AP Bot', detail: 'Incorrect tax rate applied.' },
+          { date: '2026-02-28', label: 'Credit approved', by: 'Controller', detail: 'Credit note approved for €1,500.' }
+        ]
+      },
+      {
+        id: 'DSP-4862',
+        vendor: 'Atlas Freight',
+        invoice: 'INV-8855',
+        amount: 21400,
+        currency: 'EUR',
+        region: 'DE',
+        opened: '2026-02-28',
+        due: '2026-03-02',
+        status: 'Under Review',
+        priority: 'High',
+        owner: 'Ravi M.',
+        policyHold: true,
+        creditRequested: 2600,
+        timeline: [
+          { date: '2026-02-28', label: 'Dispute opened', by: 'AP Bot', detail: 'Fuel surcharge not per contract.' },
+          { date: '2026-02-29', label: 'Vendor response received', by: 'Ravi M.', detail: 'Provided revised surcharge schedule.' }
+        ]
+      },
+      {
+        id: 'DSP-4874',
+        vendor: 'NovaLab Instruments',
+        invoice: 'INV-8861',
+        amount: 4650,
+        currency: 'EUR',
+        region: 'UK',
+        opened: '2026-02-28',
+        due: '2026-03-10',
+        status: 'Resolved',
+        priority: 'Low',
+        owner: 'Marco P.',
+        policyHold: false,
+        creditRequested: 0,
+        timeline: [
+          { date: '2026-02-28', label: 'Dispute opened', by: 'AP Bot', detail: 'Missing PO reference.' },
+          { date: '2026-02-29', label: 'PO added', by: 'Vendor', detail: 'Corrected invoice submitted.' },
+          { date: '2026-03-01', label: 'Resolved', by: 'Marco P.', detail: 'Invoice reprocessed.' }
+        ]
+      }
+    ];
+
+    const state = {
+      search: '',
+      status: 'All',
+      priority: 'All',
+      region: 'All',
+      sort: 'SLA Soonest',
+      role: 'AP Lead',
+      activeId: disputes[0].id
+    };
+
+    const statusOrder = ['New', 'Pending Docs', 'Under Review', 'Credit Approved', 'Escalated', 'Resolved'];
+
+    const statusColors = {
+      'New': 'bg-slate-700 text-slate-200',
+      'Pending Docs': 'bg-amber-500/20 text-amber-200',
+      'Under Review': 'bg-sky-500/20 text-sky-200',
+      'Credit Approved': 'bg-emerald-500/20 text-emerald-200',
+      'Escalated': 'bg-rose-500/20 text-rose-200',
+      'Resolved': 'bg-slate-600/40 text-slate-200'
+    };
+
+    const fmtCurrency = (value, currency = 'EUR') => {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value);
+    };
+
+    const daysUntil = (dateStr) => {
+      const now = new Date('2026-03-01T09:10:00Z');
+      const target = new Date(dateStr + 'T00:00:00Z');
+      return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    };
+
+    const getFiltered = () => {
+      return disputes
+        .filter(d => {
+          const text = `${d.vendor} ${d.invoice} ${d.id}`.toLowerCase();
+          if (state.search && !text.includes(state.search.toLowerCase())) return false;
+          if (state.status !== 'All' && d.status !== state.status) return false;
+          if (state.priority !== 'All' && d.priority !== state.priority) return false;
+          if (state.region !== 'All' && d.region !== state.region) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          if (state.sort === 'Amount High-Low') return b.amount - a.amount;
+          if (state.sort === 'Amount Low-High') return a.amount - b.amount;
+          if (state.sort === 'Newest') return new Date(b.opened) - new Date(a.opened);
+          return daysUntil(a.due) - daysUntil(b.due);
+        });
+    };
+
+    const updateStats = () => {
+      const open = disputes.filter(d => d.status !== 'Resolved').length;
+      const risk = disputes.filter(d => daysUntil(d.due) <= 3 && d.status !== 'Resolved').length;
+      const creditPending = disputes
+        .filter(d => ['Pending Docs', 'Under Review'].includes(d.status))
+        .reduce((sum, d) => sum + d.creditRequested, 0);
+      document.getElementById('openCount').textContent = open;
+      document.getElementById('slaRisk').textContent = risk;
+      document.getElementById('creditPending').textContent = fmtCurrency(creditPending);
+    };
+
+    const renderList = () => {
+      const list = document.getElementById('disputeList');
+      const filtered = getFiltered();
+      list.innerHTML = '';
+      document.getElementById('resultCount').textContent = `${filtered.length} results`;
+      filtered.forEach(d => {
+        const active = d.id === state.activeId;
+        const card = document.createElement('button');
+        card.className = `w-full text-left rounded-xl border px-4 py-3 transition ${active ? 'border-amber-400 bg-slate-900' : 'border-slate-800 bg-slate-950 hover:border-slate-700'}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-slate-400">${d.id}</p>
+              <p class="font-semibold">${d.vendor}</p>
+              <p class="text-xs text-slate-400">${d.invoice} • ${d.region}</p>
+            </div>
+            <div class="text-right">
+              <p class="font-semibold">${fmtCurrency(d.amount)}</p>
+              <span class="mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] ${statusColors[d.status]}">${d.status}</span>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+            <span>Owner: ${d.owner}</span>
+            <span>SLA: ${daysUntil(d.due)}d</span>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          state.activeId = d.id;
+          renderAll();
+        });
+        list.appendChild(card);
+      });
+    };
+
+    const renderDetail = () => {
+      const d = disputes.find(item => item.id === state.activeId) || disputes[0];
+      document.getElementById('detailId').textContent = d.id;
+      document.getElementById('detailVendor').textContent = d.vendor;
+      document.getElementById('detailInvoice').textContent = `${d.invoice} • Opened ${d.opened}`;
+      document.getElementById('detailAmount').textContent = fmtCurrency(d.amount, d.currency);
+      document.getElementById('detailStatus').textContent = d.status;
+      document.getElementById('detailOwner').textContent = d.owner;
+      document.getElementById('detailSla').textContent = `${d.due} (${daysUntil(d.due)}d)`;
+      document.getElementById('detailPriority').textContent = d.priority;
+
+      document.getElementById('creditAmount').value = d.creditRequested;
+      document.getElementById('creditReason').value = d.creditReason || '';
+
+      const timeline = document.getElementById('timeline');
+      timeline.innerHTML = '';
+      d.timeline.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'flex gap-3';
+        row.innerHTML = `
+          <div class="mt-1 h-2.5 w-2.5 rounded-full bg-amber-300"></div>
+          <div>
+            <p class="text-sm font-medium">${item.label}</p>
+            <p class="text-xs text-slate-400">${item.date} • ${item.by}</p>
+            <p class="text-sm text-slate-300">${item.detail}</p>
+          </div>
+        `;
+        timeline.appendChild(row);
+      });
+
+      const policy = document.getElementById('policyChecks');
+      policy.innerHTML = '';
+      const checks = [
+        { label: 'Credit ≤ invoice total', ok: d.creditRequested <= d.amount },
+        { label: 'Vendor docs on file', ok: !d.policyHold },
+        { label: 'SLA within 10 days', ok: daysUntil(d.due) > 0 }
+      ];
+      checks.forEach(check => {
+        const row = document.createElement('div');
+        row.className = `flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${check.ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-rose-500/30 bg-rose-500/10 text-rose-200'}`;
+        row.innerHTML = `<span>${check.label}</span><span>${check.ok ? 'PASS' : 'FAIL'}</span>`;
+        policy.appendChild(row);
+      });
+
+      const path = document.getElementById('statusPath');
+      path.innerHTML = '';
+      statusOrder.forEach(step => {
+        const reached = statusOrder.indexOf(step) <= statusOrder.indexOf(d.status);
+        const chip = document.createElement('span');
+        chip.className = `px-3 py-1 rounded-full text-xs border ${reached ? 'border-amber-400 text-amber-200' : 'border-slate-700 text-slate-500'}`;
+        chip.textContent = step;
+        path.appendChild(chip);
+      });
+
+      const actions = document.getElementById('actionButtons');
+      actions.innerHTML = '';
+      const actionList = [
+        { label: 'Request Docs', role: ['AP Lead', 'Controller'], status: 'Pending Docs' },
+        { label: 'Approve Credit', role: ['AP Lead', 'Controller'], status: 'Credit Approved' },
+        { label: 'Escalate Legal', role: ['Legal', 'Controller'], status: 'Escalated' },
+        { label: 'Resolve', role: ['AP Lead', 'Controller', 'Legal'], status: 'Resolved' }
+      ];
+      actionList.filter(a => a.role.includes(state.role)).forEach(action => {
+        const btn = document.createElement('button');
+        btn.className = 'px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm';
+        btn.textContent = action.label;
+        btn.addEventListener('click', () => {
+          d.status = action.status;
+          d.timeline.unshift({
+            date: '2026-03-01',
+            label: action.label,
+            by: state.role,
+            detail: action.label === 'Approve Credit'
+              ? `Approved credit note for ${fmtCurrency(d.creditRequested)}.`
+              : `Action executed by ${state.role}.`
+          });
+          renderAll();
+        });
+        actions.appendChild(btn);
+      });
+
+      const audit = document.getElementById('auditTrail');
+      audit.innerHTML = '';
+      d.timeline.slice(0, 5).forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs';
+        row.innerHTML = `
+          <span>${item.date} • ${item.label}</span>
+          <span class="text-slate-400">${item.by}</span>
+        `;
+        audit.appendChild(row);
+      });
+    };
+
+    const renderAll = () => {
+      updateStats();
+      renderList();
+      renderDetail();
+    };
+
+    document.getElementById('searchInput').addEventListener('input', e => {
+      state.search = e.target.value;
+      renderList();
+    });
+    document.getElementById('statusFilter').addEventListener('change', e => {
+      state.status = e.target.value;
+      renderList();
+    });
+    document.getElementById('priorityFilter').addEventListener('change', e => {
+      state.priority = e.target.value;
+      renderList();
+    });
+    document.getElementById('regionFilter').addEventListener('change', e => {
+      state.region = e.target.value;
+      renderList();
+    });
+    document.getElementById('sortFilter').addEventListener('change', e => {
+      state.sort = e.target.value;
+      renderList();
+    });
+    document.getElementById('roleFilter').addEventListener('change', e => {
+      state.role = e.target.value;
+      renderDetail();
+    });
+
+    document.getElementById('creditAmount').addEventListener('input', e => {
+      const d = disputes.find(item => item.id === state.activeId);
+      d.creditRequested = Number(e.target.value || 0);
+      renderDetail();
+    });
+    document.getElementById('creditReason').addEventListener('input', e => {
+      const d = disputes.find(item => item.id === state.activeId);
+      d.creditReason = e.target.value;
+    });
+
+    document.getElementById('addNoteBtn').addEventListener('click', () => {
+      const input = document.getElementById('noteInput');
+      if (!input.value.trim()) return;
+      const d = disputes.find(item => item.id === state.activeId);
+      d.timeline.unshift({
+        date: '2026-03-01',
+        label: 'Internal note',
+        by: state.role,
+        detail: input.value.trim()
+      });
+      input.value = '';
+      renderDetail();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = getFiltered().map(d => ({
+        id: d.id,
+        vendor: d.vendor,
+        invoice: d.invoice,
+        amount: d.amount,
+        status: d.status,
+        priority: d.priority,
+        owner: d.owner,
+        due: d.due
+      }));
+      const header = Object.keys(rows[0] || {}).join(',');
+      const body = rows.map(r => Object.values(r).join(',')).join('\n');
+      const csv = header + '\n' + body;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-disputes-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('newDisputeBtn').addEventListener('click', () => {
+      alert('New dispute logged: intake form sent to AP shared inbox.');
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
