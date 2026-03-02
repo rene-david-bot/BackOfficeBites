@@ -556,5 +556,28 @@
       "timeline"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-02",
+    "day": 28,
+    "slug": "2026-03-02-budget-variance-pulseboard",
+    "name": "Budget Variance Pulseboard",
+    "description": "Scenario-based budget vs actuals monitoring with reforecast approvals and variance alerts.",
+    "category": "Finance",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "budget vs actuals",
+      "variance",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "csv export",
+      "search",
+      "filter",
+      "sort",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]
