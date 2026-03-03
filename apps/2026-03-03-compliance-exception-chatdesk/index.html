@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compliance Exception Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="mx-auto max-w-7xl px-6 py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-semibold">Compliance Exception Chatdesk</h1>
+        <p class="text-slate-400">Triage policy exceptions in chat context, route approval decisions, and keep an immutable legal audit trail.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button id="exportCsv" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-amber-300 hover:text-amber-200">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 md:grid-cols-4">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Open exceptions</p>
+        <p id="kpiOpen" class="mt-2 text-3xl font-semibold">0</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Pending approval</p>
+        <p id="kpiPending" class="mt-2 text-3xl font-semibold text-amber-300">0</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Critical risk</p>
+        <p id="kpiCritical" class="mt-2 text-3xl font-semibold text-rose-300">0</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-sm text-slate-400">Avg. response time</p>
+        <p id="kpiSla" class="mt-2 text-3xl font-semibold text-emerald-300">0h</p>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="grid gap-3 md:grid-cols-5">
+        <div>
+          <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="ID, policy, requester" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+        </div>
+        <div>
+          <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+          <select id="statusFilter" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All statuses</option>
+            <option value="Pending Review">Pending Review</option>
+            <option value="Needs Revision">Needs Revision</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="severityFilter" class="text-xs uppercase tracking-wide text-slate-400">Severity</label>
+          <select id="severityFilter" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="All">All severities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-xs uppercase tracking-wide text-slate-400">Sort by</label>
+          <select id="sortBy" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option value="updated">Last update</option>
+            <option value="severity">Severity</option>
+            <option value="value">Contract value</option>
+          </select>
+        </div>
+        <div>
+          <label for="activeRole" class="text-xs uppercase tracking-wide text-slate-400">View as role</label>
+          <select id="activeRole" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none">
+            <option>Requester</option>
+            <option selected>Legal Reviewer</option>
+            <option>Legal Approver</option>
+          </select>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-slate-500">Policy guardrail: High/Critical or value &gt; €50,000 can only be approved by Legal Approver.</p>
+    </section>
+
+    <section class="mt-6 grid gap-4 xl:grid-cols-12">
+      <aside class="xl:col-span-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-200">Exception queue</h2>
+          <span id="queueCount" class="text-xs text-slate-500">0 items</span>
+        </div>
+        <div id="queueList" class="space-y-2"></div>
+      </aside>
+
+      <main class="xl:col-span-5 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-center justify-between">
+          <h2 id="chatTitle" class="text-lg font-semibold text-slate-100">Select an exception</h2>
+          <span id="chatBadge" class="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-300">—</span>
+        </div>
+        <p id="chatMeta" class="mt-1 text-sm text-slate-400"></p>
+
+        <div id="messageList" class="mt-4 h-[320px] overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/70 p-3"></div>
+
+        <form id="chatForm" class="mt-4">
+          <label for="chatInput" class="text-xs uppercase tracking-wide text-slate-400">Post update</label>
+          <textarea id="chatInput" rows="3" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" placeholder="Add context for requester and approvers"></textarea>
+          <div class="mt-2 flex items-center justify-between">
+            <p class="text-xs text-slate-500">Minimum 6 characters. Messages are appended to audit trail.</p>
+            <button type="submit" class="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300">Send</button>
+          </div>
+        </form>
+      </main>
+
+      <aside class="xl:col-span-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">Decision panel</h2>
+        <div id="detailPanel" class="mt-3 space-y-3 text-sm text-slate-300"></div>
+
+        <label for="dueDate" class="mt-4 block text-xs uppercase tracking-wide text-slate-400">Revised due date</label>
+        <input id="dueDate" type="date" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none" />
+
+        <div class="mt-4 grid gap-2">
+          <button id="btnApprove" class="rounded-lg border border-emerald-400/70 px-3 py-2 text-sm font-semibold text-emerald-200 hover:border-emerald-300">Approve</button>
+          <button id="btnRevision" class="rounded-lg border border-amber-400/70 px-3 py-2 text-sm font-semibold text-amber-200 hover:border-amber-300">Request Revision</button>
+          <button id="btnReject" class="rounded-lg border border-rose-400/70 px-3 py-2 text-sm font-semibold text-rose-200 hover:border-rose-300">Reject</button>
+        </div>
+
+        <p id="feedback" class="mt-3 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs text-slate-300">No action yet.</p>
+
+        <h3 class="mt-5 text-sm font-semibold text-slate-200">Audit trail</h3>
+        <div id="auditList" class="mt-2 space-y-2"></div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const exceptions = [
+      {
+        id: 'LEX-4021',
+        title: 'Vendor onboarding without DPA annex',
+        policy: 'GDPR-14',
+        requester: 'Marta Klein',
+        owner: 'Legal Ops EMEA',
+        status: 'Pending Review',
+        severity: 'High',
+        value: 72000,
+        region: 'DE',
+        responseHours: 9,
+        dueDate: '2026-03-07',
+        updatedAt: '2026-03-03T07:50:00Z',
+        messages: [
+          { who: 'Requester', text: 'Supplier insists on legacy paper terms. Need temporary exception for pilot.', at: '08:02' },
+          { who: 'Legal Reviewer', text: 'Please attach signed SCC appendix before final approval.', at: '08:14' }
+        ],
+        audit: [
+          { at: '08:00', text: 'Exception created by Marta Klein.' },
+          { at: '08:14', text: 'Legal reviewer requested SCC appendix.' }
+        ]
+      },
+      {
+        id: 'LEX-4022',
+        title: 'Retention extension for incident evidence',
+        policy: 'SEC-09',
+        requester: 'Noah Brandt',
+        owner: 'Security Governance',
+        status: 'Needs Revision',
+        severity: 'Medium',
+        value: 18000,
+        region: 'EU',
+        responseHours: 14,
+        dueDate: '2026-03-10',
+        updatedAt: '2026-03-03T06:35:00Z',
+        messages: [
+          { who: 'Requester', text: 'Need +60 days retention due to active forensics case.', at: '07:12' },
+          { who: 'Legal Reviewer', text: 'Document legal hold reference and affected systems.', at: '07:21' }
+        ],
+        audit: [
+          { at: '07:10', text: 'Case reopened after missing evidence scope.' }
+        ]
+      },
+      {
+        id: 'LEX-4023',
+        title: 'Marketing claim pending trademark clearance',
+        policy: 'IP-31',
+        requester: 'Alina Vogt',
+        owner: 'Brand Counsel',
+        status: 'Pending Review',
+        severity: 'Critical',
+        value: 135000,
+        region: 'US',
+        responseHours: 5,
+        dueDate: '2026-03-05',
+        updatedAt: '2026-03-03T08:30:00Z',
+        messages: [
+          { who: 'Requester', text: 'Campaign launch is locked for Friday. Need temporary wording sign-off.', at: '08:31' }
+        ],
+        audit: [
+          { at: '08:31', text: 'Escalated to legal due to critical launch deadline.' }
+        ]
+      },
+      {
+        id: 'LEX-4024',
+        title: 'Subprocessor transfer outside approved regions',
+        policy: 'DP-22',
+        requester: 'Ibrahim Kaya',
+        owner: 'Privacy Counsel',
+        status: 'Approved',
+        severity: 'Low',
+        value: 9000,
+        region: 'TR',
+        responseHours: 22,
+        dueDate: '2026-03-15',
+        updatedAt: '2026-03-02T18:12:00Z',
+        messages: [
+          { who: 'Legal Approver', text: 'Approved for 30 days with encryption addendum in place.', at: '18:12' }
+        ],
+        audit: [
+          { at: '18:12', text: 'Approved by legal approver with sunset date.' }
+        ]
+      }
+    ];
+
+    let selectedId = exceptions[0].id;
+
+    const severityRank = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const el = {
+      kpiOpen: document.getElementById('kpiOpen'),
+      kpiPending: document.getElementById('kpiPending'),
+      kpiCritical: document.getElementById('kpiCritical'),
+      kpiSla: document.getElementById('kpiSla'),
+      searchInput: document.getElementById('searchInput'),
+      statusFilter: document.getElementById('statusFilter'),
+      severityFilter: document.getElementById('severityFilter'),
+      sortBy: document.getElementById('sortBy'),
+      activeRole: document.getElementById('activeRole'),
+      queueCount: document.getElementById('queueCount'),
+      queueList: document.getElementById('queueList'),
+      chatTitle: document.getElementById('chatTitle'),
+      chatBadge: document.getElementById('chatBadge'),
+      chatMeta: document.getElementById('chatMeta'),
+      messageList: document.getElementById('messageList'),
+      chatForm: document.getElementById('chatForm'),
+      chatInput: document.getElementById('chatInput'),
+      detailPanel: document.getElementById('detailPanel'),
+      dueDate: document.getElementById('dueDate'),
+      btnApprove: document.getElementById('btnApprove'),
+      btnRevision: document.getElementById('btnRevision'),
+      btnReject: document.getElementById('btnReject'),
+      feedback: document.getElementById('feedback'),
+      auditList: document.getElementById('auditList'),
+      exportCsv: document.getElementById('exportCsv')
+    };
+
+    const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+    function selectedItem() {
+      return exceptions.find(item => item.id === selectedId);
+    }
+
+    function statusBadge(status) {
+      if (status === 'Approved') return 'bg-emerald-500/20 text-emerald-200';
+      if (status === 'Rejected') return 'bg-rose-500/20 text-rose-200';
+      if (status === 'Needs Revision') return 'bg-amber-500/20 text-amber-200';
+      return 'bg-sky-500/20 text-sky-200';
+    }
+
+    function addAudit(item, text) {
+      const now = new Date();
+      const at = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      item.audit.unshift({ at, text });
+      item.updatedAt = now.toISOString();
+    }
+
+    function addMessage(item, who, text) {
+      const now = new Date();
+      const at = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      item.messages.push({ who, text, at });
+      addAudit(item, `${who} posted update: ${text.slice(0, 70)}${text.length > 70 ? '…' : ''}`);
+    }
+
+    function getFiltered() {
+      const query = el.searchInput.value.trim().toLowerCase();
+      const status = el.statusFilter.value;
+      const severity = el.severityFilter.value;
+
+      let list = exceptions.filter(item => {
+        const hay = `${item.id} ${item.title} ${item.policy} ${item.requester}`.toLowerCase();
+        const q = !query || hay.includes(query);
+        const st = status === 'All' || item.status === status;
+        const se = severity === 'All' || item.severity === severity;
+        return q && st && se;
+      });
+
+      list.sort((a, b) => {
+        if (el.sortBy.value === 'severity') return severityRank[b.severity] - severityRank[a.severity];
+        if (el.sortBy.value === 'value') return b.value - a.value;
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+
+      return list;
+    }
+
+    function renderKpis(list) {
+      el.kpiOpen.textContent = list.filter(item => item.status !== 'Approved' && item.status !== 'Rejected').length;
+      el.kpiPending.textContent = list.filter(item => item.status === 'Pending Review').length;
+      el.kpiCritical.textContent = list.filter(item => item.severity === 'Critical' || item.severity === 'High').length;
+      const avg = list.length ? Math.round(list.reduce((sum, item) => sum + item.responseHours, 0) / list.length) : 0;
+      el.kpiSla.textContent = `${avg}h`;
+    }
+
+    function renderQueue() {
+      const list = getFiltered();
+      if (!list.find(item => item.id === selectedId)) selectedId = list[0]?.id || '';
+      el.queueCount.textContent = `${list.length} item${list.length === 1 ? '' : 's'}`;
+
+      el.queueList.innerHTML = list.map(item => {
+        const selected = item.id === selectedId;
+        const badge = statusBadge(item.status);
+        return `
+          <button data-id="${item.id}" class="w-full rounded-lg border text-left ${selected ? 'border-amber-400 bg-slate-900' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} px-3 py-3 focus:outline-none focus:ring-2 focus:ring-amber-300">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-sm font-semibold text-slate-100">${item.title}</p>
+                <p class="text-xs text-slate-500">${item.id} · ${item.policy} · ${item.requester}</p>
+              </div>
+              <span class="rounded-full px-2 py-1 text-xs ${badge}">${item.status}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span>${item.severity} risk</span>
+              <span>${euro.format(item.value)}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      renderDetails();
+      renderKpis(list);
+    }
+
+    function renderDetails() {
+      const item = selectedItem();
+      if (!item) {
+        el.chatTitle.textContent = 'Select an exception';
+        el.chatBadge.textContent = '—';
+        el.chatMeta.textContent = '';
+        el.messageList.innerHTML = '';
+        el.detailPanel.innerHTML = '';
+        el.auditList.innerHTML = '';
+        return;
+      }
+
+      el.chatTitle.textContent = item.title;
+      el.chatBadge.className = `rounded-full px-2 py-1 text-xs ${statusBadge(item.status)}`;
+      el.chatBadge.textContent = item.status;
+      el.chatMeta.textContent = `${item.id} • ${item.region} • Owner ${item.owner}`;
+      el.dueDate.value = item.dueDate;
+
+      el.messageList.innerHTML = item.messages.map(msg => `
+        <article class="mb-2 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2">
+          <div class="flex items-center justify-between text-xs text-slate-500">
+            <span>${msg.who}</span>
+            <time>${msg.at}</time>
+          </div>
+          <p class="mt-1 text-sm text-slate-200">${msg.text}</p>
+        </article>
+      `).join('');
+      el.messageList.scrollTop = el.messageList.scrollHeight;
+
+      const role = el.activeRole.value;
+      const policyLocked = (item.severity === 'High' || item.severity === 'Critical' || item.value > 50000);
+      const canApprove = role === 'Legal Approver' || !policyLocked;
+      const canReject = role === 'Legal Approver';
+
+      el.detailPanel.innerHTML = `
+        <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+          <p class="text-xs text-slate-500">Policy</p>
+          <p>${item.policy}</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+          <p class="text-xs text-slate-500">Severity</p>
+          <p>${item.severity}</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+          <p class="text-xs text-slate-500">Contract value</p>
+          <p>${euro.format(item.value)}</p>
+        </div>
+        <p class="text-xs text-slate-500">Current role: ${role}${policyLocked ? ' • Guardrail active' : ''}</p>
+      `;
+
+      el.btnApprove.disabled = !canApprove;
+      el.btnReject.disabled = !canReject;
+      [el.btnApprove, el.btnReject].forEach(btn => {
+        btn.classList.toggle('opacity-50', btn.disabled);
+        btn.classList.toggle('cursor-not-allowed', btn.disabled);
+      });
+
+      el.auditList.innerHTML = item.audit.map(entry => `
+        <div class="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2">
+          <div class="text-xs text-slate-500">${entry.at}</div>
+          <div class="text-sm text-slate-200">${entry.text}</div>
+        </div>
+      `).join('');
+    }
+
+    function setFeedback(text, tone = 'slate') {
+      const tones = {
+        slate: 'text-slate-300 border-slate-800',
+        ok: 'text-emerald-200 border-emerald-400/40',
+        warn: 'text-amber-200 border-amber-400/40',
+        error: 'text-rose-200 border-rose-400/40'
+      };
+      el.feedback.className = `mt-3 rounded-lg bg-slate-950/70 px-3 py-2 text-xs ${tones[tone] || tones.slate}`;
+      el.feedback.textContent = text;
+    }
+
+    function validateDueDate(value) {
+      if (!value) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return new Date(value) >= today;
+    }
+
+    el.queueList.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-id]');
+      if (!button) return;
+      selectedId = button.dataset.id;
+      renderQueue();
+    });
+
+    [el.searchInput, el.statusFilter, el.severityFilter, el.sortBy, el.activeRole].forEach(input => {
+      input.addEventListener('input', renderQueue);
+      input.addEventListener('change', renderQueue);
+    });
+
+    el.chatForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const item = selectedItem();
+      const text = el.chatInput.value.trim();
+      if (!item) return;
+      if (text.length < 6) {
+        setFeedback('Message too short. Add at least 6 characters for audit quality.', 'warn');
+        return;
+      }
+      addMessage(item, el.activeRole.value, text);
+      el.chatInput.value = '';
+      setFeedback('Update posted to chat and audit trail.', 'ok');
+      renderQueue();
+    });
+
+    function runDecision(nextStatus, successText) {
+      const item = selectedItem();
+      if (!item) return;
+      const role = el.activeRole.value;
+      const due = el.dueDate.value;
+
+      if (!validateDueDate(due)) {
+        setFeedback('Due date cannot be in the past.', 'error');
+        return;
+      }
+
+      if (nextStatus === 'Approved' && role !== 'Legal Approver' && (item.severity === 'High' || item.severity === 'Critical' || item.value > 50000)) {
+        setFeedback('Guardrail blocked: only Legal Approver can approve high-risk or > €50k exceptions.', 'error');
+        return;
+      }
+
+      if (nextStatus === 'Rejected' && role !== 'Legal Approver') {
+        setFeedback('Only Legal Approver can reject exceptions.', 'error');
+        return;
+      }
+
+      item.status = nextStatus;
+      item.dueDate = due || item.dueDate;
+      addAudit(item, `${role} set status to ${nextStatus}.`);
+      addMessage(item, role, successText);
+      setFeedback(`Decision recorded: ${nextStatus}.`, 'ok');
+      renderQueue();
+    }
+
+    el.btnApprove.addEventListener('click', () => runDecision('Approved', 'Approved with current controls and documented rationale.'));
+    el.btnRevision.addEventListener('click', () => runDecision('Needs Revision', 'Please revise attachments and respond to open legal comments.'));
+    el.btnReject.addEventListener('click', () => runDecision('Rejected', 'Rejected due to unresolved policy exposure. Submit a mitigated request.'));
+
+    el.exportCsv.addEventListener('click', () => {
+      const rows = [
+        ['ID', 'Title', 'Policy', 'Requester', 'Status', 'Severity', 'Value', 'Region', 'Due Date'],
+        ...getFiltered().map(item => [item.id, item.title, item.policy, item.requester, item.status, item.severity, item.value, item.region, item.dueDate])
+      ];
+      const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'compliance-exception-chatdesk.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setFeedback('CSV export created for legal review pack.', 'ok');
+    });
+
+    renderQueue();
+  </script>
+</body>
+</html>

@@ -579,5 +579,25 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-03",
+    "day": 29,
+    "slug": "2026-03-03-compliance-exception-chatdesk",
+    "name": "Compliance Exception Chatdesk",
+    "description": "Chat-first legal exception triage with policy guardrails, approver routing, and audit-ready decisions.",
+    "category": "Legal",
+    "pattern": "Chat UI",
+    "tags": [
+      "approval workflow",
+      "audit trail",
+      "role-based",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
