@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commission Adjustment Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold">Commission Adjustment Control Grid</h1>
+        <p class="text-slate-400 mt-1">Policy-aware commission exception handling with role-based approvals and audit trail.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-slate-700 overflow-hidden w-fit" role="radiogroup" aria-label="Role selector">
+        <button data-role="Analyst" class="role-btn px-3 py-2 text-sm bg-emerald-600 text-white">Analyst</button>
+        <button data-role="Manager" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Manager</button>
+        <button data-role="Finance" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Finance</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <label class="text-sm">
+            <span class="block text-slate-400 mb-1">Search (rep/account)</span>
+            <input id="search" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type to search..." />
+          </label>
+          <label class="text-sm">
+            <span class="block text-slate-400 mb-1">Region</span>
+            <select id="regionFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by region">
+              <option value="all">All regions</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="block text-slate-400 mb-1">Status</span>
+            <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="Draft">Draft</option>
+              <option value="Pending Manager">Pending Manager</option>
+              <option value="Pending Finance">Pending Finance</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </label>
+          <div class="flex items-end gap-2">
+            <button id="resetFilters" class="w-full md:w-auto px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">Reset</button>
+            <button id="exportCsv" class="w-full md:w-auto px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium">Export CSV</button>
+          </div>
+        </div>
+
+        <div class="mt-4 overflow-auto border border-slate-800 rounded-lg">
+          <table class="w-full text-sm min-w-[880px]" id="gridTable">
+            <thead class="bg-slate-900">
+              <tr class="text-left text-slate-300">
+                <th><button class="sort-btn p-3" data-key="rep">Rep</button></th>
+                <th><button class="sort-btn p-3" data-key="account">Account</button></th>
+                <th><button class="sort-btn p-3" data-key="region">Region</button></th>
+                <th><button class="sort-btn p-3" data-key="quarter">Quarter</button></th>
+                <th><button class="sort-btn p-3" data-key="base">Base (€)</button></th>
+                <th><button class="sort-btn p-3" data-key="adjustmentPct">Adj. %</button></th>
+                <th><button class="sort-btn p-3" data-key="status">Status</button></th>
+                <th class="p-3">Action</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div>
+          <h2 class="font-semibold text-lg">Adjustment Request</h2>
+          <p class="text-slate-400 text-sm">Select a row, then submit policy-checked adjustment.</p>
+        </div>
+
+        <form id="requestForm" class="space-y-3" novalidate>
+          <div class="text-xs bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <p class="text-slate-400">Selected case</p>
+            <p id="selectedCase" class="font-medium mt-1">None selected</p>
+          </div>
+
+          <label class="block text-sm">
+            <span class="text-slate-300">Adjustment %</span>
+            <input id="adjustmentInput" type="number" step="0.1" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+
+          <label class="block text-sm">
+            <span class="text-slate-300">Justification</span>
+            <textarea id="reasonInput" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Explain customer/contract context" required></textarea>
+          </label>
+
+          <p id="policyHint" class="text-xs text-slate-400">Policy: Analyst can request ±5%; manager approval needed above ±2%; finance approval needed above ±4%.</p>
+          <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+
+          <button type="submit" class="w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold">Submit for Approval</button>
+        </form>
+
+        <div>
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 text-sm space-y-2 max-h-52 overflow-auto"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const dataset = [
+      { id: 'C-2107', rep: 'Lena Becker', account: 'RheinFleet AG', region: 'DACH', quarter: 'Q1', base: 12800, adjustmentPct: 0, status: 'Draft', reason: '', audit: ['Case created by comp ops.'] },
+      { id: 'C-2113', rep: 'Marco Rossi', account: 'Contoso Mobility', region: 'Southern EU', quarter: 'Q1', base: 9400, adjustmentPct: 2.5, status: 'Pending Manager', reason: 'Late upsell booking reconciliation', audit: ['Analyst requested +2.5% adjustment.'] },
+      { id: 'C-2119', rep: 'Nina Keller', account: 'BluePeak Energy', region: 'DACH', quarter: 'Q1', base: 15600, adjustmentPct: 4.7, status: 'Pending Finance', reason: 'Contract amendment after legal sign-off', audit: ['Manager approved +4.7%; routed to Finance.'] },
+      { id: 'C-2121', rep: 'Tom Novak', account: 'Nexa Robotics', region: 'Nordics', quarter: 'Q1', base: 10100, adjustmentPct: -1.2, status: 'Approved', reason: 'Returned hardware bundle correction', audit: ['Manager approved -1.2%.', 'Finance auto-approved.'] },
+      { id: 'C-2125', rep: 'Sara Min', account: 'Kite Health Group', region: 'UKI', quarter: 'Q1', base: 11900, adjustmentPct: 5.8, status: 'Rejected', reason: 'Insufficient supporting evidence', audit: ['Manager escalated.', 'Finance rejected (missing legal attachment).'] },
+      { id: 'C-2128', rep: 'Jonas Meyer', account: 'Altair Retail', region: 'DACH', quarter: 'Q1', base: 8700, adjustmentPct: 3.1, status: 'Pending Manager', reason: 'Channel conflict true-up', audit: ['Analyst requested +3.1% adjustment.'] }
+    ];
+
+    let rows = structuredClone(dataset);
+    let role = 'Analyst';
+    let selectedId = null;
+    let sortState = { key: 'rep', dir: 'asc' };
+
+    const gridBody = document.getElementById('gridBody');
+    const searchEl = document.getElementById('search');
+    const regionFilterEl = document.getElementById('regionFilter');
+    const statusFilterEl = document.getElementById('statusFilter');
+    const selectedCaseEl = document.getElementById('selectedCase');
+    const auditTrailEl = document.getElementById('auditTrail');
+    const formErrorEl = document.getElementById('formError');
+
+    function euro(v) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+    }
+
+    function populateRegions() {
+      [...new Set(rows.map(r => r.region))].forEach(region => {
+        const option = document.createElement('option');
+        option.value = region;
+        option.textContent = region;
+        regionFilterEl.append(option);
+      });
+    }
+
+    function currentPolicyLimit() {
+      if (role === 'Analyst') return 5;
+      if (role === 'Manager') return 8;
+      return 10;
+    }
+
+    function render() {
+      const q = searchEl.value.trim().toLowerCase();
+      const region = regionFilterEl.value;
+      const status = statusFilterEl.value;
+
+      const filtered = rows.filter(r => {
+        const textMatch = r.rep.toLowerCase().includes(q) || r.account.toLowerCase().includes(q);
+        const regionMatch = region === 'all' || r.region === region;
+        const statusMatch = status === 'all' || r.status === status;
+        return textMatch && regionMatch && statusMatch;
+      }).sort((a, b) => {
+        const k = sortState.key;
+        const dir = sortState.dir === 'asc' ? 1 : -1;
+        const av = a[k];
+        const bv = b[k];
+        if (typeof av === 'number') return (av - bv) * dir;
+        return String(av).localeCompare(String(bv)) * dir;
+      });
+
+      gridBody.innerHTML = filtered.map(r => `
+        <tr class="border-t border-slate-800 ${r.id === selectedId ? 'bg-emerald-900/30' : 'hover:bg-slate-800/50'}">
+          <td class="p-3">${r.rep}</td>
+          <td class="p-3">${r.account}</td>
+          <td class="p-3">${r.region}</td>
+          <td class="p-3">${r.quarter}</td>
+          <td class="p-3">${euro(r.base)}</td>
+          <td class="p-3">${r.adjustmentPct.toFixed(1)}%</td>
+          <td class="p-3"><span class="px-2 py-1 rounded text-xs ${statusColor(r.status)}">${r.status}</span></td>
+          <td class="p-3"><button class="select-btn px-2 py-1 rounded border border-slate-600 hover:border-emerald-400" data-id="${r.id}">Select</button></td>
+        </tr>
+      `).join('');
+
+      [...document.querySelectorAll('.select-btn')].forEach(btn => {
+        btn.addEventListener('click', () => selectCase(btn.dataset.id));
+      });
+
+      renderAudit();
+    }
+
+    function statusColor(status) {
+      if (status === 'Approved') return 'bg-emerald-900/60 text-emerald-300';
+      if (status === 'Rejected') return 'bg-rose-900/60 text-rose-300';
+      if (status.includes('Pending')) return 'bg-amber-900/60 text-amber-200';
+      return 'bg-slate-800 text-slate-200';
+    }
+
+    function selectCase(id) {
+      selectedId = id;
+      const item = rows.find(r => r.id === id);
+      selectedCaseEl.textContent = `${item.id} · ${item.rep} · ${item.account}`;
+      document.getElementById('adjustmentInput').value = item.adjustmentPct;
+      document.getElementById('reasonInput').value = item.reason;
+      render();
+    }
+
+    function renderAudit() {
+      const item = rows.find(r => r.id === selectedId);
+      if (!item) {
+        auditTrailEl.innerHTML = '<li class="text-slate-500">No case selected.</li>';
+        return;
+      }
+      auditTrailEl.innerHTML = item.audit.map((line, i) => `<li class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2"><span class="text-slate-500 mr-2">#${i + 1}</span>${line}</li>`).join('');
+    }
+
+    function nextStatus(pct) {
+      const abs = Math.abs(pct);
+      if (abs <= 2) return 'Approved';
+      if (abs <= 4) return 'Pending Manager';
+      return 'Pending Finance';
+    }
+
+    document.getElementById('requestForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      formErrorEl.classList.add('hidden');
+
+      if (!selectedId) {
+        return showError('Select a case first.');
+      }
+
+      const pct = Number(document.getElementById('adjustmentInput').value);
+      const reason = document.getElementById('reasonInput').value.trim();
+      const limit = currentPolicyLimit();
+
+      if (!Number.isFinite(pct)) return showError('Enter a valid numeric adjustment.');
+      if (Math.abs(pct) > limit) return showError(`Policy violation: ${role} cannot submit above ±${limit}%.`);
+      if (reason.length < 10) return showError('Please provide at least 10 characters of justification.');
+
+      const item = rows.find(r => r.id === selectedId);
+      item.adjustmentPct = pct;
+      item.reason = reason;
+      const status = nextStatus(pct);
+      item.status = status;
+      const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      item.audit.unshift(`${stamp} ${role}: submitted ${pct.toFixed(1)}% (${reason}). Status → ${status}.`);
+      render();
+    });
+
+    function showError(message) {
+      formErrorEl.textContent = message;
+      formErrorEl.classList.remove('hidden');
+    }
+
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (sortState.key === key) {
+          sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState = { key, dir: 'asc' };
+        }
+        render();
+      });
+    });
+
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        role = btn.dataset.role;
+        document.querySelectorAll('.role-btn').forEach(b => {
+          const active = b.dataset.role === role;
+          b.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-200'}`;
+        });
+        document.getElementById('policyHint').textContent = `Policy: ${role} can submit up to ±${currentPolicyLimit()}%. Manager approval needed above ±2%; finance approval above ±4%.`;
+      });
+    });
+
+    [searchEl, regionFilterEl, statusFilterEl].forEach(el => el.addEventListener('input', render));
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchEl.value = '';
+      regionFilterEl.value = 'all';
+      statusFilterEl.value = 'all';
+      render();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const headers = ['id','rep','account','region','quarter','base','adjustmentPct','status','reason'];
+      const body = rows.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(',')).join('\n');
+      const csv = `${headers.join(',')}\n${body}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'commission-adjustments.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    populateRegions();
+    render();
+  </script>
+</body>
+</html>
