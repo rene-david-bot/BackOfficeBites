@@ -621,5 +621,28 @@
       "data grid"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-05",
+    "day": 31,
+    "slug": "2026-03-05-capacity-allocation-dragboard",
+    "name": "Capacity Allocation Dragboard",
+    "description": "Drag-and-drop capacity planning with policy-guarded approvals, state transitions, and audit logs.",
+    "category": "Planning",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "capacity planner",
+      "drag-and-drop",
+      "approval workflow",
+      "state machine",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capacity Allocation Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold">Capacity Allocation Dragboard</h1>
+        <p class="text-slate-400 mt-1">Plan weekly staffing requests with drag-and-drop approvals, policy controls, and audit-ready traces.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-slate-700 overflow-hidden w-fit" role="radiogroup" aria-label="Role selector">
+        <button data-role="Planner" class="role-btn px-3 py-2 text-sm bg-emerald-600 text-white">Planner</button>
+        <button data-role="PMO Lead" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">PMO Lead</button>
+        <button data-role="Director" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Director</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Total requested</p>
+        <p id="metricRequested" class="text-2xl font-semibold mt-1">0.0 FTE</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Approved load</p>
+        <p id="metricApproved" class="text-2xl font-semibold mt-1">0.0 FTE</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Capacity utilization</p>
+        <p id="metricUtilization" class="text-2xl font-semibold mt-1">0%</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy</p>
+        <p id="policyHint" class="text-sm text-slate-300 mt-1">Planner can approve up to 1.2 FTE per request.</p>
+      </article>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <label class="text-sm md:col-span-2">
+          <span class="block text-slate-400 mb-1">Search initiative / owner / ID</span>
+          <input id="search" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type to search..." />
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Squad</span>
+          <select id="squadFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by squad">
+            <option value="all">All squads</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Week</span>
+          <select id="weekFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by week">
+            <option value="all">All weeks</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Sort</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Sort requests">
+            <option value="priority">Priority (high to low)</option>
+            <option value="fte">FTE (high to low)</option>
+            <option value="week">Week (soonest first)</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="resetFilters" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <button id="exportCsv" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 2xl:grid-cols-4 gap-4">
+      <div class="2xl:col-span-3 grid grid-cols-1 xl:grid-cols-3 gap-4" id="board"></div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div>
+          <h2 class="font-semibold text-lg">Request Details</h2>
+          <p class="text-slate-400 text-sm">Select a card to inspect notes and audit history.</p>
+        </div>
+
+        <div id="selectedCard" class="text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-400">No request selected.</div>
+
+        <label class="block text-sm">
+          <span class="text-slate-300">Audit note</span>
+          <textarea id="auditInput" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Add decision context..."></textarea>
+        </label>
+        <button id="addAudit" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Append audit note</button>
+
+        <div>
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 text-sm space-y-2 max-h-60 overflow-auto"></ul>
+        </div>
+
+        <hr class="border-slate-800" />
+
+        <div>
+          <h3 class="font-semibold">New Capacity Request</h3>
+          <p class="text-xs text-slate-400 mt-1">Policy validation runs before the card is created.</p>
+        </div>
+
+        <form id="newRequestForm" class="space-y-3" novalidate>
+          <label class="block text-sm">
+            <span class="text-slate-300">Initiative</span>
+            <input id="initiativeInput" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="block text-sm">
+            <span class="text-slate-300">Owner</span>
+            <input id="ownerInput" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm">
+              <span class="text-slate-300">Squad</span>
+              <select id="squadInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Week</span>
+              <select id="weekInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm">
+              <span class="text-slate-300">FTE needed</span>
+              <input id="fteInput" type="number" min="0.2" max="2.5" step="0.1" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Priority (1-5)</span>
+              <input id="priorityInput" type="number" min="1" max="5" step="1" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+          </div>
+          <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+          <button type="submit" class="w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold">Create request</button>
+        </form>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const capacityByWeek = {
+      '2026-W11': 12,
+      '2026-W12': 12,
+      '2026-W13': 12,
+      '2026-W14': 12
+    };
+
+    const initialRequests = [
+      { id: 'CAP-401', initiative: 'Warehouse Handheld Rollout', owner: 'Lea Wagner', squad: 'Platform', week: '2026-W11', fte: 1.0, priority: 5, status: 'Backlog', skill: 'Mobile QA', audit: ['Request created by PMO intake.'] },
+      { id: 'CAP-402', initiative: 'QBR Metrics Automation', owner: 'Tobias Frank', squad: 'Data', week: '2026-W11', fte: 0.8, priority: 4, status: 'Review', skill: 'Analytics Eng', audit: ['Planner moved request to Review.'] },
+      { id: 'CAP-403', initiative: 'Access Recertification Sprint', owner: 'Mira Havel', squad: 'Security', week: '2026-W12', fte: 1.4, priority: 5, status: 'Review', skill: 'IAM', audit: ['Escalated for approval due to compliance deadline.'] },
+      { id: 'CAP-404', initiative: 'Returns Triage Assistant', owner: 'Jonas Meyer', squad: 'Ops', week: '2026-W12', fte: 1.6, priority: 3, status: 'Approved', skill: 'Workflow Design', audit: ['Director approved with risk note.'] },
+      { id: 'CAP-405', initiative: 'AP Reconciliation Bot Hardening', owner: 'Nina Keller', squad: 'Finance Tech', week: '2026-W13', fte: 1.2, priority: 4, status: 'Backlog', skill: 'Automation', audit: ['Waiting for dependency estimate.'] },
+      { id: 'CAP-406', initiative: 'Quarterly Vendor Review Pack', owner: 'Marco Rossi', squad: 'Legal Ops', week: '2026-W14', fte: 0.7, priority: 2, status: 'Approved', skill: 'Contract Ops', audit: ['PMO Lead approved under standard threshold.'] }
+    ];
+
+    const lanes = ['Backlog', 'Review', 'Approved'];
+    const roleApproveLimit = { 'Planner': 1.2, 'PMO Lead': 1.8, 'Director': 2.5 };
+
+    let requests = structuredClone(initialRequests);
+    let selectedId = null;
+    let currentRole = 'Planner';
+
+    const boardEl = document.getElementById('board');
+    const auditTrailEl = document.getElementById('auditTrail');
+    const selectedCardEl = document.getElementById('selectedCard');
+    const searchEl = document.getElementById('search');
+    const squadFilterEl = document.getElementById('squadFilter');
+    const weekFilterEl = document.getElementById('weekFilter');
+    const sortByEl = document.getElementById('sortBy');
+    const formErrorEl = document.getElementById('formError');
+
+    function stamp() {
+      return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function cardStyle(priority) {
+      if (priority >= 5) return 'border-rose-700';
+      if (priority >= 4) return 'border-amber-700';
+      return 'border-slate-700';
+    }
+
+    function badgeStyle(status) {
+      if (status === 'Approved') return 'bg-emerald-900/60 text-emerald-300';
+      if (status === 'Review') return 'bg-amber-900/60 text-amber-200';
+      return 'bg-slate-800 text-slate-200';
+    }
+
+    function rolePolicyText() {
+      return `${currentRole} can approve up to ${roleApproveLimit[currentRole].toFixed(1)} FTE per request.`;
+    }
+
+    function stateTransitionAllowed(from, to) {
+      const transitions = {
+        'Backlog': ['Review'],
+        'Review': ['Backlog', 'Approved'],
+        'Approved': ['Review']
+      };
+      return transitions[from]?.includes(to);
+    }
+
+    function filteredRequests() {
+      const q = searchEl.value.trim().toLowerCase();
+      const squad = squadFilterEl.value;
+      const week = weekFilterEl.value;
+      const sort = sortByEl.value;
+
+      const list = requests.filter(r => {
+        const textMatch =
+          r.id.toLowerCase().includes(q) ||
+          r.initiative.toLowerCase().includes(q) ||
+          r.owner.toLowerCase().includes(q);
+        const squadMatch = squad === 'all' || r.squad === squad;
+        const weekMatch = week === 'all' || r.week === week;
+        return textMatch && squadMatch && weekMatch;
+      });
+
+      list.sort((a, b) => {
+        if (sort === 'fte') return b.fte - a.fte;
+        if (sort === 'week') return a.week.localeCompare(b.week) || b.priority - a.priority;
+        return b.priority - a.priority || b.fte - a.fte;
+      });
+
+      return list;
+    }
+
+    function updateMetrics() {
+      const visible = filteredRequests();
+      const requested = visible.reduce((sum, r) => sum + r.fte, 0);
+      const approved = visible.filter(r => r.status === 'Approved').reduce((sum, r) => sum + r.fte, 0);
+      const capacity = Object.values(capacityByWeek).reduce((a, b) => a + b, 0);
+      const utilization = capacity ? Math.round((approved / capacity) * 100) : 0;
+
+      document.getElementById('metricRequested').textContent = `${requested.toFixed(1)} FTE`;
+      document.getElementById('metricApproved').textContent = `${approved.toFixed(1)} FTE`;
+      document.getElementById('metricUtilization').textContent = `${utilization}%`;
+      document.getElementById('policyHint').textContent = rolePolicyText();
+    }
+
+    function renderBoard() {
+      const visible = filteredRequests();
+      boardEl.innerHTML = lanes.map(lane => {
+        const laneCards = visible.filter(r => r.status === lane);
+        return `
+          <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3" data-lane="${lane}">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-semibold">${lane}</h2>
+              <span class="text-xs text-slate-400">${laneCards.length} cards</span>
+            </div>
+            <div class="drop-zone min-h-[360px] space-y-2 rounded-lg border border-dashed border-slate-700 p-2" data-lane="${lane}">
+              ${laneCards.map(card => cardTemplate(card)).join('') || '<p class="text-xs text-slate-500 p-2">Drop request here</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.request-card').forEach(card => {
+        card.addEventListener('click', () => selectCard(card.dataset.id));
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          card.classList.add('opacity-60');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('opacity-60'));
+      });
+
+      document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('ring-2', 'ring-emerald-500');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('ring-2', 'ring-emerald-500'));
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('ring-2', 'ring-emerald-500');
+          const id = e.dataTransfer.getData('text/plain');
+          moveCard(id, zone.dataset.lane);
+        });
+      });
+
+      updateMetrics();
+      renderAudit();
+    }
+
+    function cardTemplate(card) {
+      return `
+        <article
+          class="request-card cursor-pointer rounded-lg border ${cardStyle(card.priority)} bg-slate-950/90 p-3 ${card.id === selectedId ? 'ring-2 ring-emerald-500' : ''}"
+          draggable="true"
+          tabindex="0"
+          role="button"
+          aria-label="${card.id} ${card.initiative}"
+          data-id="${card.id}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-mono text-slate-400">${card.id}</span>
+            <span class="text-[11px] px-2 py-1 rounded ${badgeStyle(card.status)}">P${card.priority}</span>
+          </div>
+          <h3 class="font-semibold mt-2 leading-tight">${card.initiative}</h3>
+          <p class="text-xs text-slate-400 mt-1">${card.owner} · ${card.squad}</p>
+          <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
+            <span class="px-2 py-1 rounded bg-slate-800">${card.week}</span>
+            <span class="px-2 py-1 rounded bg-slate-800">${card.fte.toFixed(1)} FTE</span>
+            <span class="px-2 py-1 rounded bg-slate-800">${card.skill}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    function moveCard(id, toLane) {
+      const card = requests.find(r => r.id === id);
+      if (!card || card.status === toLane) return;
+
+      if (!stateTransitionAllowed(card.status, toLane)) {
+        alert('State machine rule: move through Review before approval.');
+        return;
+      }
+
+      if (toLane === 'Approved' && card.fte > roleApproveLimit[currentRole]) {
+        alert(`Policy violation: ${currentRole} may approve max ${roleApproveLimit[currentRole].toFixed(1)} FTE per request.`);
+        card.audit.unshift(`${stamp()} ${currentRole}: approval blocked (${card.fte.toFixed(1)} FTE > role limit).`);
+        if (selectedId === card.id) renderAudit();
+        return;
+      }
+
+      const from = card.status;
+      card.status = toLane;
+      card.audit.unshift(`${stamp()} ${currentRole}: moved ${id} from ${from} → ${toLane}.`);
+      renderBoard();
+    }
+
+    function selectCard(id) {
+      selectedId = id;
+      const card = requests.find(r => r.id === id);
+      if (!card) return;
+      selectedCardEl.innerHTML = `
+        <p><span class="text-slate-500">ID:</span> ${card.id}</p>
+        <p class="mt-1"><span class="text-slate-500">Initiative:</span> ${card.initiative}</p>
+        <p class="mt-1"><span class="text-slate-500">Status:</span> ${card.status}</p>
+        <p class="mt-1"><span class="text-slate-500">Owner:</span> ${card.owner}</p>
+        <p class="mt-1"><span class="text-slate-500">Week:</span> ${card.week}</p>
+        <p class="mt-1"><span class="text-slate-500">FTE:</span> ${card.fte.toFixed(1)}</p>
+      `;
+      renderBoard();
+    }
+
+    function renderAudit() {
+      const card = requests.find(r => r.id === selectedId);
+      if (!card) {
+        auditTrailEl.innerHTML = '<li class="text-slate-500">No request selected.</li>';
+        return;
+      }
+      auditTrailEl.innerHTML = card.audit
+        .map((line, i) => `<li class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2"><span class="text-slate-500 mr-2">#${i + 1}</span>${line}</li>`)
+        .join('');
+    }
+
+    function showFormError(message) {
+      formErrorEl.textContent = message;
+      formErrorEl.classList.remove('hidden');
+    }
+
+    function clearFormError() {
+      formErrorEl.classList.add('hidden');
+      formErrorEl.textContent = '';
+    }
+
+    function nextId() {
+      const max = requests.reduce((m, r) => Math.max(m, Number(r.id.split('-')[1]) || 0), 0);
+      return `CAP-${String(max + 1).padStart(3, '0')}`;
+    }
+
+    function populateSelectors() {
+      const squads = [...new Set(requests.map(r => r.squad))];
+      const weeks = Object.keys(capacityByWeek);
+      const formSkillSet = [...new Set(requests.map(r => r.skill))];
+
+      squads.forEach(squad => {
+        const option = document.createElement('option');
+        option.value = squad;
+        option.textContent = squad;
+        squadFilterEl.append(option);
+
+        const option2 = option.cloneNode(true);
+        document.getElementById('squadInput').append(option2);
+      });
+
+      weeks.forEach(week => {
+        const option = document.createElement('option');
+        option.value = week;
+        option.textContent = week;
+        weekFilterEl.append(option);
+
+        const option2 = option.cloneNode(true);
+        document.getElementById('weekInput').append(option2);
+      });
+
+      const skillInput = document.createElement('select');
+      skillInput.id = 'skillInput';
+      skillInput.className = 'mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500';
+      formSkillSet.forEach(skill => {
+        const option = document.createElement('option');
+        option.value = skill;
+        option.textContent = skill;
+        skillInput.append(option);
+      });
+      const skillLabel = document.createElement('label');
+      skillLabel.className = 'block text-sm';
+      skillLabel.innerHTML = '<span class="text-slate-300">Primary skill</span>';
+      skillLabel.append(skillInput);
+      document.getElementById('newRequestForm').insertBefore(skillLabel, document.getElementById('formError'));
+    }
+
+    document.getElementById('newRequestForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      clearFormError();
+
+      const initiative = document.getElementById('initiativeInput').value.trim();
+      const owner = document.getElementById('ownerInput').value.trim();
+      const squad = document.getElementById('squadInput').value;
+      const week = document.getElementById('weekInput').value;
+      const fte = Number(document.getElementById('fteInput').value);
+      const priority = Number(document.getElementById('priorityInput').value);
+      const skill = document.getElementById('skillInput').value;
+
+      if (initiative.length < 5) return showFormError('Initiative title must be at least 5 characters.');
+      if (owner.length < 3) return showFormError('Owner name must be at least 3 characters.');
+      if (!Number.isFinite(fte) || fte < 0.2 || fte > 2.5) return showFormError('FTE must be between 0.2 and 2.5.');
+      if (!Number.isInteger(priority) || priority < 1 || priority > 5) return showFormError('Priority must be an integer from 1 to 5.');
+
+      const newCard = {
+        id: nextId(),
+        initiative,
+        owner,
+        squad,
+        week,
+        fte,
+        priority,
+        status: 'Backlog',
+        skill,
+        audit: [`${stamp()} ${currentRole}: request created in Backlog.`]
+      };
+
+      requests.unshift(newCard);
+      e.target.reset();
+      document.getElementById('squadInput').value = squad;
+      document.getElementById('weekInput').value = week;
+      document.getElementById('skillInput').value = skill;
+      selectedId = newCard.id;
+      selectCard(newCard.id);
+      renderBoard();
+    });
+
+    document.getElementById('addAudit').addEventListener('click', () => {
+      const card = requests.find(r => r.id === selectedId);
+      const note = document.getElementById('auditInput').value.trim();
+      if (!card || !note) return;
+      card.audit.unshift(`${stamp()} ${currentRole}: ${note}`);
+      document.getElementById('auditInput').value = '';
+      renderAudit();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const headers = ['id','initiative','owner','squad','week','fte','priority','status','skill'];
+      const rows = filteredRequests().map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','));
+      const csv = `${headers.join(',')}\n${rows.join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'capacity-allocation-board.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchEl.value = '';
+      squadFilterEl.value = 'all';
+      weekFilterEl.value = 'all';
+      sortByEl.value = 'priority';
+      renderBoard();
+    });
+
+    [searchEl, squadFilterEl, weekFilterEl, sortByEl].forEach(el => el.addEventListener('input', renderBoard));
+
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRole = btn.dataset.role;
+        document.querySelectorAll('.role-btn').forEach(b => {
+          const active = b.dataset.role === currentRole;
+          b.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-200'}`;
+        });
+        document.getElementById('policyHint').textContent = rolePolicyText();
+      });
+    });
+
+    populateSelectors();
+    renderBoard();
+  </script>
+</body>
+</html>
