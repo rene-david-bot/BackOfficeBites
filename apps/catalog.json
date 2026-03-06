@@ -644,5 +644,27 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-06",
+    "day": 32,
+    "slug": "2026-03-06-visitor-access-intake-wizard",
+    "name": "Visitor Access Intake Wizard",
+    "description": "Policy-driven visitor pre-registration with guided intake, risk scoring, approvals, and check-in controls.",
+    "category": "IT Ops",
+    "pattern": "Wizard",
+    "tags": [
+      "visitor logs",
+      "wizard",
+      "policy validation",
+      "approval workflow",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based"
+    ],
+    "thumb": ""
   }
 ]

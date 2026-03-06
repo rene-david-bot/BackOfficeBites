@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visitor Access Intake Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold">Visitor Access Intake Wizard</h1>
+        <p class="text-slate-400 mt-1">Guide visitor pre-checks through policy validation, approvals, and check-in state transitions.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-slate-700 overflow-hidden" role="radiogroup" aria-label="Role view">
+        <button data-role="Security Desk" class="role-btn px-3 py-2 text-sm bg-emerald-600 text-white">Security Desk</button>
+        <button data-role="Facilities Lead" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Facilities Lead</button>
+        <button data-role="Compliance" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Compliance</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open requests</p>
+        <p id="metricOpen" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Checked in today</p>
+        <p id="metricCheckedIn" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy blocks</p>
+        <p id="metricBlocked" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Role policy</p>
+        <p id="roleHint" class="text-sm text-slate-300 mt-1">Security Desk can check in only approved visitors.</p>
+      </article>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <label class="text-sm md:col-span-2">
+          <span class="block text-slate-400 mb-1">Search visitor / host / request ID</span>
+          <input id="search" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type to search..." />
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by status">
+            <option value="all">All statuses</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Site</span>
+          <select id="siteFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by site">
+            <option value="all">All sites</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Sort</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Sort requests">
+            <option value="date">Visit date (soonest first)</option>
+            <option value="risk">Risk score (highest first)</option>
+            <option value="name">Visitor name (A-Z)</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="resetFilters" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <button id="exportCsv" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 2xl:grid-cols-5 gap-4">
+      <article class="2xl:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-4 overflow-auto">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-lg">Access Queue</h2>
+          <span id="rowCount" class="text-xs text-slate-400">0 rows</span>
+        </div>
+        <table class="w-full min-w-[760px] text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 border-b border-slate-800">
+              <th class="py-2 pr-2">Request</th>
+              <th class="py-2 pr-2">Visitor</th>
+              <th class="py-2 pr-2">Host</th>
+              <th class="py-2 pr-2">Visit</th>
+              <th class="py-2 pr-2">Site</th>
+              <th class="py-2 pr-2">Risk</th>
+              <th class="py-2 pr-2">Status</th>
+            </tr>
+          </thead>
+          <tbody id="queueBody"></tbody>
+        </table>
+      </article>
+
+      <aside class="2xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div>
+          <h2 class="font-semibold text-lg">Request Details</h2>
+          <p class="text-sm text-slate-400">Select a row to review policy findings and progress state.</p>
+        </div>
+
+        <div id="detailPanel" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-400">
+          No request selected.
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm font-medium">State Actions</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="approveBtn" class="px-2 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Approve</button>
+            <button id="checkInBtn" class="px-2 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Check In</button>
+            <button id="denyBtn" class="px-2 py-2 rounded-lg bg-rose-700 hover:bg-rose-600 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Deny</button>
+          </div>
+          <label class="block text-sm">
+            <span class="text-slate-300">Audit note</span>
+            <input id="auditNote" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Reason / context" />
+          </label>
+        </div>
+
+        <div>
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 space-y-2 text-sm max-h-44 overflow-auto"></ul>
+        </div>
+      </aside>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h2 class="font-semibold text-lg">New Visitor Intake Wizard</h2>
+        <span id="wizardStepLabel" class="text-xs text-slate-400">Step 1 of 4</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4" aria-hidden="true">
+        <div id="stepDot1" class="h-1.5 rounded bg-emerald-500"></div>
+        <div id="stepDot2" class="h-1.5 rounded bg-slate-700"></div>
+        <div id="stepDot3" class="h-1.5 rounded bg-slate-700"></div>
+        <div id="stepDot4" class="h-1.5 rounded bg-slate-700"></div>
+      </div>
+
+      <form id="wizardForm" class="space-y-4" novalidate>
+        <section data-step="1" class="wizard-step grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="text-sm">
+            <span class="text-slate-300">Visitor full name</span>
+            <input id="visitorName" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Company</span>
+            <input id="company" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Email</span>
+            <input id="email" type="email" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Government ID</span>
+            <input id="govId" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Passport / ID number" required />
+          </label>
+        </section>
+
+        <section data-step="2" class="wizard-step hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="text-sm">
+            <span class="text-slate-300">Host employee</span>
+            <input id="hostName" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Visit date</span>
+            <input id="visitDate" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Arrival time</span>
+            <input id="arrivalTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Departure time</span>
+            <input id="departureTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Site</span>
+            <select id="site" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Dresden HQ">Dresden HQ</option>
+              <option value="Leipzig DC">Leipzig DC</option>
+              <option value="Berlin Lab">Berlin Lab</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Zone</span>
+            <select id="zone" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="General Office">General Office</option>
+              <option value="Operations Floor">Operations Floor</option>
+              <option value="Secure Lab">Secure Lab</option>
+            </select>
+          </label>
+        </section>
+
+        <section data-step="3" class="wizard-step hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="flex items-center gap-2 text-sm bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <input id="ndaSigned" type="checkbox" class="accent-emerald-500" />
+            NDA signed
+          </label>
+          <label class="flex items-center gap-2 text-sm bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <input id="safetyBriefing" type="checkbox" class="accent-emerald-500" />
+            Safety briefing completed
+          </label>
+          <label class="flex items-center gap-2 text-sm bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+            <input id="deviceDeclared" type="checkbox" class="accent-emerald-500" />
+            Personal device declared
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Visit purpose</span>
+            <select id="purpose" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Vendor Service">Vendor Service</option>
+              <option value="Client Workshop">Client Workshop</option>
+              <option value="Interview">Interview</option>
+              <option value="Audit">Audit</option>
+            </select>
+          </label>
+        </section>
+
+        <section data-step="4" class="wizard-step hidden">
+          <div id="reviewPanel" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm"></div>
+          <p id="policyResult" class="mt-3 text-sm rounded-lg px-3 py-2 bg-slate-900 border border-slate-800"></p>
+        </section>
+
+        <p id="wizardError" class="text-sm text-rose-400 hidden" role="alert"></p>
+
+        <div class="flex flex-wrap gap-2">
+          <button id="backBtn" type="button" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm hidden">Back</button>
+          <button id="nextBtn" type="button" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold">Next step</button>
+          <button id="submitBtn" type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold hidden">Create access request</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const blockedCompanies = ['Nightfall Systems', 'Red Banner Logistics'];
+
+    const initialRequests = [
+      {
+        id: 'VAC-801',
+        visitor: 'Anna Petrova',
+        company: 'Vector Robotics',
+        email: 'anna.p@vector.io',
+        govId: 'P90871',
+        host: 'Mira Havel',
+        visitDate: '2026-03-06',
+        arrivalTime: '09:30',
+        departureTime: '12:30',
+        site: 'Dresden HQ',
+        zone: 'Secure Lab',
+        purpose: 'Client Workshop',
+        ndaSigned: true,
+        safetyBriefing: true,
+        deviceDeclared: true,
+        risk: 78,
+        policy: 'Needs Compliance approval for secure zone.',
+        status: 'Pending Approval',
+        audit: ['08:54 Security Desk: Request created.', '08:58 Compliance: Secure zone review pending.']
+      },
+      {
+        id: 'VAC-802',
+        visitor: 'Luca Stein',
+        company: 'Flowline Services',
+        email: 'luca@flowline.de',
+        govId: 'D77219',
+        host: 'Tobias Frank',
+        visitDate: '2026-03-06',
+        arrivalTime: '10:00',
+        departureTime: '16:00',
+        site: 'Leipzig DC',
+        zone: 'Operations Floor',
+        purpose: 'Vendor Service',
+        ndaSigned: true,
+        safetyBriefing: true,
+        deviceDeclared: false,
+        risk: 34,
+        policy: 'All mandatory checks passed.',
+        status: 'Approved',
+        audit: ['08:30 Security Desk: Request created.', '08:42 Facilities Lead: Approved for floor access.']
+      },
+      {
+        id: 'VAC-803',
+        visitor: 'Sabine Wolff',
+        company: 'Nightfall Systems',
+        email: 'sabine@nightfall.example',
+        govId: 'X55190',
+        host: 'Jonas Meyer',
+        visitDate: '2026-03-07',
+        arrivalTime: '07:00',
+        departureTime: '09:00',
+        site: 'Berlin Lab',
+        zone: 'General Office',
+        purpose: 'Audit',
+        ndaSigned: true,
+        safetyBriefing: false,
+        deviceDeclared: true,
+        risk: 92,
+        policy: 'Blocked: vendor on restricted list.',
+        status: 'Blocked',
+        audit: ['09:01 Security Desk: Blocked by vendor policy.']
+      }
+    ];
+
+    const rolePolicy = {
+      'Security Desk': 'Security Desk can check in only approved visitors.',
+      'Facilities Lead': 'Facilities Lead can approve requests except hard policy blocks.',
+      'Compliance': 'Compliance can approve secure zone and after-hours requests.'
+    };
+
+    let requests = structuredClone(initialRequests);
+    let currentRole = 'Security Desk';
+    let selectedId = null;
+    let wizardStep = 1;
+
+    const wizardFields = {
+      visitorName: document.getElementById('visitorName'),
+      company: document.getElementById('company'),
+      email: document.getElementById('email'),
+      govId: document.getElementById('govId'),
+      hostName: document.getElementById('hostName'),
+      visitDate: document.getElementById('visitDate'),
+      arrivalTime: document.getElementById('arrivalTime'),
+      departureTime: document.getElementById('departureTime'),
+      site: document.getElementById('site'),
+      zone: document.getElementById('zone'),
+      ndaSigned: document.getElementById('ndaSigned'),
+      safetyBriefing: document.getElementById('safetyBriefing'),
+      deviceDeclared: document.getElementById('deviceDeclared'),
+      purpose: document.getElementById('purpose')
+    };
+
+    const queueBody = document.getElementById('queueBody');
+    const auditTrail = document.getElementById('auditTrail');
+    const detailPanel = document.getElementById('detailPanel');
+    const wizardError = document.getElementById('wizardError');
+    const policyResult = document.getElementById('policyResult');
+
+    function nowTime() {
+      return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function statusBadge(status) {
+      if (status === 'Approved') return 'bg-emerald-900/60 text-emerald-300';
+      if (status === 'Checked In') return 'bg-indigo-900/60 text-indigo-300';
+      if (status === 'Blocked') return 'bg-rose-900/60 text-rose-300';
+      if (status === 'Denied') return 'bg-rose-900/60 text-rose-300';
+      return 'bg-amber-900/60 text-amber-200';
+    }
+
+    function riskStyle(risk) {
+      if (risk >= 80) return 'text-rose-300';
+      if (risk >= 50) return 'text-amber-300';
+      return 'text-emerald-300';
+    }
+
+    function filteredRequests() {
+      const query = document.getElementById('search').value.trim().toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const site = document.getElementById('siteFilter').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      const rows = requests.filter((req) => {
+        const textMatch =
+          req.id.toLowerCase().includes(query) ||
+          req.visitor.toLowerCase().includes(query) ||
+          req.host.toLowerCase().includes(query);
+        const statusMatch = status === 'all' || req.status === status;
+        const siteMatch = site === 'all' || req.site === site;
+        return textMatch && statusMatch && siteMatch;
+      });
+
+      rows.sort((a, b) => {
+        if (sortBy === 'risk') return b.risk - a.risk;
+        if (sortBy === 'name') return a.visitor.localeCompare(b.visitor);
+        return `${a.visitDate} ${a.arrivalTime}`.localeCompare(`${b.visitDate} ${b.arrivalTime}`);
+      });
+
+      return rows;
+    }
+
+    function updateMetrics() {
+      const open = requests.filter((r) => ['Pending Approval', 'Approved'].includes(r.status)).length;
+      const checkedIn = requests.filter((r) => r.status === 'Checked In' && r.visitDate === '2026-03-06').length;
+      const blocked = requests.filter((r) => ['Blocked', 'Denied'].includes(r.status)).length;
+
+      document.getElementById('metricOpen').textContent = open;
+      document.getElementById('metricCheckedIn').textContent = checkedIn;
+      document.getElementById('metricBlocked').textContent = blocked;
+      document.getElementById('roleHint').textContent = rolePolicy[currentRole];
+    }
+
+    function renderQueue() {
+      const rows = filteredRequests();
+      document.getElementById('rowCount').textContent = `${rows.length} rows`;
+
+      if (!rows.length) {
+        queueBody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">No requests match current filters.</td></tr>';
+        updateMetrics();
+        return;
+      }
+
+      queueBody.innerHTML = rows.map((req) => `
+        <tr tabindex="0" data-id="${req.id}" class="queue-row border-b border-slate-900 hover:bg-slate-900/70 cursor-pointer ${req.id === selectedId ? 'bg-slate-900/70' : ''}">
+          <td class="py-2 pr-2 font-mono text-xs text-slate-400">${req.id}</td>
+          <td class="py-2 pr-2">${req.visitor}</td>
+          <td class="py-2 pr-2 text-slate-300">${req.host}</td>
+          <td class="py-2 pr-2 text-slate-300">${req.visitDate} ${req.arrivalTime}</td>
+          <td class="py-2 pr-2 text-slate-300">${req.site}</td>
+          <td class="py-2 pr-2 font-semibold ${riskStyle(req.risk)}">${req.risk}</td>
+          <td class="py-2 pr-2"><span class="text-xs px-2 py-1 rounded ${statusBadge(req.status)}">${req.status}</span></td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.queue-row').forEach((row) => {
+        row.addEventListener('click', () => selectRequest(row.dataset.id));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectRequest(row.dataset.id);
+          }
+        });
+      });
+
+      updateMetrics();
+    }
+
+    function selectRequest(id) {
+      selectedId = id;
+      const req = requests.find((r) => r.id === id);
+      if (!req) return;
+
+      detailPanel.innerHTML = `
+        <p><span class="text-slate-500">Visitor:</span> ${req.visitor} (${req.company})</p>
+        <p class="mt-1"><span class="text-slate-500">Host:</span> ${req.host}</p>
+        <p class="mt-1"><span class="text-slate-500">Visit:</span> ${req.visitDate} ${req.arrivalTime}-${req.departureTime}</p>
+        <p class="mt-1"><span class="text-slate-500">Location:</span> ${req.site} · ${req.zone}</p>
+        <p class="mt-1"><span class="text-slate-500">Policy:</span> ${req.policy}</p>
+      `;
+
+      auditTrail.innerHTML = req.audit
+        .map((line, idx) => `<li class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2"><span class="text-slate-500 mr-2">#${idx + 1}</span>${line}</li>`)
+        .join('');
+
+      syncActionButtons(req);
+      renderQueue();
+    }
+
+    function syncActionButtons(req) {
+      const approveBtn = document.getElementById('approveBtn');
+      const checkInBtn = document.getElementById('checkInBtn');
+      const denyBtn = document.getElementById('denyBtn');
+
+      approveBtn.disabled = !(req.status === 'Pending Approval' && currentRole !== 'Security Desk' && !req.policy.startsWith('Blocked'));
+      checkInBtn.disabled = !(req.status === 'Approved' && currentRole === 'Security Desk');
+      denyBtn.disabled = req.status === 'Checked In' || req.status === 'Denied';
+    }
+
+    function mutateState(nextState) {
+      const note = document.getElementById('auditNote').value.trim();
+      const req = requests.find((r) => r.id === selectedId);
+      if (!req) return;
+
+      if (nextState === 'Approved') {
+        if (currentRole === 'Security Desk') return alert('Security Desk cannot approve requests.');
+        if (req.policy.startsWith('Blocked')) return alert('Hard policy block: cannot approve.');
+        if (req.zone === 'Secure Lab' && currentRole !== 'Compliance') return alert('Secure Lab requests require Compliance approval.');
+        req.status = 'Approved';
+      }
+
+      if (nextState === 'Checked In') {
+        if (currentRole !== 'Security Desk') return alert('Only Security Desk can check in visitors.');
+        if (req.status !== 'Approved') return alert('Visitor must be approved before check-in.');
+        req.status = 'Checked In';
+      }
+
+      if (nextState === 'Denied') {
+        req.status = 'Denied';
+      }
+
+      req.audit.unshift(`${nowTime()} ${currentRole}: ${nextState}${note ? ` — ${note}` : ''}`);
+      document.getElementById('auditNote').value = '';
+      selectRequest(req.id);
+    }
+
+    function populateFilters() {
+      const statuses = [...new Set(requests.map((r) => r.status))];
+      const sites = [...new Set(requests.map((r) => r.site))];
+      const statusFilter = document.getElementById('statusFilter');
+      const siteFilter = document.getElementById('siteFilter');
+
+      statuses.forEach((status) => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusFilter.append(option);
+      });
+
+      sites.forEach((site) => {
+        const option = document.createElement('option');
+        option.value = site;
+        option.textContent = site;
+        siteFilter.append(option);
+      });
+    }
+
+    function policyCheck(payload) {
+      const findings = [];
+      let risk = 20;
+
+      if (blockedCompanies.includes(payload.company)) {
+        findings.push('Blocked: vendor on restricted list.');
+        risk += 60;
+      }
+
+      if (!payload.ndaSigned) {
+        findings.push('NDA missing.');
+        risk += 20;
+      }
+
+      if (!payload.safetyBriefing) {
+        findings.push('Safety briefing incomplete.');
+        risk += 15;
+      }
+
+      if (payload.deviceDeclared && !payload.ndaSigned) {
+        findings.push('Device declared without NDA.');
+        risk += 15;
+      }
+
+      if (payload.zone === 'Secure Lab') {
+        findings.push('Secure Lab requires Compliance approval.');
+        risk += 18;
+      }
+
+      if (payload.arrivalTime < '08:00' || payload.departureTime > '18:00') {
+        findings.push('After-hours visit requires escort confirmation.');
+        risk += 10;
+      }
+
+      if (!findings.length) findings.push('All mandatory checks passed.');
+
+      const hardBlock = findings.some((line) => line.startsWith('Blocked'));
+      const policy = hardBlock ? findings[0] : findings.join(' ');
+
+      return {
+        risk: Math.min(risk, 99),
+        policy,
+        status: hardBlock ? 'Blocked' : 'Pending Approval'
+      };
+    }
+
+    function resetWizardError() {
+      wizardError.classList.add('hidden');
+      wizardError.textContent = '';
+    }
+
+    function showWizardError(message) {
+      wizardError.textContent = message;
+      wizardError.classList.remove('hidden');
+    }
+
+    function readWizardPayload() {
+      return {
+        visitor: wizardFields.visitorName.value.trim(),
+        company: wizardFields.company.value.trim(),
+        email: wizardFields.email.value.trim(),
+        govId: wizardFields.govId.value.trim(),
+        host: wizardFields.hostName.value.trim(),
+        visitDate: wizardFields.visitDate.value,
+        arrivalTime: wizardFields.arrivalTime.value,
+        departureTime: wizardFields.departureTime.value,
+        site: wizardFields.site.value,
+        zone: wizardFields.zone.value,
+        ndaSigned: wizardFields.ndaSigned.checked,
+        safetyBriefing: wizardFields.safetyBriefing.checked,
+        deviceDeclared: wizardFields.deviceDeclared.checked,
+        purpose: wizardFields.purpose.value
+      };
+    }
+
+    function validateStep(step) {
+      const payload = readWizardPayload();
+
+      if (step === 1) {
+        if (payload.visitor.length < 3) return 'Visitor name must be at least 3 characters.';
+        if (payload.company.length < 2) return 'Company name must be at least 2 characters.';
+        if (!payload.email.includes('@')) return 'Please enter a valid email address.';
+        if (payload.govId.length < 4) return 'Government ID must be at least 4 characters.';
+      }
+
+      if (step === 2) {
+        if (payload.host.length < 3) return 'Host name must be at least 3 characters.';
+        if (!payload.visitDate) return 'Visit date is required.';
+        if (!payload.arrivalTime || !payload.departureTime) return 'Arrival and departure times are required.';
+        if (payload.departureTime <= payload.arrivalTime) return 'Departure time must be after arrival time.';
+      }
+
+      if (step === 3) {
+        if (!payload.safetyBriefing) return 'Safety briefing confirmation is required.';
+      }
+
+      return null;
+    }
+
+    function updateWizardUI() {
+      document.querySelectorAll('.wizard-step').forEach((el) => {
+        const isActive = Number(el.dataset.step) === wizardStep;
+        el.classList.toggle('hidden', !isActive);
+      });
+
+      document.getElementById('wizardStepLabel').textContent = `Step ${wizardStep} of 4`;
+      document.getElementById('backBtn').classList.toggle('hidden', wizardStep === 1);
+      document.getElementById('nextBtn').classList.toggle('hidden', wizardStep === 4);
+      document.getElementById('submitBtn').classList.toggle('hidden', wizardStep !== 4);
+
+      [1, 2, 3, 4].forEach((n) => {
+        const dot = document.getElementById(`stepDot${n}`);
+        dot.className = `h-1.5 rounded ${n <= wizardStep ? 'bg-emerald-500' : 'bg-slate-700'}`;
+      });
+
+      if (wizardStep === 4) {
+        const payload = readWizardPayload();
+        const result = policyCheck(payload);
+
+        document.getElementById('reviewPanel').innerHTML = `
+          <p><span class="text-slate-500">Visitor:</span> ${payload.visitor} (${payload.company})</p>
+          <p class="mt-1"><span class="text-slate-500">Host:</span> ${payload.host}</p>
+          <p class="mt-1"><span class="text-slate-500">Visit:</span> ${payload.visitDate} ${payload.arrivalTime}-${payload.departureTime}</p>
+          <p class="mt-1"><span class="text-slate-500">Site/Zone:</span> ${payload.site} · ${payload.zone}</p>
+          <p class="mt-1"><span class="text-slate-500">Purpose:</span> ${payload.purpose}</p>
+        `;
+
+        policyResult.textContent = `${result.policy} Risk score: ${result.risk}. Initial state: ${result.status}.`;
+        policyResult.className = `mt-3 text-sm rounded-lg px-3 py-2 border ${result.status === 'Blocked' ? 'bg-rose-900/30 border-rose-700 text-rose-200' : 'bg-slate-900 border-slate-800 text-slate-200'}`;
+      }
+    }
+
+    function nextRequestId() {
+      const max = requests.reduce((acc, req) => Math.max(acc, Number(req.id.split('-')[1]) || 0), 0);
+      return `VAC-${String(max + 1).padStart(3, '0')}`;
+    }
+
+    function resetWizard() {
+      document.getElementById('wizardForm').reset();
+      wizardStep = 1;
+      updateWizardUI();
+      resetWizardError();
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      resetWizardError();
+      const error = validateStep(wizardStep);
+      if (error) return showWizardError(error);
+      wizardStep = Math.min(4, wizardStep + 1);
+      updateWizardUI();
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      resetWizardError();
+      wizardStep = Math.max(1, wizardStep - 1);
+      updateWizardUI();
+    });
+
+    document.getElementById('wizardForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      resetWizardError();
+
+      const validationErrors = [1, 2, 3].map(validateStep).filter(Boolean);
+      if (validationErrors.length) return showWizardError(validationErrors[0]);
+
+      const payload = readWizardPayload();
+      const result = policyCheck(payload);
+
+      const newRequest = {
+        id: nextRequestId(),
+        visitor: payload.visitor,
+        company: payload.company,
+        email: payload.email,
+        govId: payload.govId,
+        host: payload.host,
+        visitDate: payload.visitDate,
+        arrivalTime: payload.arrivalTime,
+        departureTime: payload.departureTime,
+        site: payload.site,
+        zone: payload.zone,
+        purpose: payload.purpose,
+        ndaSigned: payload.ndaSigned,
+        safetyBriefing: payload.safetyBriefing,
+        deviceDeclared: payload.deviceDeclared,
+        risk: result.risk,
+        policy: result.policy,
+        status: result.status,
+        audit: [`${nowTime()} Security Desk: Request created via intake wizard.`]
+      };
+
+      requests.unshift(newRequest);
+      if (!document.querySelector(`#statusFilter option[value="${newRequest.status}"]`)) {
+        const option = document.createElement('option');
+        option.value = newRequest.status;
+        option.textContent = newRequest.status;
+        document.getElementById('statusFilter').append(option);
+      }
+      if (!document.querySelector(`#siteFilter option[value="${newRequest.site}"]`)) {
+        const option = document.createElement('option');
+        option.value = newRequest.site;
+        option.textContent = newRequest.site;
+        document.getElementById('siteFilter').append(option);
+      }
+
+      resetWizard();
+      selectRequest(newRequest.id);
+      renderQueue();
+    });
+
+    document.getElementById('approveBtn').addEventListener('click', () => mutateState('Approved'));
+    document.getElementById('checkInBtn').addEventListener('click', () => mutateState('Checked In'));
+    document.getElementById('denyBtn').addEventListener('click', () => mutateState('Denied'));
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const headers = ['id', 'visitor', 'company', 'host', 'visitDate', 'arrivalTime', 'site', 'zone', 'risk', 'status'];
+      const rows = filteredRequests().map((r) => headers.map((h) => JSON.stringify(r[h] ?? '')).join(','));
+      const csv = `${headers.join(',')}\n${rows.join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visitor-access-queue.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      document.getElementById('search').value = '';
+      document.getElementById('statusFilter').value = 'all';
+      document.getElementById('siteFilter').value = 'all';
+      document.getElementById('sortBy').value = 'date';
+      renderQueue();
+    });
+
+    ['search', 'statusFilter', 'siteFilter', 'sortBy'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', renderQueue);
+      document.getElementById(id).addEventListener('change', renderQueue);
+    });
+
+    document.querySelectorAll('.role-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentRole = btn.dataset.role;
+        document.querySelectorAll('.role-btn').forEach((b) => {
+          const active = b.dataset.role === currentRole;
+          b.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-200'}`;
+        });
+        const selected = requests.find((r) => r.id === selectedId);
+        if (selected) syncActionButtons(selected);
+        updateMetrics();
+      });
+    });
+
+    populateFilters();
+    updateWizardUI();
+    renderQueue();
+    selectRequest(requests[0].id);
+  </script>
+</body>
+</html>
