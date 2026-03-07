@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Note Resolution Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold">Credit Note Resolution Kanban</h1>
+        <p class="text-slate-400 mt-1">Route credit-note exceptions through policy checks, approvals, and posting with full audit history.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-slate-700 overflow-hidden" role="radiogroup" aria-label="Role view">
+        <button data-role="AR Specialist" class="role-btn px-3 py-2 text-sm bg-emerald-600 text-white">AR Specialist</button>
+        <button data-role="Controller" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Controller</button>
+        <button data-role="Finance Director" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Finance Director</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open exposure</p>
+        <p id="metricExposure" class="text-2xl font-semibold mt-1">€0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Awaiting approval</p>
+        <p id="metricAwaiting" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Posted today</p>
+        <p id="metricPosted" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Role policy</p>
+        <p id="roleHint" class="text-sm text-slate-300 mt-1">AR Specialist can intake, enrich, and post approved notes.</p>
+      </article>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-3">
+        <label class="text-sm lg:col-span-2">
+          <span class="block text-slate-400 mb-1">Search case / customer / owner</span>
+          <input id="searchInput" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type to search..." />
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Region</span>
+          <select id="regionFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by region">
+            <option value="all">All regions</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Reason</span>
+          <select id="reasonFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by reason">
+            <option value="all">All reasons</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Sort by</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Sort cards">
+            <option value="age">Aging days (high to low)</option>
+            <option value="amount">Amount (high to low)</option>
+            <option value="customer">Customer (A-Z)</option>
+            <option value="risk">Risk score (high to low)</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="resetFilters" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <button id="exportCsv" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 2xl:grid-cols-4 gap-4">
+      <article class="2xl:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-lg">Workflow Board</h2>
+          <span id="visibleCount" class="text-xs text-slate-400">0 cards</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 min-w-[980px]" id="board"></div>
+      </article>
+
+      <aside class="2xl:col-span-1 space-y-4">
+        <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+          <h2 class="font-semibold text-lg">Case Details</h2>
+          <p class="text-sm text-slate-400">Select a card to inspect policy outcomes and action controls.</p>
+          <div id="detailPanel" class="mt-3 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-400">
+            No case selected.
+          </div>
+          <div class="mt-3 space-y-2">
+            <label class="block text-sm">
+              <span class="text-slate-300">Audit note</span>
+              <input id="auditNote" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Reason / context" />
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="advanceBtn" class="px-2 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Advance</button>
+              <button id="sendBackBtn" class="px-2 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Send Back</button>
+              <button id="rejectBtn" class="px-2 py-2 rounded-lg bg-rose-700 hover:bg-rose-600 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Reject</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 space-y-2 text-sm max-h-64 overflow-auto"></ul>
+        </section>
+      </aside>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <h2 class="font-semibold text-lg">New Credit Note Intake</h2>
+      <p class="text-sm text-slate-400">Create a new case with policy validation and auto-risk scoring.</p>
+
+      <form id="intakeForm" class="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" novalidate>
+        <label class="text-sm">
+          <span class="text-slate-300">Customer</span>
+          <input id="customer" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Amount (€)</span>
+          <input id="amount" type="number" min="1" step="0.01" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Reason</span>
+          <select id="reason" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required>
+            <option value="Pricing Error">Pricing Error</option>
+            <option value="Service Failure">Service Failure</option>
+            <option value="Damaged Shipment">Damaged Shipment</option>
+            <option value="Duplicate Billing">Duplicate Billing</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Region</span>
+          <select id="region" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required>
+            <option value="DACH">DACH</option>
+            <option value="Nordics">Nordics</option>
+            <option value="Benelux">Benelux</option>
+            <option value="UKI">UKI</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Case owner</span>
+          <input id="owner" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Invoice ref</span>
+          <input id="invoiceRef" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="INV-2026-..." required />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Aging days</span>
+          <input id="aging" type="number" min="0" max="365" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Evidence attached</span>
+          <select id="evidence" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <div class="md:col-span-2 xl:col-span-4 flex flex-wrap gap-2 pt-1">
+          <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">Create case</button>
+          <button type="button" id="clearForm" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Clear</button>
+        </div>
+      </form>
+      <p id="formError" class="mt-2 text-sm text-rose-400 hidden" role="alert"></p>
+      <p id="formSuccess" class="mt-2 text-sm text-emerald-300 hidden" role="status"></p>
+    </section>
+  </main>
+
+  <script>
+    const policyByRole = {
+      'AR Specialist': 'AR Specialist can intake, enrich, and post approved notes.',
+      'Controller': 'Controller approves standard credit notes up to €20,000.',
+      'Finance Director': 'Finance Director approves high-value / policy-exception notes.'
+    };
+
+    const laneOrder = ['Intake', 'Policy Review', 'Approved', 'Posted', 'Rejected'];
+
+    const seededCases = [
+      {
+        id: 'CN-4401',
+        customer: 'Nordlicht Retail GmbH',
+        amount: 18450,
+        reason: 'Pricing Error',
+        region: 'DACH',
+        owner: 'Lea Krüger',
+        invoiceRef: 'INV-2026-1182',
+        aging: 9,
+        risk: 58,
+        status: 'Policy Review',
+        policy: 'Controller approval required for amount > €10,000 pricing correction.',
+        evidence: 'yes',
+        audit: ['08:32 AR Specialist: Case created from dispute inbox.', '08:40 AR Specialist: Pricing matrix attached.']
+      },
+      {
+        id: 'CN-4402',
+        customer: 'Beacon Mobility AB',
+        amount: 6400,
+        reason: 'Service Failure',
+        region: 'Nordics',
+        owner: 'Oskar Lund',
+        invoiceRef: 'INV-2026-1044',
+        aging: 14,
+        risk: 36,
+        status: 'Intake',
+        policy: 'Standard review path.',
+        evidence: 'yes',
+        audit: ['07:55 AR Specialist: Intake from support escalation.']
+      },
+      {
+        id: 'CN-4403',
+        customer: 'Bridgeway Foods BV',
+        amount: 27990,
+        reason: 'Damaged Shipment',
+        region: 'Benelux',
+        owner: 'Sven Kramer',
+        invoiceRef: 'INV-2026-0930',
+        aging: 22,
+        risk: 81,
+        status: 'Policy Review',
+        policy: 'Finance Director approval required for amount > €20,000.',
+        evidence: 'yes',
+        audit: ['08:10 AR Specialist: Logistics incident evidence uploaded.', '08:19 Controller: Routed to Finance Director due to threshold.']
+      },
+      {
+        id: 'CN-4404',
+        customer: 'Altair Commerce Ltd',
+        amount: 2150,
+        reason: 'Duplicate Billing',
+        region: 'UKI',
+        owner: 'Mina Patel',
+        invoiceRef: 'INV-2026-1120',
+        aging: 4,
+        risk: 20,
+        status: 'Approved',
+        policy: 'Ready for AR posting.',
+        evidence: 'yes',
+        audit: ['09:03 Controller: Approved after duplicate charge confirmation.']
+      },
+      {
+        id: 'CN-4405',
+        customer: 'Rheinsys Services AG',
+        amount: 970,
+        reason: 'Service Failure',
+        region: 'DACH',
+        owner: 'Mara Klein',
+        invoiceRef: 'INV-2026-1213',
+        aging: 2,
+        risk: 18,
+        status: 'Posted',
+        policy: 'Posted to ledger.',
+        evidence: 'yes',
+        audit: ['07:41 Controller: Approved.', '07:47 AR Specialist: Posted to ledger document GL-CN-9021.']
+      }
+    ];
+
+    let cards = structuredClone(seededCases);
+    let selectedId = null;
+    let currentRole = 'AR Specialist';
+
+    const boardEl = document.getElementById('board');
+    const detailPanel = document.getElementById('detailPanel');
+    const auditTrail = document.getElementById('auditTrail');
+
+    function euro(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function nowStamp() {
+      return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function riskClass(risk) {
+      if (risk >= 75) return 'text-rose-300';
+      if (risk >= 45) return 'text-amber-300';
+      return 'text-emerald-300';
+    }
+
+    function statusPill(status) {
+      if (status === 'Approved') return 'bg-emerald-900/60 text-emerald-300';
+      if (status === 'Policy Review') return 'bg-amber-900/60 text-amber-200';
+      if (status === 'Posted') return 'bg-indigo-900/60 text-indigo-300';
+      if (status === 'Rejected') return 'bg-rose-900/60 text-rose-300';
+      return 'bg-slate-800 text-slate-200';
+    }
+
+    function filteredCards() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const region = document.getElementById('regionFilter').value;
+      const reason = document.getElementById('reasonFilter').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      const subset = cards.filter((item) => {
+        const textOk = !query ||
+          item.id.toLowerCase().includes(query) ||
+          item.customer.toLowerCase().includes(query) ||
+          item.owner.toLowerCase().includes(query);
+        const regionOk = region === 'all' || item.region === region;
+        const reasonOk = reason === 'all' || item.reason === reason;
+        return textOk && regionOk && reasonOk;
+      });
+
+      subset.sort((a, b) => {
+        if (sortBy === 'amount') return b.amount - a.amount;
+        if (sortBy === 'customer') return a.customer.localeCompare(b.customer);
+        if (sortBy === 'risk') return b.risk - a.risk;
+        return b.aging - a.aging;
+      });
+
+      return subset;
+    }
+
+    function updateMetrics() {
+      const exposure = cards.filter((c) => ['Intake', 'Policy Review', 'Approved'].includes(c.status)).reduce((sum, c) => sum + c.amount, 0);
+      const awaiting = cards.filter((c) => c.status === 'Policy Review').length;
+      const posted = cards.filter((c) => c.status === 'Posted').length;
+
+      document.getElementById('metricExposure').textContent = euro(exposure);
+      document.getElementById('metricAwaiting').textContent = awaiting;
+      document.getElementById('metricPosted').textContent = posted;
+      document.getElementById('roleHint').textContent = policyByRole[currentRole];
+    }
+
+    function canTransition(card, from, to) {
+      if (to === from) return true;
+      if (to === 'Rejected') return currentRole !== 'AR Specialist' || from !== 'Posted';
+      if (to === 'Intake') return currentRole !== 'Finance Director';
+
+      if (from === 'Intake' && to === 'Policy Review') return currentRole === 'AR Specialist';
+
+      if (from === 'Policy Review' && to === 'Approved') {
+        if (card.amount > 20000 || card.risk >= 75 || card.evidence === 'no') return currentRole === 'Finance Director';
+        return currentRole === 'Controller' || currentRole === 'Finance Director';
+      }
+
+      if (from === 'Approved' && to === 'Posted') return currentRole === 'AR Specialist';
+
+      if (from === 'Policy Review' && to === 'Intake') return currentRole === 'Controller' || currentRole === 'Finance Director';
+
+      return false;
+    }
+
+    function nextStatusForward(status) {
+      if (status === 'Intake') return 'Policy Review';
+      if (status === 'Policy Review') return 'Approved';
+      if (status === 'Approved') return 'Posted';
+      return status;
+    }
+
+    function previousStatus(status) {
+      if (status === 'Policy Review') return 'Intake';
+      if (status === 'Approved') return 'Policy Review';
+      if (status === 'Posted') return 'Approved';
+      return status;
+    }
+
+    function moveCard(cardId, toStatus, source = 'board') {
+      const card = cards.find((item) => item.id === cardId);
+      if (!card) return;
+
+      const from = card.status;
+      if (!canTransition(card, from, toStatus)) {
+        alert(`Role policy violation: ${currentRole} cannot move ${from} → ${toStatus}.`);
+        return;
+      }
+
+      card.status = toStatus;
+      const note = document.getElementById('auditNote').value.trim();
+      card.audit.unshift(`${nowStamp()} ${currentRole}: ${source} moved ${from} → ${toStatus}${note ? ` — ${note}` : ''}`);
+      document.getElementById('auditNote').value = '';
+
+      if (toStatus === 'Rejected') {
+        card.policy = 'Rejected after policy decision.';
+      } else if (toStatus === 'Approved') {
+        card.policy = card.amount > 20000 ? 'Approved by Finance Director.' : 'Approved for AR posting.';
+      } else if (toStatus === 'Posted') {
+        card.policy = 'Posted to ledger and customer account.';
+      }
+
+      renderBoard();
+      selectCard(card.id);
+    }
+
+    function renderBoard() {
+      const visible = filteredCards();
+      document.getElementById('visibleCount').textContent = `${visible.length} cards`;
+
+      const lanes = laneOrder.map((status) => ({ status, cards: visible.filter((c) => c.status === status) }));
+
+      boardEl.innerHTML = lanes.map((lane) => `
+        <section class="bg-slate-950 border border-slate-800 rounded-lg p-3" data-lane="${lane.status}" aria-label="${lane.status} lane">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold text-sm">${lane.status}</h3>
+            <span class="text-xs text-slate-400">${lane.cards.length}</span>
+          </div>
+          <div class="space-y-2 min-h-[180px] drop-zone" data-drop="${lane.status}">
+            ${lane.cards.length ? lane.cards.map((card) => `
+              <article
+                tabindex="0"
+                draggable="true"
+                data-id="${card.id}"
+                class="credit-card bg-slate-900 border ${card.id === selectedId ? 'border-emerald-500' : 'border-slate-700'} rounded-lg p-3 cursor-pointer hover:border-slate-500"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <p class="font-mono text-xs text-slate-400">${card.id}</p>
+                  <span class="text-[11px] px-2 py-1 rounded ${statusPill(card.status)}">${card.status}</span>
+                </div>
+                <p class="mt-1 font-medium text-sm">${card.customer}</p>
+                <p class="text-xs text-slate-400 mt-1">${card.reason} · ${card.region}</p>
+                <div class="mt-2 flex items-center justify-between text-xs">
+                  <span class="${riskClass(card.risk)} font-semibold">Risk ${card.risk}</span>
+                  <span class="text-slate-300">${euro(card.amount)}</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Aging: ${card.aging}d · Owner: ${card.owner}</p>
+              </article>
+            `).join('') : '<p class="text-xs text-slate-500">Drop cards here</p>'}
+          </div>
+        </section>
+      `).join('');
+
+      document.querySelectorAll('.credit-card').forEach((cardEl) => {
+        const id = cardEl.dataset.id;
+        cardEl.addEventListener('click', () => selectCard(id));
+        cardEl.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            selectCard(id);
+          }
+        });
+
+        cardEl.addEventListener('dragstart', (event) => {
+          event.dataTransfer.setData('text/plain', id);
+          event.dataTransfer.effectAllowed = 'move';
+        });
+      });
+
+      document.querySelectorAll('.drop-zone').forEach((laneEl) => {
+        laneEl.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          laneEl.classList.add('ring-1', 'ring-emerald-500');
+        });
+        laneEl.addEventListener('dragleave', () => laneEl.classList.remove('ring-1', 'ring-emerald-500'));
+        laneEl.addEventListener('drop', (event) => {
+          event.preventDefault();
+          laneEl.classList.remove('ring-1', 'ring-emerald-500');
+          const id = event.dataTransfer.getData('text/plain');
+          moveCard(id, laneEl.dataset.drop, 'Drag-and-drop');
+        });
+      });
+
+      updateMetrics();
+    }
+
+    function selectCard(id) {
+      selectedId = id;
+      const card = cards.find((item) => item.id === id);
+      if (!card) return;
+
+      detailPanel.innerHTML = `
+        <p><span class="text-slate-500">Customer:</span> ${card.customer}</p>
+        <p class="mt-1"><span class="text-slate-500">Invoice:</span> ${card.invoiceRef}</p>
+        <p class="mt-1"><span class="text-slate-500">Amount:</span> ${euro(card.amount)}</p>
+        <p class="mt-1"><span class="text-slate-500">Reason:</span> ${card.reason}</p>
+        <p class="mt-1"><span class="text-slate-500">Owner:</span> ${card.owner} (${card.region})</p>
+        <p class="mt-1"><span class="text-slate-500">Policy:</span> ${card.policy}</p>
+      `;
+
+      auditTrail.innerHTML = card.audit.map((line, idx) => `
+        <li class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+          <span class="text-slate-500 mr-2">#${idx + 1}</span>${line}
+        </li>
+      `).join('');
+
+      syncActionButtons(card);
+      renderBoard();
+    }
+
+    function syncActionButtons(card) {
+      const advanceTo = nextStatusForward(card.status);
+      const backTo = previousStatus(card.status);
+      const advanceBtn = document.getElementById('advanceBtn');
+      const sendBackBtn = document.getElementById('sendBackBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
+
+      advanceBtn.disabled = advanceTo === card.status || !canTransition(card, card.status, advanceTo);
+      sendBackBtn.disabled = backTo === card.status || !canTransition(card, card.status, backTo);
+      rejectBtn.disabled = !canTransition(card, card.status, 'Rejected');
+    }
+
+    function evaluatePolicy(payload) {
+      const amount = Number(payload.amount);
+      const aging = Number(payload.aging);
+      let risk = 20;
+      const findings = [];
+
+      if (amount > 10000) {
+        risk += 18;
+        findings.push('Controller approval required for amount > €10,000.');
+      }
+      if (amount > 20000) {
+        risk += 20;
+        findings.push('Finance Director approval required for amount > €20,000.');
+      }
+      if (payload.reason === 'Pricing Error') {
+        risk += 10;
+      }
+      if (aging > 15) {
+        risk += 16;
+        findings.push('Aging > 15 days — prioritize for weekly close review.');
+      }
+      if (payload.evidence === 'no') {
+        risk += 22;
+        findings.push('Evidence missing — cannot approve until attachment received.');
+      }
+
+      if (!findings.length) findings.push('Standard review path.');
+
+      return {
+        risk: Math.min(risk, 99),
+        policy: findings.join(' '),
+        status: 'Intake'
+      };
+    }
+
+    function validateForm() {
+      const customer = document.getElementById('customer').value.trim();
+      const amount = Number(document.getElementById('amount').value);
+      const owner = document.getElementById('owner').value.trim();
+      const invoiceRef = document.getElementById('invoiceRef').value.trim();
+      const aging = Number(document.getElementById('aging').value);
+
+      if (customer.length < 3) return 'Customer must have at least 3 characters.';
+      if (!Number.isFinite(amount) || amount <= 0) return 'Amount must be greater than 0.';
+      if (owner.length < 3) return 'Owner must have at least 3 characters.';
+      if (!/^INV-\d{4}-\d{3,}$/.test(invoiceRef)) return 'Invoice ref must match INV-YYYY-NNN format.';
+      if (!Number.isFinite(aging) || aging < 0 || aging > 365) return 'Aging must be between 0 and 365 days.';
+      return null;
+    }
+
+    function nextCaseId() {
+      const max = cards.reduce((acc, item) => Math.max(acc, Number(item.id.split('-')[1]) || 0), 0);
+      return `CN-${String(max + 1).padStart(4, '0')}`;
+    }
+
+    function clearFormMessages() {
+      const errorEl = document.getElementById('formError');
+      const successEl = document.getElementById('formSuccess');
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
+      errorEl.textContent = '';
+      successEl.textContent = '';
+    }
+
+    function populateFilters() {
+      const regions = [...new Set(cards.map((c) => c.region))];
+      const reasons = [...new Set(cards.map((c) => c.reason))];
+      const regionFilter = document.getElementById('regionFilter');
+      const reasonFilter = document.getElementById('reasonFilter');
+
+      regions.forEach((region) => {
+        if (regionFilter.querySelector(`option[value="${region}"]`)) return;
+        const option = document.createElement('option');
+        option.value = region;
+        option.textContent = region;
+        regionFilter.append(option);
+      });
+
+      reasons.forEach((reason) => {
+        if (reasonFilter.querySelector(`option[value="${reason}"]`)) return;
+        const option = document.createElement('option');
+        option.value = reason;
+        option.textContent = reason;
+        reasonFilter.append(option);
+      });
+    }
+
+    document.getElementById('advanceBtn').addEventListener('click', () => {
+      const card = cards.find((item) => item.id === selectedId);
+      if (!card) return;
+      moveCard(card.id, nextStatusForward(card.status), 'Action');
+    });
+
+    document.getElementById('sendBackBtn').addEventListener('click', () => {
+      const card = cards.find((item) => item.id === selectedId);
+      if (!card) return;
+      moveCard(card.id, previousStatus(card.status), 'Action');
+    });
+
+    document.getElementById('rejectBtn').addEventListener('click', () => {
+      const card = cards.find((item) => item.id === selectedId);
+      if (!card) return;
+      moveCard(card.id, 'Rejected', 'Action');
+    });
+
+    document.getElementById('intakeForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      clearFormMessages();
+
+      const validationError = validateForm();
+      if (validationError) {
+        const errorEl = document.getElementById('formError');
+        errorEl.textContent = validationError;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      const payload = {
+        customer: document.getElementById('customer').value.trim(),
+        amount: Number(document.getElementById('amount').value),
+        reason: document.getElementById('reason').value,
+        region: document.getElementById('region').value,
+        owner: document.getElementById('owner').value.trim(),
+        invoiceRef: document.getElementById('invoiceRef').value.trim(),
+        aging: Number(document.getElementById('aging').value),
+        evidence: document.getElementById('evidence').value
+      };
+
+      const evalResult = evaluatePolicy(payload);
+      const newCase = {
+        id: nextCaseId(),
+        ...payload,
+        risk: evalResult.risk,
+        status: evalResult.status,
+        policy: evalResult.policy,
+        audit: [`${nowStamp()} AR Specialist: Intake case created from form.`]
+      };
+
+      cards.unshift(newCase);
+      populateFilters();
+      renderBoard();
+      selectCard(newCase.id);
+      document.getElementById('intakeForm').reset();
+
+      const successEl = document.getElementById('formSuccess');
+      successEl.textContent = `${newCase.id} created. Policy: ${newCase.policy}`;
+      successEl.classList.remove('hidden');
+    });
+
+    document.getElementById('clearForm').addEventListener('click', () => {
+      document.getElementById('intakeForm').reset();
+      clearFormMessages();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const headers = ['id', 'customer', 'amount', 'reason', 'region', 'owner', 'invoiceRef', 'aging', 'risk', 'status'];
+      const rows = filteredCards().map((item) => headers.map((h) => JSON.stringify(item[h] ?? '')).join(','));
+      const csv = `${headers.join(',')}\n${rows.join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'credit-note-kanban.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('regionFilter').value = 'all';
+      document.getElementById('reasonFilter').value = 'all';
+      document.getElementById('sortBy').value = 'age';
+      renderBoard();
+    });
+
+    ['searchInput', 'regionFilter', 'reasonFilter', 'sortBy'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', renderBoard);
+      document.getElementById(id).addEventListener('change', renderBoard);
+    });
+
+    document.querySelectorAll('.role-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentRole = btn.dataset.role;
+        document.querySelectorAll('.role-btn').forEach((b) => {
+          const active = b.dataset.role === currentRole;
+          b.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-200'}`;
+        });
+        const selected = cards.find((item) => item.id === selectedId);
+        if (selected) syncActionButtons(selected);
+        updateMetrics();
+      });
+    });
+
+    populateFilters();
+    renderBoard();
+    selectCard(cards[0].id);
+  </script>
+</body>
+</html>

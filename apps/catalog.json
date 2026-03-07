@@ -666,5 +666,29 @@
       "role-based"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-07",
+    "day": 33,
+    "slug": "2026-03-07-credit-note-resolution-kanban",
+    "name": "Credit Note Resolution Kanban",
+    "description": "Policy-aware board for triaging, approving, and posting credit-note exceptions with risk scoring and audit trail.",
+    "category": "Finance",
+    "pattern": "Kanban",
+    "tags": [
+      "credit notes",
+      "finance",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based",
+      "drag-and-drop"
+    ],
+    "thumb": ""
   }
 ]
