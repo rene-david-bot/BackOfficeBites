@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Compliance Pulseboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0b1220',
+            panel: '#111827',
+            panelSoft: '#1f2937',
+            accent: '#34d399'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-ink text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl sm:text-3xl font-semibold mt-2">Training Compliance Pulseboard</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Policy-aware HR dashboard for tracking mandatory training coverage, extension approvals, and audit-ready actions across departments.</p>
+
+    <section class="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="kpiCards" aria-label="Summary metrics"></section>
+
+    <section class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <article class="bg-panel border border-slate-700 rounded-xl p-4">
+        <h2 class="text-lg font-medium">Department Compliance</h2>
+        <p class="text-sm text-slate-400 mt-1">Compliant employees vs total population.</p>
+        <div id="deptBars" class="mt-4 space-y-3" role="img" aria-label="Department compliance chart"></div>
+      </article>
+      <article class="bg-panel border border-slate-700 rounded-xl p-4">
+        <h2 class="text-lg font-medium">Upcoming Deadlines (Next 30 Days)</h2>
+        <p class="text-sm text-slate-400 mt-1">Records due soon or overdue by department.</p>
+        <div id="deadlineBars" class="mt-4 space-y-3" role="img" aria-label="Upcoming deadline chart"></div>
+      </article>
+    </section>
+
+    <section class="mt-6 bg-panel border border-slate-700 rounded-xl p-4">
+      <div class="flex flex-wrap gap-3 items-end">
+        <div class="min-w-[220px] flex-1">
+          <label for="searchInput" class="block text-sm text-slate-300 mb-1">Search</label>
+          <input id="searchInput" type="search" placeholder="Employee, manager, or training" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+        </div>
+        <div>
+          <label for="deptFilter" class="block text-sm text-slate-300 mb-1">Department</label>
+          <select id="deptFilter" class="bg-panelSoft border border-slate-600 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-sm text-slate-300 mb-1">Status</label>
+          <select id="statusFilter" class="bg-panelSoft border border-slate-600 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+            <option>Compliant</option>
+            <option>In Progress</option>
+            <option>Due Soon</option>
+            <option>Overdue</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="block text-sm text-slate-300 mb-1">Sort by</label>
+          <select id="sortBy" class="bg-panelSoft border border-slate-600 rounded-lg px-3 py-2">
+            <option value="risk-desc">Risk (high → low)</option>
+            <option value="due-asc">Due date (soonest)</option>
+            <option value="name-asc">Name (A → Z)</option>
+            <option value="status-asc">Status</option>
+          </select>
+        </div>
+        <button id="exportCsv" class="ml-auto bg-emerald-500 hover:bg-emerald-400 text-ink font-semibold px-4 py-2 rounded-lg">Export CSV</button>
+      </div>
+
+      <div class="overflow-x-auto mt-4">
+        <table class="min-w-full text-sm" aria-label="Training compliance grid">
+          <thead>
+            <tr class="text-left text-slate-300 border-b border-slate-700">
+              <th class="py-2 pr-3">Employee</th>
+              <th class="py-2 pr-3">Department</th>
+              <th class="py-2 pr-3">Training</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2 pr-3">Due Date</th>
+              <th class="py-2 pr-3">Risk</th>
+              <th class="py-2 pr-3">Manager</th>
+            </tr>
+          </thead>
+          <tbody id="employeeRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <article class="bg-panel border border-slate-700 rounded-xl p-4">
+        <h2 class="text-lg font-medium">Role-Based Approval Queue</h2>
+        <p class="text-sm text-slate-400 mt-1">Approve extension requests based on role and policy.</p>
+        <div class="mt-3">
+          <label for="roleSelect" class="block text-sm text-slate-300 mb-1">Active Role</label>
+          <select id="roleSelect" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2">
+            <option>L&D Admin</option>
+            <option>Manager</option>
+            <option>Compliance Officer</option>
+          </select>
+        </div>
+        <div class="overflow-auto mt-3 max-h-72 border border-slate-700 rounded-lg">
+          <table class="min-w-full text-sm">
+            <thead class="sticky top-0 bg-panelSoft text-slate-300">
+              <tr>
+                <th class="py-2 px-2 text-left">Employee</th>
+                <th class="py-2 px-2 text-left">Requested</th>
+                <th class="py-2 px-2 text-left">Status</th>
+                <th class="py-2 px-2 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody id="queueRows"></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">Policy: Managers can approve low-risk (risk &lt; 70 and extension ≤ 14 days). Compliance Officers can approve all. L&amp;D Admin can route only.</p>
+      </article>
+
+      <article class="bg-panel border border-slate-700 rounded-xl p-4">
+        <h2 class="text-lg font-medium">Log Training Completion</h2>
+        <form id="completionForm" class="mt-3 space-y-3" novalidate>
+          <div>
+            <label for="completionEmployee" class="block text-sm text-slate-300 mb-1">Employee</label>
+            <select id="completionEmployee" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2"></select>
+          </div>
+          <div>
+            <label for="completionDate" class="block text-sm text-slate-300 mb-1">Completion Date</label>
+            <input id="completionDate" type="date" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2" />
+          </div>
+          <div>
+            <label for="assessmentScore" class="block text-sm text-slate-300 mb-1">Assessment Score (%)</label>
+            <input id="assessmentScore" type="number" min="0" max="100" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2" />
+          </div>
+          <label class="flex items-center gap-2 text-sm text-slate-300">
+            <input id="evidenceConfirmed" type="checkbox" class="h-4 w-4" /> Evidence uploaded
+          </label>
+          <p id="completionError" class="text-sm text-rose-300 hidden"></p>
+          <button class="w-full bg-emerald-500 hover:bg-emerald-400 text-ink font-semibold py-2 rounded-lg" type="submit">Mark as Compliant</button>
+        </form>
+      </article>
+
+      <article class="bg-panel border border-slate-700 rounded-xl p-4">
+        <h2 class="text-lg font-medium">Request Due-Date Extension</h2>
+        <form id="extensionForm" class="mt-3 space-y-3" novalidate>
+          <div>
+            <label for="extensionEmployee" class="block text-sm text-slate-300 mb-1">Employee</label>
+            <select id="extensionEmployee" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2"></select>
+          </div>
+          <div>
+            <label for="requestedDate" class="block text-sm text-slate-300 mb-1">Requested Due Date</label>
+            <input id="requestedDate" type="date" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2" />
+          </div>
+          <div>
+            <label for="extensionReason" class="block text-sm text-slate-300 mb-1">Reason</label>
+            <textarea id="extensionReason" rows="3" class="w-full bg-panelSoft border border-slate-600 rounded-lg px-3 py-2" placeholder="Explain why an extension is needed (min 10 chars)"></textarea>
+          </div>
+          <p id="extensionError" class="text-sm text-rose-300 hidden"></p>
+          <button class="w-full bg-sky-500 hover:bg-sky-400 text-ink font-semibold py-2 rounded-lg" type="submit">Submit for Approval</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="mt-6 bg-panel border border-slate-700 rounded-xl p-4">
+      <h2 class="text-lg font-medium">Audit Trail</h2>
+      <ul id="auditTrail" class="mt-3 space-y-2 text-sm"></ul>
+    </section>
+  </main>
+
+  <script>
+    const employees = [
+      { id: 'E-101', name: 'Mia Keller', dept: 'Finance', training: 'Anti-Bribery 2026', status: 'Due Soon', dueDate: '2026-03-19', risk: 62, manager: 'Jonas Winter', lastCompleted: '2025-03-10' },
+      { id: 'E-102', name: 'Lukas Brandt', dept: 'IT Ops', training: 'Secure Access Hygiene', status: 'Overdue', dueDate: '2026-03-02', risk: 84, manager: 'Elena Kurz', lastCompleted: '2024-12-14' },
+      { id: 'E-103', name: 'Sara Hoffmann', dept: 'Sales', training: 'Privacy Essentials', status: 'In Progress', dueDate: '2026-03-22', risk: 41, manager: 'Tom Berger', lastCompleted: '2025-04-01' },
+      { id: 'E-104', name: 'Noah Richter', dept: 'HR', training: 'Workplace Conduct', status: 'Compliant', dueDate: '2027-01-11', risk: 15, manager: 'Anne Vogt', lastCompleted: '2026-01-11' },
+      { id: 'E-105', name: 'Lea Schuster', dept: 'Legal', training: 'Contracting Ethics', status: 'Due Soon', dueDate: '2026-03-25', risk: 58, manager: 'Matteo Hahn', lastCompleted: '2025-03-25' },
+      { id: 'E-106', name: 'Tim Adler', dept: 'Supply Chain', training: 'Export Control Basics', status: 'Overdue', dueDate: '2026-02-27', risk: 90, manager: 'Eva Pohl', lastCompleted: '2024-11-07' },
+      { id: 'E-107', name: 'Hannah Beck', dept: 'Finance', training: 'Data Retention Policy', status: 'Compliant', dueDate: '2026-10-18', risk: 20, manager: 'Jonas Winter', lastCompleted: '2025-10-18' },
+      { id: 'E-108', name: 'Nico Seidel', dept: 'IT Ops', training: 'Incident Escalation SOP', status: 'In Progress', dueDate: '2026-03-28', risk: 49, manager: 'Elena Kurz', lastCompleted: '2025-05-29' }
+    ];
+
+    const extensionRequests = [
+      { id: 'R-501', employeeId: 'E-102', requestedDate: '2026-03-16', reason: 'On-call week and migration cutover overlap.', status: 'Pending', createdAt: '2026-03-06T11:10:00Z' },
+      { id: 'R-502', employeeId: 'E-106', requestedDate: '2026-03-25', reason: 'Travel to supplier audit; no training slot available.', status: 'Pending', createdAt: '2026-03-07T09:20:00Z' }
+    ];
+
+    const auditEntries = [
+      { at: '2026-03-07T09:20:00Z', text: 'Extension request R-502 submitted for Tim Adler (Supply Chain).' },
+      { at: '2026-03-06T11:10:00Z', text: 'Extension request R-501 submitted for Lukas Brandt (IT Ops).' }
+    ];
+
+    const ui = {
+      searchInput: document.getElementById('searchInput'),
+      deptFilter: document.getElementById('deptFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      sortBy: document.getElementById('sortBy'),
+      exportCsv: document.getElementById('exportCsv'),
+      employeeRows: document.getElementById('employeeRows'),
+      kpiCards: document.getElementById('kpiCards'),
+      deptBars: document.getElementById('deptBars'),
+      deadlineBars: document.getElementById('deadlineBars'),
+      roleSelect: document.getElementById('roleSelect'),
+      queueRows: document.getElementById('queueRows'),
+      completionForm: document.getElementById('completionForm'),
+      extensionForm: document.getElementById('extensionForm'),
+      completionEmployee: document.getElementById('completionEmployee'),
+      extensionEmployee: document.getElementById('extensionEmployee'),
+      completionDate: document.getElementById('completionDate'),
+      assessmentScore: document.getElementById('assessmentScore'),
+      evidenceConfirmed: document.getElementById('evidenceConfirmed'),
+      completionError: document.getElementById('completionError'),
+      requestedDate: document.getElementById('requestedDate'),
+      extensionReason: document.getElementById('extensionReason'),
+      extensionError: document.getElementById('extensionError'),
+      auditTrail: document.getElementById('auditTrail')
+    };
+
+    const statusClass = {
+      Compliant: 'text-emerald-300 bg-emerald-900/40',
+      'In Progress': 'text-sky-300 bg-sky-900/40',
+      'Due Soon': 'text-amber-300 bg-amber-900/40',
+      Overdue: 'text-rose-300 bg-rose-900/40'
+    };
+
+    function formatDate(dateString) {
+      return new Date(dateString + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function daysBetween(a, b) {
+      const ms = new Date(b).setHours(0,0,0,0) - new Date(a).setHours(0,0,0,0);
+      return Math.round(ms / 86400000);
+    }
+
+    function employeeById(id) {
+      return employees.find(e => e.id === id);
+    }
+
+    function addAudit(text) {
+      auditEntries.unshift({ at: new Date().toISOString(), text });
+      renderAuditTrail();
+    }
+
+    function getDepartments() {
+      return [...new Set(employees.map(e => e.dept))].sort();
+    }
+
+    function getFilteredEmployees() {
+      const q = ui.searchInput.value.trim().toLowerCase();
+      const dept = ui.deptFilter.value;
+      const status = ui.statusFilter.value;
+      const sortBy = ui.sortBy.value;
+
+      let rows = employees.filter(e => {
+        const matchesSearch = !q || [e.name, e.manager, e.training, e.id].join(' ').toLowerCase().includes(q);
+        const matchesDept = dept === 'all' || e.dept === dept;
+        const matchesStatus = status === 'all' || e.status === status;
+        return matchesSearch && matchesDept && matchesStatus;
+      });
+
+      rows.sort((a, b) => {
+        switch (sortBy) {
+          case 'name-asc': return a.name.localeCompare(b.name);
+          case 'due-asc': return new Date(a.dueDate) - new Date(b.dueDate);
+          case 'status-asc': return a.status.localeCompare(b.status);
+          default: return b.risk - a.risk;
+        }
+      });
+
+      return rows;
+    }
+
+    function renderKPIs() {
+      const total = employees.length;
+      const compliant = employees.filter(e => e.status === 'Compliant').length;
+      const overdue = employees.filter(e => e.status === 'Overdue').length;
+      const pending = extensionRequests.filter(r => r.status === 'Pending').length;
+      const avgRisk = Math.round(employees.reduce((s, e) => s + e.risk, 0) / total);
+
+      const cards = [
+        { label: 'Compliance Rate', value: `${Math.round((compliant / total) * 100)}%`, note: `${compliant}/${total} employees compliant` },
+        { label: 'Overdue Trainings', value: overdue, note: 'Require immediate intervention' },
+        { label: 'Pending Approvals', value: pending, note: 'Extension requests awaiting review' },
+        { label: 'Average Risk Score', value: avgRisk, note: 'Policy risk index across org' }
+      ];
+
+      ui.kpiCards.innerHTML = cards.map(card => `
+        <article class="bg-panel border border-slate-700 rounded-xl p-4">
+          <p class="text-sm text-slate-400">${card.label}</p>
+          <p class="text-2xl font-semibold mt-1">${card.value}</p>
+          <p class="text-xs text-slate-400 mt-1">${card.note}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderDeptBars() {
+      const depts = getDepartments();
+      const html = depts.map(d => {
+        const all = employees.filter(e => e.dept === d);
+        const compliant = all.filter(e => e.status === 'Compliant').length;
+        const pct = Math.round((compliant / all.length) * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span>${d}</span><span class="text-slate-300">${pct}%</span></div>
+            <div class="h-2 rounded-full bg-slate-700 overflow-hidden">
+              <div class="h-full bg-emerald-400" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      ui.deptBars.innerHTML = html;
+    }
+
+    function renderDeadlineBars() {
+      const in30 = employees.filter(e => daysBetween(new Date(), new Date(e.dueDate)) <= 30 || e.status === 'Overdue');
+      const grouped = {};
+      in30.forEach(e => grouped[e.dept] = (grouped[e.dept] || 0) + 1);
+      const max = Math.max(1, ...Object.values(grouped));
+      const depts = Object.keys(grouped).sort();
+      if (!depts.length) {
+        ui.deadlineBars.innerHTML = '<p class="text-sm text-slate-400">No deadlines in the next 30 days.</p>';
+        return;
+      }
+      ui.deadlineBars.innerHTML = depts.map(d => {
+        const value = grouped[d];
+        const width = Math.round((value / max) * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-sm mb-1"><span>${d}</span><span class="text-slate-300">${value}</span></div>
+            <div class="h-2 rounded-full bg-slate-700 overflow-hidden">
+              <div class="h-full bg-sky-400" style="width: ${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderGrid() {
+      const rows = getFilteredEmployees();
+      ui.employeeRows.innerHTML = rows.map(e => `
+        <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+          <td class="py-2 pr-3">${e.name}<div class="text-xs text-slate-400">${e.id}</div></td>
+          <td class="py-2 pr-3">${e.dept}</td>
+          <td class="py-2 pr-3">${e.training}</td>
+          <td class="py-2 pr-3"><span class="px-2 py-1 rounded-full text-xs ${statusClass[e.status] || 'bg-slate-700'}">${e.status}</span></td>
+          <td class="py-2 pr-3">${formatDate(e.dueDate)}</td>
+          <td class="py-2 pr-3">${e.risk}</td>
+          <td class="py-2 pr-3">${e.manager}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" class="py-4 text-slate-400">No records found.</td></tr>';
+    }
+
+    function canApprove(request, role) {
+      const e = employeeById(request.employeeId);
+      if (!e) return false;
+      if (role === 'Compliance Officer') return true;
+      if (role !== 'Manager') return false;
+      const extensionDays = daysBetween(new Date(e.dueDate), new Date(request.requestedDate));
+      return e.risk < 70 && extensionDays <= 14;
+    }
+
+    function renderQueue() {
+      const role = ui.roleSelect.value;
+      ui.queueRows.innerHTML = extensionRequests.map(r => {
+        const e = employeeById(r.employeeId);
+        const disabled = r.status !== 'Pending' || !canApprove(r, role);
+        return `
+          <tr class="border-b border-slate-800">
+            <td class="py-2 px-2">${e ? e.name : r.employeeId}</td>
+            <td class="py-2 px-2">${formatDate(r.requestedDate)}</td>
+            <td class="py-2 px-2"><span class="${r.status === 'Pending' ? 'text-amber-300' : r.status === 'Approved' ? 'text-emerald-300' : 'text-rose-300'}">${r.status}</span></td>
+            <td class="py-2 px-2">
+              <div class="flex gap-2">
+                <button data-approve="${r.id}" class="text-xs px-2 py-1 rounded bg-emerald-600 disabled:opacity-40" ${disabled ? 'disabled' : ''}>Approve</button>
+                <button data-reject="${r.id}" class="text-xs px-2 py-1 rounded bg-rose-600 disabled:opacity-40" ${r.status !== 'Pending' ? 'disabled' : ''}>Reject</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="4" class="py-3 px-2 text-slate-400">No extension requests.</td></tr>';
+    }
+
+    function renderAuditTrail() {
+      ui.auditTrail.innerHTML = auditEntries.slice(0, 10).map(a => `
+        <li class="border border-slate-700 rounded-lg p-3 bg-panelSoft/60">
+          <p>${a.text}</p>
+          <p class="text-xs text-slate-400 mt-1">${new Date(a.at).toLocaleString('en-GB')}</p>
+        </li>
+      `).join('');
+    }
+
+    function populateSelects() {
+      const deptOptions = getDepartments().map(d => `<option value="${d}">${d}</option>`).join('');
+      ui.deptFilter.insertAdjacentHTML('beforeend', deptOptions);
+
+      const employeeOptions = employees.map(e => `<option value="${e.id}">${e.name} (${e.dept})</option>`).join('');
+      ui.completionEmployee.innerHTML = employeeOptions;
+      ui.extensionEmployee.innerHTML = employeeOptions;
+    }
+
+    function downloadCsv() {
+      const rows = getFilteredEmployees();
+      const header = ['id', 'name', 'department', 'training', 'status', 'dueDate', 'risk', 'manager'];
+      const csvRows = [header.join(',')].concat(rows.map(r =>
+        [r.id, r.name, r.dept, r.training, r.status, r.dueDate, r.risk, r.manager]
+          .map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')
+      ));
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'training-compliance-export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit(`CSV export generated (${rows.length} records).`);
+    }
+
+    function resetCompletionError(msg = '') {
+      ui.completionError.textContent = msg;
+      ui.completionError.classList.toggle('hidden', !msg);
+    }
+
+    function resetExtensionError(msg = '') {
+      ui.extensionError.textContent = msg;
+      ui.extensionError.classList.toggle('hidden', !msg);
+    }
+
+    function markCompliant(event) {
+      event.preventDefault();
+      const id = ui.completionEmployee.value;
+      const date = ui.completionDate.value;
+      const score = Number(ui.assessmentScore.value);
+      const hasEvidence = ui.evidenceConfirmed.checked;
+
+      if (!date) return resetCompletionError('Completion date is required.');
+      if (!Number.isFinite(score) || score < 70) return resetCompletionError('Assessment score must be at least 70%.');
+      if (!hasEvidence) return resetCompletionError('Evidence confirmation is required for audit readiness.');
+
+      const e = employeeById(id);
+      if (!e) return resetCompletionError('Employee not found.');
+
+      e.status = 'Compliant';
+      e.lastCompleted = date;
+      const next = new Date(date + 'T00:00:00');
+      next.setDate(next.getDate() + 365);
+      e.dueDate = next.toISOString().slice(0, 10);
+      e.risk = Math.max(10, e.risk - 30);
+
+      resetCompletionError();
+      ui.completionForm.reset();
+      addAudit(`Training marked compliant for ${e.name} with score ${score}%. Next due ${formatDate(e.dueDate)}.`);
+      renderAll();
+    }
+
+    function requestExtension(event) {
+      event.preventDefault();
+      const employeeId = ui.extensionEmployee.value;
+      const requestedDate = ui.requestedDate.value;
+      const reason = ui.extensionReason.value.trim();
+
+      if (!requestedDate) return resetExtensionError('Requested due date is required.');
+      if (reason.length < 10) return resetExtensionError('Reason must have at least 10 characters.');
+
+      const e = employeeById(employeeId);
+      if (!e) return resetExtensionError('Employee not found.');
+      if (new Date(requestedDate) <= new Date(e.dueDate)) return resetExtensionError('Requested due date must be after the current due date.');
+
+      const newRequest = {
+        id: `R-${Math.floor(600 + Math.random() * 300)}`,
+        employeeId,
+        requestedDate,
+        reason,
+        status: 'Pending',
+        createdAt: new Date().toISOString()
+      };
+
+      extensionRequests.unshift(newRequest);
+      resetExtensionError();
+      ui.extensionForm.reset();
+      addAudit(`Extension request ${newRequest.id} submitted for ${e.name} (${formatDate(requestedDate)}).`);
+      renderAll();
+    }
+
+    function handleQueueAction(event) {
+      const approveId = event.target.getAttribute('data-approve');
+      const rejectId = event.target.getAttribute('data-reject');
+      if (!approveId && !rejectId) return;
+
+      const request = extensionRequests.find(r => r.id === (approveId || rejectId));
+      if (!request || request.status !== 'Pending') return;
+
+      const role = ui.roleSelect.value;
+      const e = employeeById(request.employeeId);
+
+      if (approveId) {
+        if (!canApprove(request, role)) {
+          addAudit(`Approval blocked for ${request.id}. Role ${role} exceeds policy threshold.`);
+          return;
+        }
+        request.status = 'Approved';
+        if (e) {
+          e.dueDate = request.requestedDate;
+          e.status = 'Due Soon';
+          e.risk = Math.max(20, e.risk - 8);
+        }
+        addAudit(`${request.id} approved by ${role}; ${e ? e.name : request.employeeId} due date moved to ${formatDate(request.requestedDate)}.`);
+      }
+
+      if (rejectId) {
+        request.status = 'Rejected';
+        addAudit(`${request.id} rejected by ${role}.`);
+      }
+
+      renderAll();
+    }
+
+    function renderAll() {
+      renderKPIs();
+      renderDeptBars();
+      renderDeadlineBars();
+      renderGrid();
+      renderQueue();
+      renderAuditTrail();
+    }
+
+    [ui.searchInput, ui.deptFilter, ui.statusFilter, ui.sortBy].forEach(el => el.addEventListener('input', renderGrid));
+    ui.exportCsv.addEventListener('click', downloadCsv);
+    ui.roleSelect.addEventListener('change', renderQueue);
+    ui.queueRows.addEventListener('click', handleQueueAction);
+    ui.completionForm.addEventListener('submit', markCompliant);
+    ui.extensionForm.addEventListener('submit', requestExtension);
+
+    populateSelects();
+    renderAll();
+  </script>
+</body>
+</html>

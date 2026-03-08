@@ -690,5 +690,29 @@
       "drag-and-drop"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-08",
+    "day": 34,
+    "slug": "2026-03-08-training-compliance-pulseboard",
+    "name": "Training Compliance Pulseboard",
+    "description": "Policy-aware training compliance dashboard with role-based extension approvals and audit-ready traceability.",
+    "category": "HR",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "training tracker",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "role-based",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
