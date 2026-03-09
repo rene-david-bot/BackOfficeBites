@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quote Approval Wizard — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#111827',
+            panelSoft: '#1f2937',
+            panelMuted: '#0f172a'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Quote Approval Wizard</h1>
+    <p class="text-slate-300 mt-2">Build policy-compliant quotes with guided steps, approval routing, and an audit trail.</p>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
+      <section class="xl:col-span-2 bg-panel border border-slate-800 rounded-2xl p-5">
+        <div class="flex flex-wrap gap-2 mb-5" id="stepChips"></div>
+
+        <form id="wizardForm" class="space-y-5" novalidate>
+          <div data-step="1" class="step-panel">
+            <h2 class="text-xl font-semibold mb-4">1) Deal Context</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label class="text-sm">Account Name
+                <input id="accountName" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" required />
+              </label>
+              <label class="text-sm">Opportunity Owner Role
+                <select id="ownerRole" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Account Executive</option>
+                  <option>Regional Manager</option>
+                  <option>VP Sales</option>
+                </select>
+              </label>
+              <label class="text-sm">Region
+                <select id="region" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>EMEA</option>
+                  <option>Americas</option>
+                  <option>APAC</option>
+                </select>
+              </label>
+              <label class="text-sm">Deal Type
+                <select id="dealType" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Net New</option>
+                  <option>Expansion</option>
+                  <option>Renewal</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div data-step="2" class="step-panel hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold">2) Quote Lines</h2>
+              <button type="button" id="addLine" class="text-sm bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold px-3 py-2 rounded-lg">+ Add Line</button>
+            </div>
+            <div class="overflow-auto rounded-lg border border-slate-800">
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-900 text-slate-300">
+                  <tr>
+                    <th class="text-left p-2">Product</th>
+                    <th class="text-left p-2">Qty</th>
+                    <th class="text-left p-2">Unit €</th>
+                    <th class="text-left p-2">Discount %</th>
+                    <th class="text-left p-2">Line Net €</th>
+                    <th class="text-left p-2"></th>
+                  </tr>
+                </thead>
+                <tbody id="lineItems"></tbody>
+              </table>
+            </div>
+            <p id="policyHint" class="text-xs text-slate-400 mt-3"></p>
+          </div>
+
+          <div data-step="3" class="step-panel hidden">
+            <h2 class="text-xl font-semibold mb-4">3) Review & Submit</h2>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              <div class="bg-panelSoft border border-slate-800 rounded-lg p-4">
+                <h3 class="font-semibold text-slate-200 mb-2">Summary</h3>
+                <ul id="summaryList" class="space-y-1 text-slate-300"></ul>
+              </div>
+              <div class="bg-panelSoft border border-slate-800 rounded-lg p-4">
+                <h3 class="font-semibold text-slate-200 mb-2">Policy Validation</h3>
+                <p id="policyStatus" class="text-slate-300"></p>
+                <label class="block mt-3 text-sm">Override Justification (required if over cap)
+                  <textarea id="overrideReason" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <p id="formError" class="text-rose-400 text-sm"></p>
+
+          <div class="flex justify-between pt-3 border-t border-slate-800">
+            <button type="button" id="prevBtn" class="px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800">Back</button>
+            <div class="flex gap-2">
+              <button type="button" id="nextBtn" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold">Next</button>
+              <button type="submit" id="submitBtn" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold hidden">Submit Quote</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <aside class="bg-panel border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div>
+          <h2 class="font-semibold">Queue Controls</h2>
+          <div class="grid grid-cols-1 gap-2 mt-2">
+            <input id="searchInput" placeholder="Search account or quote..." class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+            <select id="statusFilter" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="all">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="pending_approval">Pending approval</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="sent">Sent</option>
+            </select>
+            <select id="sortBy" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="newest">Sort: Newest</option>
+              <option value="value_desc">Sort: Value high → low</option>
+              <option value="value_asc">Sort: Value low → high</option>
+            </select>
+            <button id="exportCsv" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">Export filtered CSV</button>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="font-semibold">State Machine</h2>
+          <p class="text-xs text-slate-300 mt-1">Draft → Pending Approval → Approved → Sent<br/>Draft/Pending → Rejected</p>
+        </div>
+
+        <div>
+          <h2 class="font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-72 overflow-auto"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <section class="bg-panel border border-slate-800 rounded-2xl p-5 mt-6">
+      <h2 class="text-xl font-semibold mb-3">Quote Queue</h2>
+      <div class="overflow-auto rounded-lg border border-slate-800">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-900 text-slate-300">
+            <tr>
+              <th class="text-left p-2">Quote ID</th>
+              <th class="text-left p-2">Account</th>
+              <th class="text-left p-2">Region</th>
+              <th class="text-left p-2">Owner</th>
+              <th class="text-left p-2">Value €</th>
+              <th class="text-left p-2">Status</th>
+              <th class="text-left p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="quoteTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const products = [
+      { name: 'Core Platform License', price: 12000 },
+      { name: 'AI Workflow Add-on', price: 6800 },
+      { name: 'Premium Support', price: 3000 },
+      { name: 'Implementation Package', price: 9500 }
+    ];
+
+    const discountCaps = {
+      'Account Executive': 10,
+      'Regional Manager': 20,
+      'VP Sales': 35
+    };
+
+    let step = 1;
+    let lines = [{ product: products[0].name, qty: 1, discount: 0 }];
+    let quoteSeq = 1007;
+
+    const quotes = [
+      { id: 'Q-20260308-1005', account: 'Nordlicht GmbH', region: 'EMEA', owner: 'Regional Manager', value: 26400, status: 'pending_approval', createdAt: '2026-03-08T11:22:00Z' },
+      { id: 'Q-20260308-1006', account: 'Helio Logistics', region: 'EMEA', owner: 'Account Executive', value: 11900, status: 'approved', createdAt: '2026-03-08T14:50:00Z' }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+
+    function eur(n) {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+    }
+
+    function addAudit(text) {
+      const li = document.createElement('li');
+      li.className = 'border border-slate-700 rounded-lg p-2 bg-slate-900/50';
+      li.textContent = `${new Date().toISOString().replace('T', ' ').slice(0, 16)} — ${text}`;
+      $('auditTrail').prepend(li);
+    }
+
+    function currentCap() {
+      return discountCaps[$('ownerRole').value] ?? 10;
+    }
+
+    function calcTotals() {
+      let gross = 0;
+      let discountValue = 0;
+      lines.forEach(l => {
+        const product = products.find(p => p.name === l.product) || products[0];
+        const lineGross = product.price * Number(l.qty || 0);
+        const lineDiscount = lineGross * (Number(l.discount || 0) / 100);
+        gross += lineGross;
+        discountValue += lineDiscount;
+      });
+      return { gross, discountValue, net: gross - discountValue };
+    }
+
+    function policyCheck() {
+      const cap = currentCap();
+      const overCap = lines.some(l => Number(l.discount) > cap);
+      const { net } = calcTotals();
+      const needsApproval = overCap || net > 30000 || $('dealType').value === 'Renewal';
+      return { cap, overCap, needsApproval };
+    }
+
+    function renderStepChips() {
+      const labels = ['Deal', 'Lines', 'Review'];
+      $('stepChips').innerHTML = labels.map((label, idx) => {
+        const active = idx + 1 === step;
+        return `<span class="px-3 py-1 rounded-full text-xs border ${active ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'border-slate-700 text-slate-400'}">Step ${idx + 1}: ${label}</span>`;
+      }).join('');
+    }
+
+    function renderLines() {
+      const cap = currentCap();
+      $('policyHint').textContent = `Discount cap for ${$('ownerRole').value}: ${cap}%`;
+
+      $('lineItems').innerHTML = lines.map((line, idx) => {
+        const product = products.find(p => p.name === line.product) || products[0];
+        const net = (product.price * line.qty) * (1 - line.discount / 100);
+        const over = Number(line.discount) > cap;
+        return `
+          <tr class="border-t border-slate-800">
+            <td class="p-2">
+              <select data-idx="${idx}" data-key="product" class="line-input w-full bg-panelSoft border border-slate-700 rounded px-2 py-1">
+                ${products.map(p => `<option ${p.name === line.product ? 'selected' : ''}>${p.name}</option>`).join('')}
+              </select>
+            </td>
+            <td class="p-2"><input type="number" min="1" data-idx="${idx}" data-key="qty" value="${line.qty}" class="line-input w-20 bg-panelSoft border border-slate-700 rounded px-2 py-1" /></td>
+            <td class="p-2 text-slate-300">${eur(product.price)}</td>
+            <td class="p-2">
+              <input type="number" min="0" max="50" data-idx="${idx}" data-key="discount" value="${line.discount}" class="line-input w-24 bg-panelSoft border ${over ? 'border-rose-500' : 'border-slate-700'} rounded px-2 py-1" />
+              ${over ? '<div class="text-xs text-rose-400 mt-1">Over policy cap</div>' : ''}
+            </td>
+            <td class="p-2 text-slate-200">${eur(net)}</td>
+            <td class="p-2"><button type="button" data-remove="${idx}" class="text-rose-400 hover:text-rose-300 text-xs">Remove</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.line-input').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const key = e.target.dataset.key;
+          lines[idx][key] = key === 'product' ? e.target.value : Number(e.target.value);
+          renderLines();
+          renderSummary();
+        });
+      });
+
+      document.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (lines.length === 1) return;
+          lines.splice(Number(btn.dataset.remove), 1);
+          renderLines();
+          renderSummary();
+        });
+      });
+    }
+
+    function renderSummary() {
+      const totals = calcTotals();
+      const policy = policyCheck();
+      $('summaryList').innerHTML = `
+        <li><span class="text-slate-400">Account:</span> ${$('accountName').value || '—'}</li>
+        <li><span class="text-slate-400">Owner Role:</span> ${$('ownerRole').value}</li>
+        <li><span class="text-slate-400">Region:</span> ${$('region').value}</li>
+        <li><span class="text-slate-400">Deal Type:</span> ${$('dealType').value}</li>
+        <li><span class="text-slate-400">Gross:</span> ${eur(totals.gross)}</li>
+        <li><span class="text-slate-400">Discount:</span> ${eur(totals.discountValue)}</li>
+        <li><span class="text-slate-400">Net:</span> ${eur(totals.net)}</li>
+      `;
+
+      $('policyStatus').innerHTML = policy.overCap
+        ? `<span class="text-rose-300">One or more lines exceed cap (${policy.cap}%). Approval + override required.</span>`
+        : `<span class="text-emerald-300">Within cap (${policy.cap}%).</span>`;
+    }
+
+    function renderWizard() {
+      renderStepChips();
+      document.querySelectorAll('.step-panel').forEach(panel => {
+        panel.classList.toggle('hidden', Number(panel.dataset.step) !== step);
+      });
+
+      $('prevBtn').disabled = step === 1;
+      $('prevBtn').classList.toggle('opacity-40', step === 1);
+      $('nextBtn').classList.toggle('hidden', step === 3);
+      $('submitBtn').classList.toggle('hidden', step !== 3);
+      renderSummary();
+    }
+
+    function validStep() {
+      $('formError').textContent = '';
+
+      if (step === 1 && !$('accountName').value.trim()) {
+        $('formError').textContent = 'Account name is required.';
+        return false;
+      }
+
+      if (step === 2) {
+        const invalidQty = lines.some(l => !l.qty || l.qty < 1);
+        if (invalidQty) {
+          $('formError').textContent = 'Each line must have quantity of at least 1.';
+          return false;
+        }
+      }
+
+      if (step === 3) {
+        const policy = policyCheck();
+        if (policy.overCap && !$('overrideReason').value.trim()) {
+          $('formError').textContent = 'Provide override justification for discounts over policy cap.';
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function normalizedStatus(s) {
+      return s.replace('_', ' ');
+    }
+
+    function transition(quote, action) {
+      const map = {
+        approve: { from: ['pending_approval'], to: 'approved' },
+        reject: { from: ['draft', 'pending_approval'], to: 'rejected' },
+        send: { from: ['approved'], to: 'sent' }
+      };
+      const rule = map[action];
+      if (!rule.from.includes(quote.status)) return;
+      const old = quote.status;
+      quote.status = rule.to;
+      addAudit(`${quote.id}: ${normalizedStatus(old)} → ${normalizedStatus(quote.status)}`);
+      renderQueue();
+    }
+
+    function filteredQuotes() {
+      const q = $('searchInput').value.trim().toLowerCase();
+      const status = $('statusFilter').value;
+      const sortBy = $('sortBy').value;
+
+      let data = quotes.filter(item => {
+        const passSearch = !q || [item.id, item.account, item.owner].join(' ').toLowerCase().includes(q);
+        const passStatus = status === 'all' || item.status === status;
+        return passSearch && passStatus;
+      });
+
+      if (sortBy === 'value_desc') data.sort((a, b) => b.value - a.value);
+      if (sortBy === 'value_asc') data.sort((a, b) => a.value - b.value);
+      if (sortBy === 'newest') data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return data;
+    }
+
+    function renderQueue() {
+      const rows = filteredQuotes();
+      $('quoteTable').innerHTML = rows.map(item => {
+        const badgeColors = {
+          draft: 'bg-slate-600',
+          pending_approval: 'bg-amber-600',
+          approved: 'bg-emerald-600',
+          rejected: 'bg-rose-600',
+          sent: 'bg-sky-600'
+        };
+
+        return `
+          <tr class="border-t border-slate-800">
+            <td class="p-2 font-mono text-xs">${item.id}</td>
+            <td class="p-2">${item.account}</td>
+            <td class="p-2">${item.region}</td>
+            <td class="p-2">${item.owner}</td>
+            <td class="p-2">${eur(item.value)}</td>
+            <td class="p-2"><span class="px-2 py-1 rounded text-xs ${badgeColors[item.status] || 'bg-slate-600'}">${normalizedStatus(item.status)}</span></td>
+            <td class="p-2">
+              <div class="flex flex-wrap gap-1">
+                ${item.status === 'pending_approval' ? `<button data-act="approve" data-id="${item.id}" class="text-xs px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600">Approve</button>` : ''}
+                ${['draft','pending_approval'].includes(item.status) ? `<button data-act="reject" data-id="${item.id}" class="text-xs px-2 py-1 rounded bg-rose-700 hover:bg-rose-600">Reject</button>` : ''}
+                ${item.status === 'approved' ? `<button data-act="send" data-id="${item.id}" class="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">Mark Sent</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="7" class="p-4 text-slate-400">No matching quotes.</td></tr>';
+
+      document.querySelectorAll('[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const quote = quotes.find(q => q.id === btn.dataset.id);
+          if (!quote) return;
+          transition(quote, btn.dataset.act);
+        });
+      });
+    }
+
+    function exportCsv() {
+      const rows = filteredQuotes();
+      const header = ['id', 'account', 'region', 'owner', 'value', 'status', 'createdAt'];
+      const csv = [header.join(',')].concat(rows.map(r => [r.id, r.account, r.region, r.owner, r.value, r.status, r.createdAt].map(v => `"${String(v).replaceAll('"', '""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quote-queue.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit(`CSV export created (${rows.length} rows)`);
+    }
+
+    $('addLine').addEventListener('click', () => {
+      lines.push({ product: products[0].name, qty: 1, discount: 0 });
+      renderLines();
+      renderSummary();
+    });
+
+    $('prevBtn').addEventListener('click', () => {
+      if (step > 1) step -= 1;
+      renderWizard();
+    });
+
+    $('nextBtn').addEventListener('click', () => {
+      if (!validStep()) return;
+      if (step < 3) step += 1;
+      renderWizard();
+    });
+
+    $('wizardForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!validStep()) return;
+
+      const { net } = calcTotals();
+      const policy = policyCheck();
+      const id = `Q-20260309-${quoteSeq++}`;
+      const status = policy.needsApproval ? 'pending_approval' : 'approved';
+
+      quotes.push({
+        id,
+        account: $('accountName').value.trim(),
+        region: $('region').value,
+        owner: $('ownerRole').value,
+        value: Math.round(net),
+        status,
+        createdAt: new Date().toISOString()
+      });
+
+      addAudit(`${id}: created by ${$('ownerRole').value}, routed to ${status === 'pending_approval' ? 'approval queue' : 'auto-approved lane'}`);
+      renderQueue();
+
+      step = 1;
+      lines = [{ product: products[0].name, qty: 1, discount: 0 }];
+      $('wizardForm').reset();
+      $('ownerRole').value = 'Account Executive';
+      $('region').value = 'EMEA';
+      $('dealType').value = 'Net New';
+      $('overrideReason').value = '';
+      renderLines();
+      renderWizard();
+    });
+
+    ['searchInput', 'statusFilter', 'sortBy'].forEach(id => $(id).addEventListener('input', renderQueue));
+    $('exportCsv').addEventListener('click', exportCsv);
+    $('ownerRole').addEventListener('change', () => { renderLines(); renderSummary(); });
+    ['accountName', 'region', 'dealType'].forEach(id => $(id).addEventListener('input', renderSummary));
+
+    addAudit('System booted with quote policy matrix v3.2');
+    addAudit('2 existing quotes loaded from today’s pipeline');
+
+    renderLines();
+    renderWizard();
+    renderQueue();
+  </script>
+</body>
+</html>

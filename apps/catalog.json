@@ -714,5 +714,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-09",
+    "day": 35,
+    "slug": "2026-03-09-quote-approval-wizard",
+    "name": "Quote Approval Wizard",
+    "description": "Guided sales quote creation with policy checks, approval routing, and audit-ready state transitions.",
+    "category": "Sales",
+    "pattern": "Wizard",
+    "tags": [
+      "quote builder",
+      "sales",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
