@@ -737,5 +737,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-10",
+    "day": 36,
+    "slug": "2026-03-10-audit-findings-workbench",
+    "name": "Audit Findings Workbench",
+    "description": "Master-detail legal/compliance desk for triaging findings, routing risk acceptance approvals, and maintaining an audit-ready trail.",
+    "category": "Legal",
+    "pattern": "Master-Detail",
+    "tags": [
+      "audit findings",
+      "legal",
+      "compliance",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

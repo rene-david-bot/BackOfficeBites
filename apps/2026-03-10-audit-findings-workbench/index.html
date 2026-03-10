@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Findings Workbench — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#111827',
+            panelSoft: '#1f2937'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Audit Findings Workbench</h1>
+    <p class="text-slate-300 mt-2">Legal and compliance teams triage control findings, route risk acceptance approvals, and track remediation with a full audit trail.</p>
+
+    <section class="grid grid-cols-1 xl:grid-cols-4 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Your role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Control Owner</option>
+          <option>Compliance Analyst</option>
+          <option>Legal Counsel</option>
+          <option>CISO</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search findings</label>
+        <input id="searchInput" placeholder="control id, title, owner..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option value="open">Open</option>
+          <option value="in_review">In Review</option>
+          <option value="pending_approval">Pending Approval</option>
+          <option value="remediated">Remediated</option>
+          <option value="accepted_risk">Accepted Risk</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="severityFilter" class="text-xs uppercase text-slate-400">Severity</label>
+        <select id="severityFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All severity</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <div class="flex gap-3 items-center">
+          <label for="sortBy" class="text-sm text-slate-300">Sort</label>
+          <select id="sortBy" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="risk_desc">Risk score: high → low</option>
+            <option value="due_asc">Due date: earliest first</option>
+            <option value="severity_desc">Severity: critical first</option>
+            <option value="updated_desc">Recently updated</option>
+          </select>
+        </div>
+        <button id="exportCsv" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">Export filtered CSV</button>
+      </div>
+      <div id="kpiBars" class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+      <section class="xl:col-span-2 bg-panel border border-slate-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold">Findings Queue</h2>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+        <div class="overflow-auto rounded-lg border border-slate-800">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-900 text-slate-300">
+              <tr>
+                <th class="text-left p-2">ID</th>
+                <th class="text-left p-2">Finding</th>
+                <th class="text-left p-2">Owner</th>
+                <th class="text-left p-2">Severity</th>
+                <th class="text-left p-2">Risk</th>
+                <th class="text-left p-2">Due</th>
+                <th class="text-left p-2">Status</th>
+              </tr>
+            </thead>
+            <tbody id="findingTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="bg-panel border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div>
+          <h2 class="text-xl font-semibold">Detail</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">Select a finding to manage remediation workflow.</p>
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailDesc" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="font-semibold text-sm">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="actionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="font-semibold text-sm">Workflow Action</h4>
+
+              <label class="block text-sm" for="assignTo">Assign owner
+                <input id="assignTo" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+
+              <label class="block text-sm" for="nextStatus">Next status
+                <select id="nextStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="open">Open</option>
+                  <option value="in_review">In Review</option>
+                  <option value="pending_approval">Pending Approval</option>
+                  <option value="remediated">Remediated</option>
+                  <option value="accepted_risk">Accepted Risk</option>
+                </select>
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 12 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <label class="block text-sm" for="approvalRef">Approval reference (required for Accepted Risk)
+                <input id="approvalRef" placeholder="e.g. LEG-2026-194" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+
+              <div class="flex flex-wrap gap-2">
+                <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Apply update</button>
+                <button type="button" id="approveBtn" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm hidden">Approve pending risk</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <h4 class="font-semibold text-sm">State machine</h4>
+          <p class="text-xs text-slate-300 mt-2">Open → In Review → Remediated</p>
+          <p class="text-xs text-slate-300">In Review → Pending Approval → Accepted Risk (Legal only)</p>
+        </div>
+
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <h4 class="font-semibold text-sm">Audit Trail</h4>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-72 overflow-auto"></ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const findings = [
+      {
+        id: 'AF-2026-141',
+        title: 'Privileged access reviews missing for treasury system',
+        owner: 'Lena Vogel',
+        severity: 'critical',
+        riskScore: 92,
+        status: 'open',
+        dueDate: '2026-03-18',
+        updatedAt: '2026-03-09T15:20:00Z',
+        domain: 'Finance ITGC',
+        businessUnit: 'Corporate Finance',
+        control: 'SOX-ITGC-04',
+        description: 'Quarterly review evidence for admin users was not retained in the approved archive.',
+        policy: 'Critical findings must move to In Review within 2 business days and require CISO visibility.',
+        audit: [
+          'Finding created from Q1 external audit package.',
+          'Auto-alert sent to control owner and CISO distribution list.'
+        ]
+      },
+      {
+        id: 'AF-2026-137',
+        title: 'Contract retention policy not enforced for vendor addenda',
+        owner: 'Jonas Richter',
+        severity: 'high',
+        riskScore: 78,
+        status: 'in_review',
+        dueDate: '2026-03-22',
+        updatedAt: '2026-03-09T09:40:00Z',
+        domain: 'Legal Operations',
+        businessUnit: 'Procurement Legal',
+        control: 'LEGAL-RET-08',
+        description: '17 vendor amendments lacked retention tags and exceeded policy SLA by 45 days.',
+        policy: 'High severity legal findings need remediation plan and owner assignment before closure.',
+        audit: [
+          'Owner assigned to procurement legal lead.',
+          'Document taxonomy cleanup project started.'
+        ]
+      },
+      {
+        id: 'AF-2026-133',
+        title: 'Third-party DPIA records incomplete for marketing tools',
+        owner: 'Marta Klein',
+        severity: 'high',
+        riskScore: 74,
+        status: 'pending_approval',
+        dueDate: '2026-03-14',
+        updatedAt: '2026-03-08T18:05:00Z',
+        domain: 'Data Privacy',
+        businessUnit: 'Marketing',
+        control: 'GDPR-DPIA-03',
+        description: 'Data processing impact assessment fields are missing for two active ad-tech vendors.',
+        policy: 'Risk acceptance for privacy exceptions requires Legal Counsel approval reference.',
+        audit: [
+          'Compliance analyst requested temporary risk acceptance.',
+          'Awaiting Legal Counsel sign-off.'
+        ]
+      },
+      {
+        id: 'AF-2026-126',
+        title: 'Incident post-mortem sign-off missing in IAM outage',
+        owner: 'Paul Berger',
+        severity: 'medium',
+        riskScore: 58,
+        status: 'in_review',
+        dueDate: '2026-03-25',
+        updatedAt: '2026-03-08T11:12:00Z',
+        domain: 'IT Operations',
+        businessUnit: 'Internal Platforms',
+        control: 'OPS-INC-12',
+        description: 'Root cause report exists but executive sign-off was not captured in the incident register.',
+        policy: 'Medium findings can close only after evidence upload and manager validation.',
+        audit: [
+          'Incident manager assigned.',
+          'Evidence checklist generated.'
+        ]
+      },
+      {
+        id: 'AF-2026-119',
+        title: 'Travel expense exceptions exceed policy threshold',
+        owner: 'Nora Weiss',
+        severity: 'low',
+        riskScore: 37,
+        status: 'remediated',
+        dueDate: '2026-03-11',
+        updatedAt: '2026-03-07T12:00:00Z',
+        domain: 'Finance Controls',
+        businessUnit: 'People Operations',
+        control: 'EXP-TRV-06',
+        description: 'Employee reimbursement requests above meal cap lacked manager rationale notes.',
+        policy: 'Remediated findings remain in monitoring for one cycle before full closure.',
+        audit: [
+          'Expense form updated with mandatory rationale field.',
+          'Spot checks completed by internal audit.'
+        ]
+      },
+      {
+        id: 'AF-2026-115',
+        title: 'Accepted legacy encryption exception for archive vault',
+        owner: 'Kai Sommer',
+        severity: 'medium',
+        riskScore: 49,
+        status: 'accepted_risk',
+        dueDate: '2026-04-30',
+        updatedAt: '2026-03-05T07:55:00Z',
+        domain: 'Security Architecture',
+        businessUnit: 'Enterprise IT',
+        control: 'SEC-CRYPTO-02',
+        description: 'Archive vault uses legacy cipher pending migration project in Q3.',
+        policy: 'Accepted risk requires legal approval reference and quarterly review checkpoint.',
+        audit: [
+          'Legal approval LEG-2026-099 attached.',
+          'Quarterly reassessment scheduled.'
+        ]
+      }
+    ];
+
+    const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+    const allowedTransitions = {
+      open: ['open', 'in_review'],
+      in_review: ['open', 'in_review', 'pending_approval', 'remediated'],
+      pending_approval: ['pending_approval', 'accepted_risk', 'in_review'],
+      remediated: ['remediated', 'in_review'],
+      accepted_risk: ['accepted_risk', 'in_review']
+    };
+
+    const state = {
+      selectedId: null,
+      findings: structuredClone(findings)
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function labelStatus(value) {
+      return value.replace('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+    }
+
+    function cssForSeverity(sev) {
+      return {
+        critical: 'text-rose-300 bg-rose-500/20',
+        high: 'text-orange-300 bg-orange-500/20',
+        medium: 'text-amber-300 bg-amber-500/20',
+        low: 'text-emerald-300 bg-emerald-500/20'
+      }[sev] || 'text-slate-200 bg-slate-700';
+    }
+
+    function nowStamp() {
+      return new Date().toISOString().replace('T', ' ').slice(0, 16);
+    }
+
+    function filteredFindings() {
+      const q = $('searchInput').value.trim().toLowerCase();
+      const status = $('statusFilter').value;
+      const severity = $('severityFilter').value;
+      const sortBy = $('sortBy').value;
+
+      let result = state.findings.filter((f) => {
+        if (status !== 'all' && f.status !== status) return false;
+        if (severity !== 'all' && f.severity !== severity) return false;
+        if (!q) return true;
+        const haystack = `${f.id} ${f.title} ${f.owner} ${f.control} ${f.businessUnit}`.toLowerCase();
+        return haystack.includes(q);
+      });
+
+      result.sort((a, b) => {
+        if (sortBy === 'risk_desc') return b.riskScore - a.riskScore;
+        if (sortBy === 'due_asc') return new Date(a.dueDate) - new Date(b.dueDate);
+        if (sortBy === 'severity_desc') return severityRank[b.severity] - severityRank[a.severity];
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+
+      return result;
+    }
+
+    function renderKpis(list) {
+      const statuses = ['open', 'in_review', 'pending_approval', 'remediated', 'accepted_risk'];
+      const total = Math.max(1, list.length);
+      $('kpiBars').innerHTML = statuses.map((s) => {
+        const count = list.filter((f) => f.status === s).length;
+        const width = Math.round((count / total) * 100);
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+            <div class="flex items-center justify-between text-xs text-slate-300">
+              <span>${labelStatus(s)}</span>
+              <span>${count}</span>
+            </div>
+            <div class="h-2 bg-slate-800 rounded mt-2 overflow-hidden">
+              <div class="h-2 bg-cyan-400 rounded" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTable() {
+      const list = filteredFindings();
+      $('resultCount').textContent = `${list.length} finding${list.length === 1 ? '' : 's'}`;
+      renderKpis(list);
+
+      if (!list.length) {
+        $('findingTable').innerHTML = '<tr><td colspan="7" class="p-4 text-slate-400">No findings match current filters.</td></tr>';
+        return;
+      }
+
+      if (!state.selectedId || !list.some((f) => f.id === state.selectedId)) {
+        state.selectedId = list[0].id;
+      }
+
+      $('findingTable').innerHTML = list.map((f) => {
+        const selected = f.id === state.selectedId;
+        return `
+          <tr data-id="${f.id}" class="finding-row border-t border-slate-800 cursor-pointer ${selected ? 'bg-cyan-500/10' : 'hover:bg-slate-900/70'}">
+            <td class="p-2 font-mono text-xs">${f.id}</td>
+            <td class="p-2">${f.title}</td>
+            <td class="p-2">${f.owner}</td>
+            <td class="p-2"><span class="px-2 py-1 rounded text-xs ${cssForSeverity(f.severity)}">${f.severity}</span></td>
+            <td class="p-2">${f.riskScore}</td>
+            <td class="p-2">${f.dueDate}</td>
+            <td class="p-2">${labelStatus(f.status)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.finding-row').forEach((row) => {
+        row.addEventListener('click', () => {
+          state.selectedId = row.dataset.id;
+          renderTable();
+          renderDetail();
+        });
+      });
+    }
+
+    function pushAudit(finding, text) {
+      finding.audit.unshift(`${nowStamp()} — ${text}`);
+      finding.updatedAt = new Date().toISOString();
+    }
+
+    function renderDetail() {
+      const finding = state.findings.find((f) => f.id === state.selectedId);
+      if (!finding) {
+        $('detailPanel').classList.add('hidden');
+        $('emptyDetail').classList.remove('hidden');
+        $('auditTrail').innerHTML = '';
+        return;
+      }
+
+      $('emptyDetail').classList.add('hidden');
+      $('detailPanel').classList.remove('hidden');
+
+      $('detailTitle').textContent = finding.title;
+      $('detailMeta').textContent = `${finding.id} · ${finding.domain} · ${finding.businessUnit} · ${labelStatus(finding.status)}`;
+      $('detailDesc').textContent = finding.description;
+      $('policyText').textContent = finding.policy;
+
+      $('assignTo').value = finding.owner;
+      $('nextStatus').value = finding.status;
+      $('approvalRef').value = '';
+      $('actionNote').value = '';
+      $('formError').textContent = '';
+
+      $('approveBtn').classList.toggle('hidden', !(finding.status === 'pending_approval' && $('roleSelect').value === 'Legal Counsel'));
+
+      $('auditTrail').innerHTML = finding.audit.map((line) => `<li class="border border-slate-700 rounded p-2 bg-slate-900/60">${line}</li>`).join('');
+    }
+
+    function validateTransition(current, next, role, approvalRef) {
+      if (!allowedTransitions[current]?.includes(next)) {
+        return `Transition ${labelStatus(current)} → ${labelStatus(next)} is not allowed.`;
+      }
+      if (next === 'accepted_risk') {
+        if (role !== 'Legal Counsel') return 'Only Legal Counsel can set Accepted Risk directly.';
+        if (!approvalRef.trim()) return 'Approval reference is required for Accepted Risk.';
+      }
+      if (next === 'pending_approval' && role === 'Control Owner') {
+        return null;
+      }
+      return null;
+    }
+
+    function onSubmitAction(event) {
+      event.preventDefault();
+      const finding = state.findings.find((f) => f.id === state.selectedId);
+      if (!finding) return;
+
+      const role = $('roleSelect').value;
+      const nextStatus = $('nextStatus').value;
+      const assignTo = $('assignTo').value.trim();
+      const note = $('actionNote').value.trim();
+      const approvalRef = $('approvalRef').value.trim();
+
+      if (note.length < 12) {
+        $('formError').textContent = 'Action note must be at least 12 characters.';
+        return;
+      }
+
+      const transitionError = validateTransition(finding.status, nextStatus, role, approvalRef);
+      if (transitionError) {
+        $('formError').textContent = transitionError;
+        return;
+      }
+
+      finding.owner = assignTo || finding.owner;
+      const oldStatus = finding.status;
+      finding.status = nextStatus;
+      if (approvalRef) {
+        pushAudit(finding, `${role} linked approval reference ${approvalRef}.`);
+      }
+      pushAudit(finding, `${role} updated owner to ${finding.owner}; status ${labelStatus(oldStatus)} → ${labelStatus(nextStatus)}. Note: ${note}`);
+
+      renderTable();
+      renderDetail();
+    }
+
+    function onApprovePendingRisk() {
+      const finding = state.findings.find((f) => f.id === state.selectedId);
+      if (!finding) return;
+      const role = $('roleSelect').value;
+
+      if (role !== 'Legal Counsel') {
+        $('formError').textContent = 'Only Legal Counsel can approve pending risk.';
+        return;
+      }
+      if (finding.status !== 'pending_approval') {
+        $('formError').textContent = 'Selected finding is not pending approval.';
+        return;
+      }
+
+      const ref = `LEG-2026-${Math.floor(100 + Math.random() * 899)}`;
+      const oldStatus = finding.status;
+      finding.status = 'accepted_risk';
+      pushAudit(finding, `${role} approved risk acceptance. Reference ${ref}. Status ${labelStatus(oldStatus)} → Accepted Risk.`);
+
+      renderTable();
+      renderDetail();
+    }
+
+    function exportCsv() {
+      const rows = filteredFindings();
+      const header = ['id','title','owner','severity','riskScore','status','dueDate','businessUnit','control'];
+      const lines = [header.join(',')];
+      rows.forEach((f) => {
+        const values = [f.id, f.title, f.owner, f.severity, f.riskScore, f.status, f.dueDate, f.businessUnit, f.control]
+          .map((v) => `"${String(v).replaceAll('"', '""')}"`);
+        lines.push(values.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-findings-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function wireEvents() {
+      ['searchInput','statusFilter','severityFilter','sortBy'].forEach((id) => {
+        $(id).addEventListener(id === 'searchInput' ? 'input' : 'change', () => {
+          renderTable();
+          renderDetail();
+        });
+      });
+      $('roleSelect').addEventListener('change', renderDetail);
+      $('actionForm').addEventListener('submit', onSubmitAction);
+      $('approveBtn').addEventListener('click', onApprovePendingRisk);
+      $('exportCsv').addEventListener('click', exportCsv);
+    }
+
+    wireEvents();
+    renderTable();
+    renderDetail();
+  </script>
+</body>
+</html>
