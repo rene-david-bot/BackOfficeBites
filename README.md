@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Audit Findings Workbench** — master-detail legal/compliance desk for finding triage, risk acceptance approvals, and audit-ready remediation tracking.
+**Roadmap Freeze Calendar** — calendar-driven planning desk for freeze-window requests, policy checks, and approval-ready capacity locks.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -761,5 +761,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-11",
+    "day": 37,
+    "slug": "2026-03-11-roadmap-freeze-calendar",
+    "name": "Roadmap Freeze Calendar",
+    "description": "Calendar-based planning desk for freeze windows with policy checks, approvals, and audit-ready history.",
+    "category": "Planning",
+    "pattern": "Calendar",
+    "tags": [
+      "planning",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

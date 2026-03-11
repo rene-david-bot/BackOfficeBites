@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roadmap Freeze Calendar — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Roadmap Freeze Calendar</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Planning teams schedule roadmap freeze windows, run policy checks, and route approvals before major launches lock engineering capacity.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Team Lead</option>
+          <option>PMO Analyst</option>
+          <option>Portfolio Director</option>
+          <option>Finance Partner</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="pending">Pending Approval</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="teamFilter" class="text-xs uppercase text-slate-400">Portfolio</label>
+        <select id="teamFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All portfolios</option>
+          <option>Core Platform</option>
+          <option>Commerce</option>
+          <option>Data & AI</option>
+          <option>Customer Ops</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="project, owner, initiative..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortBy" class="text-xs uppercase text-slate-400">Sort</label>
+        <select id="sortBy" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="start_asc">Start date (earliest)</option>
+          <option value="capacity_desc">Capacity impact (high → low)</option>
+          <option value="duration_desc">Duration (longest)</option>
+          <option value="updated_desc">Recently updated</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="text-sm text-slate-300">March 2026 freeze planning board</div>
+        <button id="exportBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">Export filtered CSV</button>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+      <section class="xl:col-span-2 space-y-4">
+        <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-xl font-semibold">Calendar View</h2>
+          <div class="grid grid-cols-7 gap-2 text-xs text-slate-400 mt-3" aria-hidden="true">
+            <div class="text-center">Mon</div><div class="text-center">Tue</div><div class="text-center">Wed</div><div class="text-center">Thu</div><div class="text-center">Fri</div><div class="text-center">Sat</div><div class="text-center">Sun</div>
+          </div>
+          <div id="calendarGrid" class="grid grid-cols-7 gap-2 mt-2"></div>
+        </div>
+
+        <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-xl font-semibold">Freeze Queue</h2>
+            <p id="resultCount" class="text-sm text-slate-400"></p>
+          </div>
+          <div class="overflow-auto rounded-lg border border-slate-800 mt-3">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-900 text-slate-300">
+                <tr>
+                  <th class="text-left p-2">ID</th>
+                  <th class="text-left p-2">Initiative</th>
+                  <th class="text-left p-2">Owner</th>
+                  <th class="text-left p-2">Portfolio</th>
+                  <th class="text-left p-2">Window</th>
+                  <th class="text-left p-2">Capacity</th>
+                  <th class="text-left p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody id="queueTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <aside class="space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-xl font-semibold">Selected Request</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">Select a request from calendar or queue.</p>
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailReason" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="transitionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="text-sm font-semibold">Workflow Action</h4>
+              <label class="block text-sm" for="nextStatus">Next status
+                <select id="nextStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending Approval</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </label>
+
+              <label class="block text-sm" for="approvalRef">Approval reference (required for Approved high impact)
+                <input id="approvalRef" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. PMO-2026-431" />
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 10 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+
+              <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Apply update</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">New Freeze Request</h2>
+          <form id="newForm" class="space-y-3 mt-3" novalidate>
+            <label class="block text-sm" for="newInitiative">Initiative
+              <input id="newInitiative" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+            <label class="block text-sm" for="newOwner">Owner
+              <input id="newOwner" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+            <label class="block text-sm" for="newPortfolio">Portfolio
+              <select id="newPortfolio" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option>Core Platform</option>
+                <option>Commerce</option>
+                <option>Data & AI</option>
+                <option>Customer Ops</option>
+              </select>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newStart">Start
+                <input id="newStart" type="date" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newEnd">End
+                <input id="newEnd" type="date" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+            <label class="block text-sm" for="newCapacity">Capacity impact %
+              <input id="newCapacity" type="number" min="5" max="100" value="40" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+            <label class="block text-sm" for="newReason">Business reason (min 12 chars)
+              <textarea id="newReason" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2"></textarea>
+            </label>
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Create draft request</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-52 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const freezeRequests = [
+      {
+        id: 'RF-301',
+        initiative: 'Q2 Checkout Refactor',
+        owner: 'Mina Herzog',
+        portfolio: 'Commerce',
+        start: '2026-03-12',
+        end: '2026-03-18',
+        capacity: 72,
+        status: 'pending',
+        updatedAt: '2026-03-10T16:10:00Z',
+        reason: 'Stabilize checkout service contracts and freeze non-critical scope before migration cutover.',
+        approvalRef: '',
+        audit: ['Draft submitted by Commerce lead.', 'Risk score auto-flagged due to >70% capacity impact.']
+      },
+      {
+        id: 'RF-297',
+        initiative: 'Identity Provider Split',
+        owner: 'Paul Krause',
+        portfolio: 'Core Platform',
+        start: '2026-03-08',
+        end: '2026-03-14',
+        capacity: 58,
+        status: 'approved',
+        updatedAt: '2026-03-09T08:20:00Z',
+        reason: 'Freeze required to keep IAM schema migration and SSO adapter rollout synchronized.',
+        approvalRef: 'PMO-2026-402',
+        audit: ['Submitted by Team Lead.', 'Approved by PMO Analyst with rollout contingency notes.']
+      },
+      {
+        id: 'RF-293',
+        initiative: 'ML Inference Cost Guardrails',
+        owner: 'Fatih Demir',
+        portfolio: 'Data & AI',
+        start: '2026-03-20',
+        end: '2026-03-30',
+        capacity: 44,
+        status: 'draft',
+        updatedAt: '2026-03-10T11:05:00Z',
+        reason: 'Pause feature changes while introducing inference throttling and model fallback routing.',
+        approvalRef: '',
+        audit: ['Draft created by Data & AI lead.']
+      },
+      {
+        id: 'RF-289',
+        initiative: 'Case Routing Rules Consolidation',
+        owner: 'Laura Simon',
+        portfolio: 'Customer Ops',
+        start: '2026-03-15',
+        end: '2026-03-21',
+        capacity: 66,
+        status: 'rejected',
+        updatedAt: '2026-03-08T13:55:00Z',
+        reason: 'Freeze requested for routing redesign but lacked measurable SLA baseline and rollback plan.',
+        approvalRef: '',
+        audit: ['Rejected by Portfolio Director due to missing baseline metrics.']
+      }
+    ];
+
+    const state = {
+      role: 'Team Lead',
+      selectedId: freezeRequests[0].id
+    };
+
+    const statusLabel = {
+      draft: 'Draft',
+      pending: 'Pending Approval',
+      approved: 'Approved',
+      rejected: 'Rejected'
+    };
+
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const teamFilter = document.getElementById('teamFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const kpis = document.getElementById('kpis');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const queueTable = document.getElementById('queueTable');
+    const resultCount = document.getElementById('resultCount');
+    const exportBtn = document.getElementById('exportBtn');
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailReason = document.getElementById('detailReason');
+    const policyText = document.getElementById('policyText');
+    const nextStatus = document.getElementById('nextStatus');
+    const approvalRef = document.getElementById('approvalRef');
+    const actionNote = document.getElementById('actionNote');
+    const transitionForm = document.getElementById('transitionForm');
+    const formError = document.getElementById('formError');
+    const auditTrail = document.getElementById('auditTrail');
+
+    const newForm = document.getElementById('newForm');
+    const newInitiative = document.getElementById('newInitiative');
+    const newOwner = document.getElementById('newOwner');
+    const newPortfolio = document.getElementById('newPortfolio');
+    const newStart = document.getElementById('newStart');
+    const newEnd = document.getElementById('newEnd');
+    const newCapacity = document.getElementById('newCapacity');
+    const newReason = document.getElementById('newReason');
+    const newError = document.getElementById('newError');
+
+    function toDate(value) {
+      return new Date(value + 'T00:00:00');
+    }
+
+    function daysBetween(start, end) {
+      return Math.round((toDate(end) - toDate(start)) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    function matchesFilters(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+      if (teamFilter.value !== 'all' && item.portfolio !== teamFilter.value) return false;
+      if (q) {
+        const corpus = `${item.id} ${item.initiative} ${item.owner} ${item.portfolio}`.toLowerCase();
+        if (!corpus.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function sortedFiltered() {
+      const rows = freezeRequests.filter(matchesFilters);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'start_asc') return toDate(a.start) - toDate(b.start);
+        if (sortBy.value === 'capacity_desc') return b.capacity - a.capacity;
+        if (sortBy.value === 'duration_desc') return daysBetween(b.start, b.end) - daysBetween(a.start, a.end);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+      return rows;
+    }
+
+    function statusBadge(status) {
+      const map = {
+        draft: 'bg-slate-700 text-slate-100',
+        pending: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+        approved: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        rejected: 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${map[status] || 'bg-slate-700'}">${statusLabel[status] || status}</span>`;
+    }
+
+    function renderKpis(rows) {
+      const groups = ['draft', 'pending', 'approved', 'rejected'];
+      kpis.innerHTML = '';
+      for (const g of groups) {
+        const count = rows.filter(r => r.status === g).length;
+        const card = document.createElement('div');
+        card.className = 'bg-panelSoft border border-slate-700 rounded-lg p-3';
+        card.innerHTML = `<p class="text-xs uppercase text-slate-400">${statusLabel[g]}</p><p class="text-2xl font-bold mt-1">${count}</p>`;
+        kpis.appendChild(card);
+      }
+    }
+
+    function inRange(day, start, end) {
+      const d = toDate(day);
+      return d >= toDate(start) && d <= toDate(end);
+    }
+
+    function renderCalendar(rows) {
+      calendarGrid.innerHTML = '';
+      const days = Array.from({ length: 31 }, (_, idx) => `2026-03-${String(idx + 1).padStart(2, '0')}`);
+      const offset = 6;
+      for (let i = 0; i < offset; i++) {
+        const pad = document.createElement('div');
+        pad.className = 'min-h-24 rounded-lg border border-transparent';
+        calendarGrid.appendChild(pad);
+      }
+
+      for (const day of days) {
+        const active = rows.filter(r => inRange(day, r.start, r.end));
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'text-left min-h-24 bg-panel border border-slate-800 rounded-lg p-2 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400';
+        const label = Number(day.slice(-2));
+
+        const chips = active.slice(0, 2).map(item => `<button type="button" data-id="${item.id}" class="freeze-pill block mt-1 w-full text-left truncate text-xs px-2 py-1 rounded ${item.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300' : item.status === 'pending' ? 'bg-amber-500/20 text-amber-300' : item.status === 'rejected' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-200'}">${item.id} · ${item.initiative}</button>`).join('');
+        const more = active.length > 2 ? `<p class="text-[11px] text-slate-400 mt-1">+${active.length - 2} more</p>` : '';
+
+        cell.innerHTML = `<p class="text-xs text-slate-300">${label}</p>${chips}${more}`;
+
+        cell.addEventListener('click', () => {
+          if (active[0]) {
+            state.selectedId = active[0].id;
+            render();
+          }
+        });
+        calendarGrid.appendChild(cell);
+      }
+
+      calendarGrid.querySelectorAll('.freeze-pill').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderQueue(rows) {
+      queueTable.innerHTML = '';
+      for (const item of rows) {
+        const tr = document.createElement('tr');
+        tr.className = `border-t border-slate-800 cursor-pointer hover:bg-slate-900/60 ${state.selectedId === item.id ? 'bg-slate-900/80' : ''}`;
+        tr.tabIndex = 0;
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-xs">${item.id}</td>
+          <td class="p-2">${item.initiative}</td>
+          <td class="p-2">${item.owner}</td>
+          <td class="p-2">${item.portfolio}</td>
+          <td class="p-2">${item.start} → ${item.end}</td>
+          <td class="p-2">${item.capacity}%</td>
+          <td class="p-2">${statusBadge(item.status)}</td>
+        `;
+        tr.addEventListener('click', () => {
+          state.selectedId = item.id;
+          render();
+        });
+        tr.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            state.selectedId = item.id;
+            render();
+          }
+        });
+        queueTable.appendChild(tr);
+      }
+      resultCount.textContent = `${rows.length} request${rows.length === 1 ? '' : 's'}`;
+    }
+
+    function policyMessage(item) {
+      const duration = daysBetween(item.start, item.end);
+      const highImpact = item.capacity >= 70 || duration > 10;
+      if (highImpact) {
+        return 'High-impact freeze detected (capacity ≥ 70% or >10 days). Approval reference is mandatory for Approved status.';
+      }
+      return 'Standard freeze: Team Lead can submit to Pending; PMO Analyst or Portfolio Director can approve/reject.';
+    }
+
+    function allowedStatuses(item) {
+      const isApprover = state.role === 'PMO Analyst' || state.role === 'Portfolio Director';
+      if (item.status === 'draft') return ['draft', 'pending'];
+      if (item.status === 'pending') return isApprover ? ['pending', 'approved', 'rejected'] : ['pending'];
+      if (item.status === 'approved') return isApprover ? ['approved', 'rejected'] : ['approved'];
+      if (item.status === 'rejected') return isApprover ? ['rejected', 'draft'] : ['rejected'];
+      return ['draft', 'pending', 'approved', 'rejected'];
+    }
+
+    function renderDetail(selected) {
+      if (!selected) {
+        detailPanel.classList.add('hidden');
+        emptyDetail.classList.remove('hidden');
+        auditTrail.innerHTML = '<li>No request selected.</li>';
+        return;
+      }
+
+      detailPanel.classList.remove('hidden');
+      emptyDetail.classList.add('hidden');
+      detailTitle.textContent = `${selected.id} · ${selected.initiative}`;
+      detailMeta.textContent = `${selected.owner} · ${selected.portfolio} · ${selected.start} → ${selected.end} · ${selected.capacity}% capacity`;
+      detailReason.textContent = selected.reason;
+      policyText.textContent = policyMessage(selected);
+
+      const allowed = allowedStatuses(selected);
+      nextStatus.innerHTML = allowed.map(s => `<option value="${s}">${statusLabel[s]}</option>`).join('');
+      nextStatus.value = selected.status;
+      approvalRef.value = selected.approvalRef || '';
+      actionNote.value = '';
+      formError.textContent = '';
+
+      auditTrail.innerHTML = selected.audit.map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`).join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'initiative', 'owner', 'portfolio', 'start', 'end', 'capacity', 'status', 'approvalRef'];
+      const lines = [headers.join(',')];
+      for (const item of rows) {
+        lines.push(headers.map(h => `"${String(item[h] ?? '').replaceAll('"', '""')}"`).join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'roadmap-freeze-calendar.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = sortedFiltered();
+      renderKpis(rows);
+      renderCalendar(rows);
+      renderQueue(rows);
+
+      const selected = freezeRequests.find(f => f.id === state.selectedId) || rows[0] || null;
+      if (selected) state.selectedId = selected.id;
+      renderDetail(selected);
+    }
+
+    transitionForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const selected = freezeRequests.find(f => f.id === state.selectedId);
+      if (!selected) return;
+
+      const target = nextStatus.value;
+      const note = actionNote.value.trim();
+      const ref = approvalRef.value.trim();
+
+      if (note.length < 10) {
+        formError.textContent = 'Add a note with at least 10 characters.';
+        return;
+      }
+
+      const duration = daysBetween(selected.start, selected.end);
+      const highImpact = selected.capacity >= 70 || duration > 10;
+      const isApprover = state.role === 'PMO Analyst' || state.role === 'Portfolio Director';
+
+      if ((target === 'approved' || target === 'rejected') && !isApprover) {
+        formError.textContent = 'Only PMO Analyst or Portfolio Director can approve/reject.';
+        return;
+      }
+      if (target === 'approved' && highImpact && !ref) {
+        formError.textContent = 'Approval reference is required for high-impact requests.';
+        return;
+      }
+
+      selected.status = target;
+      selected.approvalRef = ref;
+      selected.updatedAt = new Date().toISOString();
+      selected.audit.unshift(`${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC — ${state.role}: ${note} (→ ${statusLabel[target]}${ref ? `, ${ref}` : ''})`);
+      formError.textContent = '';
+      render();
+    });
+
+    newForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const initiative = newInitiative.value.trim();
+      const owner = newOwner.value.trim();
+      const portfolio = newPortfolio.value;
+      const start = newStart.value;
+      const end = newEnd.value;
+      const capacity = Number(newCapacity.value);
+      const reason = newReason.value.trim();
+
+      if (!initiative || !owner || !start || !end) {
+        newError.textContent = 'Please complete initiative, owner, and both dates.';
+        return;
+      }
+      if (toDate(start) > toDate(end)) {
+        newError.textContent = 'End date must be on or after start date.';
+        return;
+      }
+      if (reason.length < 12) {
+        newError.textContent = 'Business reason must be at least 12 characters.';
+        return;
+      }
+      if (capacity < 5 || capacity > 100) {
+        newError.textContent = 'Capacity impact must be between 5 and 100.';
+        return;
+      }
+
+      const nextId = `RF-${Math.max(...freezeRequests.map(r => Number(r.id.split('-')[1]))) + 1}`;
+      const created = {
+        id: nextId,
+        initiative,
+        owner,
+        portfolio,
+        start,
+        end,
+        capacity,
+        status: 'draft',
+        updatedAt: new Date().toISOString(),
+        reason,
+        approvalRef: '',
+        audit: [`${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC — Draft created by ${state.role}.`]
+      };
+      freezeRequests.unshift(created);
+      state.selectedId = created.id;
+      newForm.reset();
+      newCapacity.value = 40;
+      newError.textContent = '';
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      state.role = roleSelect.value;
+      render();
+    });
+
+    [statusFilter, teamFilter, sortBy].forEach(el => el.addEventListener('change', render));
+    searchInput.addEventListener('input', render);
+
+    exportBtn.addEventListener('click', () => exportCsv(sortedFiltered()));
+
+    render();
+  </script>
+</body>
+</html>
