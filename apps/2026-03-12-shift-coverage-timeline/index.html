@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift Coverage Timeline — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Shift Coverage Timeline</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">HR operations teams coordinate shift coverage requests, enforce overtime policy, and route approvals before staffing gaps hit service levels.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Shift Lead</option>
+          <option>HR Operations</option>
+          <option>Workforce Manager</option>
+          <option>Finance Reviewer</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="pending">Pending Approval</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="siteFilter" class="text-xs uppercase text-slate-400">Site</label>
+        <select id="siteFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All sites</option>
+          <option>Berlin Support Hub</option>
+          <option>Dresden Fulfillment</option>
+          <option>Hamburg Service Desk</option>
+          <option>Munich Care Center</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="employee, role, ticket..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortBy" class="text-xs uppercase text-slate-400">Sort</label>
+        <select id="sortBy" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="start_asc">Start time (soonest)</option>
+          <option value="hours_desc">Coverage hours (high to low)</option>
+          <option value="cost_desc">Overtime cost (high to low)</option>
+          <option value="updated_desc">Recently updated</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="exportBtn" class="text-xs uppercase text-slate-400">Export</label>
+        <button id="exportBtn" type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Coverage risk pulse for Week 11 (UTC)</p>
+        <p id="resultCount" class="text-sm text-slate-400"></p>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+      <section class="xl:col-span-2 space-y-4">
+        <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-xl font-semibold">Coverage Timeline</h2>
+          <p class="text-sm text-slate-400 mt-1">Click an item to inspect policy validation and approve/reject workflow transitions.</p>
+          <ol id="timeline" class="relative border-s border-slate-700 mt-4 ms-3 space-y-4"></ol>
+        </div>
+
+        <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-xl font-semibold">Coverage Queue</h2>
+          <div class="overflow-auto rounded-lg border border-slate-800 mt-3">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-900 text-slate-300">
+                <tr>
+                  <th class="text-left p-2">ID</th>
+                  <th class="text-left p-2">Employee</th>
+                  <th class="text-left p-2">Site</th>
+                  <th class="text-left p-2">Window (UTC)</th>
+                  <th class="text-left p-2">Hours</th>
+                  <th class="text-left p-2">Cost €</th>
+                  <th class="text-left p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody id="queueTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <aside class="space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-xl font-semibold">Selected Request</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">Select a request from timeline or queue.</p>
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailReason" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="transitionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="text-sm font-semibold">Workflow Action</h4>
+              <label class="block text-sm" for="nextStatus">Next status
+                <select id="nextStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending Approval</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </label>
+
+              <label class="block text-sm" for="approvalRef">Approval reference (required for high risk approvals)
+                <input id="approvalRef" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. WFM-2026-188" />
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 10 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+              <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Apply update</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">New Coverage Request</h2>
+          <form id="newForm" class="space-y-3 mt-3" novalidate>
+            <label class="block text-sm" for="newEmployee">Employee
+              <input id="newEmployee" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+            <label class="block text-sm" for="newRole">Role
+              <input id="newRole" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Senior Agent" />
+            </label>
+            <label class="block text-sm" for="newSite">Site
+              <select id="newSite" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option>Berlin Support Hub</option>
+                <option>Dresden Fulfillment</option>
+                <option>Hamburg Service Desk</option>
+                <option>Munich Care Center</option>
+              </select>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newStart">Start (UTC)
+                <input id="newStart" type="datetime-local" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newEnd">End (UTC)
+                <input id="newEnd" type="datetime-local" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newHours">Hours
+                <input id="newHours" type="number" min="1" max="24" value="8" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newCost">Overtime Cost €
+                <input id="newCost" type="number" min="0" step="10" value="120" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+            <label class="block text-sm" for="newReason">Coverage rationale (min 12 chars)
+              <textarea id="newReason" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2"></textarea>
+            </label>
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Create draft request</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-52 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const coverageRequests = [
+      {
+        id: 'SC-441',
+        employee: 'Anika Schubert',
+        role: 'Senior Agent',
+        site: 'Berlin Support Hub',
+        start: '2026-03-12T07:00',
+        end: '2026-03-12T15:00',
+        hours: 8,
+        overtimeCost: 210,
+        status: 'pending',
+        updatedAt: '2026-03-11T19:20:00Z',
+        reason: 'Late sickness in Tier-2 queue needs immediate replacement for enterprise incident coverage.',
+        approvalRef: '',
+        audit: [
+          'Draft submitted by Shift Lead.',
+          'Finance impact flagged above €200 threshold.'
+        ]
+      },
+      {
+        id: 'SC-438',
+        employee: 'Lars Neumann',
+        role: 'Forklift Operator',
+        site: 'Dresden Fulfillment',
+        start: '2026-03-12T22:00',
+        end: '2026-03-13T06:00',
+        hours: 8,
+        overtimeCost: 175,
+        status: 'approved',
+        updatedAt: '2026-03-11T15:40:00Z',
+        reason: 'Night shift gap after delayed inbound truck sequence and mandatory loading SLA.',
+        approvalRef: 'WFM-2026-172',
+        audit: [
+          'Submitted by local Shift Lead.',
+          'Approved by Workforce Manager with cost center note.'
+        ]
+      },
+      {
+        id: 'SC-433',
+        employee: 'Mira Soltan',
+        role: 'Service Desk Analyst',
+        site: 'Hamburg Service Desk',
+        start: '2026-03-13T10:00',
+        end: '2026-03-13T18:00',
+        hours: 8,
+        overtimeCost: 260,
+        status: 'draft',
+        updatedAt: '2026-03-11T10:05:00Z',
+        reason: 'Peak ticket surge expected during endpoint rollout wave and patch verification window.',
+        approvalRef: '',
+        audit: [
+          'Draft created by HR Operations.'
+        ]
+      },
+      {
+        id: 'SC-427',
+        employee: 'Jonas Feld',
+        role: 'Customer Care Specialist',
+        site: 'Munich Care Center',
+        start: '2026-03-14T06:00',
+        end: '2026-03-14T14:00',
+        hours: 8,
+        overtimeCost: 140,
+        status: 'rejected',
+        updatedAt: '2026-03-10T14:30:00Z',
+        reason: 'Weekend extension requested but no workload evidence was attached for SLA breach risk.',
+        approvalRef: '',
+        audit: [
+          'Rejected by HR Operations due to missing demand evidence.'
+        ]
+      }
+    ];
+
+    const state = {
+      role: 'Shift Lead',
+      selectedId: coverageRequests[0].id
+    };
+
+    const statusLabel = {
+      draft: 'Draft',
+      pending: 'Pending Approval',
+      approved: 'Approved',
+      rejected: 'Rejected'
+    };
+
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const siteFilter = document.getElementById('siteFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const kpis = document.getElementById('kpis');
+    const resultCount = document.getElementById('resultCount');
+    const timeline = document.getElementById('timeline');
+    const queueTable = document.getElementById('queueTable');
+
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailReason = document.getElementById('detailReason');
+    const policyText = document.getElementById('policyText');
+    const nextStatus = document.getElementById('nextStatus');
+    const approvalRef = document.getElementById('approvalRef');
+    const actionNote = document.getElementById('actionNote');
+    const transitionForm = document.getElementById('transitionForm');
+    const formError = document.getElementById('formError');
+    const auditTrail = document.getElementById('auditTrail');
+
+    const newForm = document.getElementById('newForm');
+    const newEmployee = document.getElementById('newEmployee');
+    const newRole = document.getElementById('newRole');
+    const newSite = document.getElementById('newSite');
+    const newStart = document.getElementById('newStart');
+    const newEnd = document.getElementById('newEnd');
+    const newHours = document.getElementById('newHours');
+    const newCost = document.getElementById('newCost');
+    const newReason = document.getElementById('newReason');
+    const newError = document.getElementById('newError');
+
+    function parseLocalDateTime(value) {
+      return new Date(value + ':00Z');
+    }
+
+    function formatWindow(item) {
+      const start = new Date(item.start + ':00Z');
+      const end = new Date(item.end + ':00Z');
+      const opts = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' };
+      return `${start.toLocaleString('en-GB', opts)} → ${end.toLocaleString('en-GB', opts)}`;
+    }
+
+    function statusBadge(status) {
+      const map = {
+        draft: 'bg-slate-700 text-slate-100',
+        pending: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+        approved: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        rejected: 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${map[status] || 'bg-slate-700'}">${statusLabel[status] || status}</span>`;
+    }
+
+    function matchesFilters(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+      if (siteFilter.value !== 'all' && item.site !== siteFilter.value) return false;
+      if (q) {
+        const corpus = `${item.id} ${item.employee} ${item.role} ${item.site}`.toLowerCase();
+        if (!corpus.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function sortedFiltered() {
+      const rows = coverageRequests.filter(matchesFilters);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'start_asc') return parseLocalDateTime(a.start) - parseLocalDateTime(b.start);
+        if (sortBy.value === 'hours_desc') return b.hours - a.hours;
+        if (sortBy.value === 'cost_desc') return b.overtimeCost - a.overtimeCost;
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const totals = {
+        open: rows.filter(r => r.status === 'draft' || r.status === 'pending').length,
+        approved: rows.filter(r => r.status === 'approved').length,
+        rejected: rows.filter(r => r.status === 'rejected').length,
+        hours: rows.reduce((sum, r) => sum + r.hours, 0),
+        cost: rows.reduce((sum, r) => sum + r.overtimeCost, 0)
+      };
+
+      const cards = [
+        ['Open', totals.open],
+        ['Approved', totals.approved],
+        ['Rejected', totals.rejected],
+        ['Hours', totals.hours],
+        ['Cost (€)', totals.cost.toLocaleString('en-GB')]
+      ];
+
+      kpis.innerHTML = cards.map(([label, value]) => `
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <p class="text-xs uppercase text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTimeline(rows) {
+      timeline.innerHTML = '';
+      rows.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'ms-4';
+
+        const selectedClass = state.selectedId === item.id ? 'border-amber-400/70 bg-slate-900/80' : 'border-slate-800 bg-panel';
+
+        li.innerHTML = `
+          <span class="absolute -start-1.5 mt-2 h-3 w-3 rounded-full border ${state.selectedId === item.id ? 'bg-amber-400 border-amber-300' : 'bg-slate-600 border-slate-500'}"></span>
+          <button type="button" data-id="${item.id}" class="timeline-item w-full text-left rounded-xl border ${selectedClass} p-3 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="font-semibold">${item.id} · ${item.employee}</p>
+              ${statusBadge(item.status)}
+            </div>
+            <p class="text-sm text-slate-300 mt-1">${item.role} — ${item.site}</p>
+            <p class="text-xs text-slate-400 mt-1">${formatWindow(item)} · ${item.hours}h · €${item.overtimeCost}</p>
+          </button>
+        `;
+        timeline.appendChild(li);
+      });
+
+      timeline.querySelectorAll('.timeline-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderQueue(rows) {
+      queueTable.innerHTML = '';
+      rows.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = `border-t border-slate-800 cursor-pointer hover:bg-slate-900/60 ${state.selectedId === item.id ? 'bg-slate-900/80' : ''}`;
+        tr.tabIndex = 0;
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-xs">${item.id}</td>
+          <td class="p-2">${item.employee}</td>
+          <td class="p-2">${item.site}</td>
+          <td class="p-2">${formatWindow(item)}</td>
+          <td class="p-2">${item.hours}</td>
+          <td class="p-2">${item.overtimeCost}</td>
+          <td class="p-2">${statusBadge(item.status)}</td>
+        `;
+
+        tr.addEventListener('click', () => {
+          state.selectedId = item.id;
+          render();
+        });
+
+        tr.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            state.selectedId = item.id;
+            render();
+          }
+        });
+
+        queueTable.appendChild(tr);
+      });
+
+      resultCount.textContent = `${rows.length} request${rows.length === 1 ? '' : 's'}`;
+    }
+
+    function policyMessage(item) {
+      const highCost = item.overtimeCost >= 200;
+      const longCoverage = item.hours > 8;
+      if (highCost || longCoverage) {
+        return 'High-risk policy: Overtime cost ≥ €200 or coverage > 8h requires Workforce Manager approval reference before Approved status.';
+      }
+      return 'Standard policy: Shift Lead can submit to Pending; HR Operations or Workforce Manager can approve/reject.';
+    }
+
+    function allowedStatuses(item) {
+      const isApprover = state.role === 'HR Operations' || state.role === 'Workforce Manager';
+      if (item.status === 'draft') return ['draft', 'pending'];
+      if (item.status === 'pending') return isApprover ? ['pending', 'approved', 'rejected'] : ['pending'];
+      if (item.status === 'approved') return isApprover ? ['approved', 'rejected'] : ['approved'];
+      if (item.status === 'rejected') return isApprover ? ['rejected', 'draft'] : ['rejected'];
+      return ['draft', 'pending', 'approved', 'rejected'];
+    }
+
+    function renderDetail(selected) {
+      if (!selected) {
+        detailPanel.classList.add('hidden');
+        emptyDetail.classList.remove('hidden');
+        auditTrail.innerHTML = '<li>No request selected.</li>';
+        return;
+      }
+
+      detailPanel.classList.remove('hidden');
+      emptyDetail.classList.add('hidden');
+      detailTitle.textContent = `${selected.id} · ${selected.employee}`;
+      detailMeta.textContent = `${selected.role} · ${selected.site} · ${formatWindow(selected)} · ${selected.hours}h · €${selected.overtimeCost}`;
+      detailReason.textContent = selected.reason;
+      policyText.textContent = policyMessage(selected);
+
+      const allowed = allowedStatuses(selected);
+      nextStatus.innerHTML = allowed.map(s => `<option value="${s}">${statusLabel[s]}</option>`).join('');
+      nextStatus.value = selected.status;
+      approvalRef.value = selected.approvalRef || '';
+      actionNote.value = '';
+      formError.textContent = '';
+
+      auditTrail.innerHTML = selected.audit.map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`).join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'employee', 'role', 'site', 'start', 'end', 'hours', 'overtimeCost', 'status', 'approvalRef'];
+      const lines = [headers.join(',')];
+      rows.forEach(item => {
+        lines.push(headers.map(h => `"${String(item[h] ?? '').replaceAll('"', '""')}"`).join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'shift-coverage-timeline.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = sortedFiltered();
+      renderKpis(rows);
+      renderTimeline(rows);
+      renderQueue(rows);
+
+      const selected = coverageRequests.find(r => r.id === state.selectedId) || rows[0] || null;
+      if (selected) state.selectedId = selected.id;
+      renderDetail(selected);
+    }
+
+    transitionForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const selected = coverageRequests.find(r => r.id === state.selectedId);
+      if (!selected) return;
+
+      const target = nextStatus.value;
+      const note = actionNote.value.trim();
+      const ref = approvalRef.value.trim();
+      const isApprover = state.role === 'HR Operations' || state.role === 'Workforce Manager';
+      const highRisk = selected.overtimeCost >= 200 || selected.hours > 8;
+
+      if (note.length < 10) {
+        formError.textContent = 'Please provide an action note with at least 10 characters.';
+        return;
+      }
+      if ((target === 'approved' || target === 'rejected') && !isApprover) {
+        formError.textContent = 'Only HR Operations or Workforce Manager can approve/reject.';
+        return;
+      }
+      if (target === 'approved' && highRisk && !ref) {
+        formError.textContent = 'Approval reference is required for high-risk requests.';
+        return;
+      }
+
+      selected.status = target;
+      selected.approvalRef = ref;
+      selected.updatedAt = new Date().toISOString();
+      selected.audit.unshift(`${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC — ${state.role}: ${note} (→ ${statusLabel[target]}${ref ? `, ${ref}` : ''})`);
+      formError.textContent = '';
+      render();
+    });
+
+    newForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const employee = newEmployee.value.trim();
+      const role = newRole.value.trim();
+      const site = newSite.value;
+      const start = newStart.value;
+      const end = newEnd.value;
+      const hours = Number(newHours.value);
+      const cost = Number(newCost.value);
+      const reason = newReason.value.trim();
+
+      if (!employee || !role || !start || !end) {
+        newError.textContent = 'Please complete employee, role, start, and end fields.';
+        return;
+      }
+      if (parseLocalDateTime(start) >= parseLocalDateTime(end)) {
+        newError.textContent = 'End time must be after start time.';
+        return;
+      }
+      if (hours < 1 || hours > 24) {
+        newError.textContent = 'Coverage hours must be between 1 and 24.';
+        return;
+      }
+      if (cost < 0) {
+        newError.textContent = 'Overtime cost cannot be negative.';
+        return;
+      }
+      if (reason.length < 12) {
+        newError.textContent = 'Coverage rationale must be at least 12 characters.';
+        return;
+      }
+
+      const nextIdNum = Math.max(...coverageRequests.map(r => Number(r.id.split('-')[1]))) + 1;
+      const created = {
+        id: `SC-${nextIdNum}`,
+        employee,
+        role,
+        site,
+        start,
+        end,
+        hours,
+        overtimeCost: cost,
+        status: 'draft',
+        updatedAt: new Date().toISOString(),
+        reason,
+        approvalRef: '',
+        audit: [`${new Date().toLocaleString('en-GB', { timeZone: 'UTC' })} UTC — Draft created by ${state.role}.`]
+      };
+
+      coverageRequests.unshift(created);
+      state.selectedId = created.id;
+      newForm.reset();
+      newHours.value = 8;
+      newCost.value = 120;
+      newError.textContent = '';
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      state.role = roleSelect.value;
+      render();
+    });
+
+    [statusFilter, siteFilter, sortBy].forEach(el => el.addEventListener('change', render));
+    searchInput.addEventListener('input', render);
+    exportBtn.addEventListener('click', () => exportCsv(sortedFiltered()));
+
+    render();
+  </script>
+</body>
+</html>

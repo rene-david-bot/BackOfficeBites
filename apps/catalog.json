@@ -784,5 +784,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-12",
+    "day": 38,
+    "slug": "2026-03-12-shift-coverage-timeline",
+    "name": "Shift Coverage Timeline",
+    "description": "Timeline view for staffing gap requests with overtime policy checks, approval routing, and audit-ready history.",
+    "category": "HR",
+    "pattern": "Timeline",
+    "tags": [
+      "shift scheduler",
+      "hr",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
