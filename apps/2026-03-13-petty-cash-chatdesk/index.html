@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Petty Cash Reconciliation Chatdesk — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Petty Cash Reconciliation Chatdesk</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Finance teams reconcile branch cash-box variances through structured chat threads, policy checks, and approval-ready state transitions.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Cash Custodian</option>
+          <option>Finance Reviewer</option>
+          <option>Finance Manager</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option value="new">New</option>
+          <option value="in_review">In Review</option>
+          <option value="awaiting_approval">Awaiting Approval</option>
+          <option value="resolved">Resolved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="branchFilter" class="text-xs uppercase text-slate-400">Branch</label>
+        <select id="branchFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All branches</option>
+          <option>Dresden HQ</option>
+          <option>Berlin Mitte</option>
+          <option>Leipzig Süd</option>
+          <option>Hamburg Nord</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="case id, custodian, note..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortBy" class="text-xs uppercase text-slate-400">Sort</label>
+        <select id="sortBy" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="updated_desc">Recently updated</option>
+          <option value="delta_desc">Largest variance</option>
+          <option value="amount_desc">Cash amount high to low</option>
+          <option value="id_asc">Case ID</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label class="text-xs uppercase text-slate-400">Export</label>
+        <button id="exportBtn" type="button" class="mt-2 w-full px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Daily reconciliation pulse</p>
+        <p id="resultCount" class="text-sm text-slate-400"></p>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section class="xl:col-span-3 bg-panel border border-slate-800 rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Case Inbox</h2>
+        <p class="text-sm text-slate-400 mt-1">Select a case to inspect thread, policy checks, and workflow actions.</p>
+        <ul id="caseList" class="mt-4 space-y-2 max-h-[38rem] overflow-auto"></ul>
+      </section>
+
+      <section class="xl:col-span-5 bg-panel border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[38rem]">
+        <h2 class="text-xl font-semibold">Reconciliation Thread</h2>
+        <p id="threadMeta" class="text-sm text-slate-400 mt-1">Select a case from the inbox.</p>
+
+        <div id="chatThread" class="mt-4 flex-1 overflow-auto space-y-3 pr-1"></div>
+
+        <form id="chatForm" class="mt-4 space-y-2" novalidate>
+          <label for="chatInput" class="text-sm">Add update</label>
+          <textarea id="chatInput" rows="3" class="w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Write a reconciliation note (min 4 chars)..."></textarea>
+          <div class="flex items-center justify-between gap-2">
+            <p id="chatError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Post to thread</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="xl:col-span-4 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Case Detail</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">No case selected.</p>
+
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailSummary" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="transitionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="text-sm font-semibold">Workflow Action</h4>
+              <label class="block text-sm" for="nextStatus">Next status
+                <select id="nextStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></select>
+              </label>
+
+              <label class="block text-sm" for="approvalCode">Approval code (required to resolve high-variance cases)
+                <input id="approvalCode" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. FIN-APR-611" />
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 10 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+              <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Apply update</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Create Case</h2>
+          <form id="newCaseForm" class="space-y-3 mt-3" novalidate>
+            <label class="block text-sm" for="newBranch">Branch
+              <select id="newBranch" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option>Dresden HQ</option>
+                <option>Berlin Mitte</option>
+                <option>Leipzig Süd</option>
+                <option>Hamburg Nord</option>
+              </select>
+            </label>
+
+            <label class="block text-sm" for="newCustodian">Cash custodian
+              <input id="newCustodian" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Lara König" />
+            </label>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newAmount">Declared cash (€)
+                <input id="newAmount" type="number" min="10" step="10" value="320" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newDelta">Variance (€)
+                <input id="newDelta" type="number" min="-500" max="500" step="5" value="0" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+
+            <label class="block text-sm" for="newSummary">Issue summary (min 12 chars)
+              <textarea id="newSummary" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Describe missing receipt, counting error, or timing issue."></textarea>
+            </label>
+
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">Create new case</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-44 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const cases = [
+      {
+        id: 'PC-902',
+        branch: 'Dresden HQ',
+        custodian: 'Lara König',
+        amount: 480,
+        delta: -165,
+        status: 'awaiting_approval',
+        updatedAt: '2026-03-13T07:58:00Z',
+        summary: 'Missing fuel receipt from courier run. Cash count short by €165 after end-of-day drawer close.',
+        approvalCode: '',
+        thread: [
+          { by: 'Cash Custodian', at: '2026-03-13T06:50:00Z', text: 'Attached courier log and handover sheet. Receipt still pending from vendor.' },
+          { by: 'Finance Reviewer', at: '2026-03-13T07:15:00Z', text: 'Variance above €150 threshold. Move to manager approval with branch note.' }
+        ],
+        audit: [
+          '07:15 UTC — Finance Reviewer moved case to Awaiting Approval.',
+          '06:50 UTC — Case created by Cash Custodian.'
+        ]
+      },
+      {
+        id: 'PC-897',
+        branch: 'Berlin Mitte',
+        custodian: 'Noah Brandt',
+        amount: 260,
+        delta: 35,
+        status: 'in_review',
+        updatedAt: '2026-03-13T07:10:00Z',
+        summary: 'Drawer overage due to duplicated card-fallback entry. Need confirmation from POS export.',
+        approvalCode: '',
+        thread: [
+          { by: 'Cash Custodian', at: '2026-03-13T06:40:00Z', text: 'Found duplicate fallback transaction in local POS printout.' },
+          { by: 'Finance Reviewer', at: '2026-03-13T07:10:00Z', text: 'Waiting for corrected journal before escalation.' }
+        ],
+        audit: [
+          '07:10 UTC — Finance Reviewer marked case In Review.',
+          '06:40 UTC — Case created by Cash Custodian.'
+        ]
+      },
+      {
+        id: 'PC-894',
+        branch: 'Leipzig Süd',
+        custodian: 'Mira Soltan',
+        amount: 515,
+        delta: -20,
+        status: 'resolved',
+        updatedAt: '2026-03-12T18:25:00Z',
+        summary: 'Receipt image was delayed in sync queue. Reconciled after upload and approval code attached.',
+        approvalCode: 'FIN-APR-587',
+        thread: [
+          { by: 'Finance Reviewer', at: '2026-03-12T17:10:00Z', text: 'Variance minor but total cash amount above €500, manager review required.' },
+          { by: 'Finance Manager', at: '2026-03-12T18:25:00Z', text: 'Approved and resolved after source receipt matched deposit slip.' }
+        ],
+        audit: [
+          '18:25 UTC — Finance Manager resolved case with approval FIN-APR-587.',
+          '17:10 UTC — Finance Reviewer moved case to Awaiting Approval.'
+        ]
+      },
+      {
+        id: 'PC-890',
+        branch: 'Hamburg Nord',
+        custodian: 'Jonas Feld',
+        amount: 140,
+        delta: -75,
+        status: 'rejected',
+        updatedAt: '2026-03-12T16:02:00Z',
+        summary: 'Claimed taxi payout without policy category and no supporting voucher.',
+        approvalCode: '',
+        thread: [
+          { by: 'Finance Reviewer', at: '2026-03-12T15:45:00Z', text: 'Please provide policy category and receipt scan.' },
+          { by: 'Finance Manager', at: '2026-03-12T16:02:00Z', text: 'Rejected due to missing documentation and non-compliant payout purpose.' }
+        ],
+        audit: [
+          '16:02 UTC — Finance Manager rejected case.',
+          '15:45 UTC — Finance Reviewer requested documents.'
+        ]
+      }
+    ];
+
+    const statusLabel = {
+      new: 'New',
+      in_review: 'In Review',
+      awaiting_approval: 'Awaiting Approval',
+      resolved: 'Resolved',
+      rejected: 'Rejected'
+    };
+
+    const state = {
+      role: 'Cash Custodian',
+      selectedId: cases[0].id
+    };
+
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const branchFilter = document.getElementById('branchFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const kpis = document.getElementById('kpis');
+    const resultCount = document.getElementById('resultCount');
+    const caseList = document.getElementById('caseList');
+    const threadMeta = document.getElementById('threadMeta');
+    const chatThread = document.getElementById('chatThread');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatError = document.getElementById('chatError');
+
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailSummary = document.getElementById('detailSummary');
+    const policyText = document.getElementById('policyText');
+    const nextStatus = document.getElementById('nextStatus');
+    const approvalCode = document.getElementById('approvalCode');
+    const actionNote = document.getElementById('actionNote');
+    const formError = document.getElementById('formError');
+    const transitionForm = document.getElementById('transitionForm');
+
+    const newCaseForm = document.getElementById('newCaseForm');
+    const newBranch = document.getElementById('newBranch');
+    const newCustodian = document.getElementById('newCustodian');
+    const newAmount = document.getElementById('newAmount');
+    const newDelta = document.getElementById('newDelta');
+    const newSummary = document.getElementById('newSummary');
+    const newError = document.getElementById('newError');
+    const auditTrail = document.getElementById('auditTrail');
+
+    function statusBadge(status) {
+      const map = {
+        new: 'bg-slate-700 text-slate-100',
+        in_review: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+        awaiting_approval: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+        resolved: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        rejected: 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${map[status] || 'bg-slate-700'}">${statusLabel[status] || status}</span>`;
+    }
+
+    function formatTime(iso) {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+    }
+
+    function selectedCase() {
+      return cases.find(c => c.id === state.selectedId) || null;
+    }
+
+    function matchesFilters(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+      if (branchFilter.value !== 'all' && item.branch !== branchFilter.value) return false;
+      if (q) {
+        const corpus = `${item.id} ${item.branch} ${item.custodian} ${item.summary}`.toLowerCase();
+        if (!corpus.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function sortedFiltered() {
+      const rows = cases.filter(matchesFilters);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'delta_desc') return Math.abs(b.delta) - Math.abs(a.delta);
+        if (sortBy.value === 'amount_desc') return b.amount - a.amount;
+        if (sortBy.value === 'id_asc') return a.id.localeCompare(b.id);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const openCount = rows.filter(r => ['new', 'in_review', 'awaiting_approval'].includes(r.status)).length;
+      const awaiting = rows.filter(r => r.status === 'awaiting_approval').length;
+      const resolved = rows.filter(r => r.status === 'resolved').length;
+      const rejected = rows.filter(r => r.status === 'rejected').length;
+      const absDelta = rows.reduce((sum, r) => sum + Math.abs(r.delta), 0);
+
+      const cards = [
+        ['Open', openCount],
+        ['Awaiting Approval', awaiting],
+        ['Resolved', resolved],
+        ['Rejected', rejected],
+        ['Total Variance (€)', absDelta.toLocaleString('en-GB')]
+      ];
+
+      kpis.innerHTML = cards.map(([label, value]) => `
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <p class="text-xs uppercase text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderCaseList(rows) {
+      caseList.innerHTML = '';
+
+      rows.forEach(item => {
+        const selected = state.selectedId === item.id;
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <button type="button" data-id="${item.id}" class="case-btn w-full text-left rounded-xl border ${selected ? 'border-amber-400/70 bg-slate-900/80' : 'border-slate-800 bg-panelSoft'} p-3 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-semibold">${item.id}</p>
+              ${statusBadge(item.status)}
+            </div>
+            <p class="text-sm text-slate-300 mt-1">${item.branch}</p>
+            <p class="text-xs text-slate-400 mt-1">${item.custodian} · Δ €${item.delta}</p>
+          </button>
+        `;
+        caseList.appendChild(li);
+      });
+
+      caseList.querySelectorAll('.case-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+
+      resultCount.textContent = `${rows.length} case${rows.length === 1 ? '' : 's'}`;
+    }
+
+    function renderThread(item) {
+      if (!item) {
+        threadMeta.textContent = 'Select a case from the inbox.';
+        chatThread.innerHTML = '<p class="text-sm text-slate-400">No thread to show.</p>';
+        return;
+      }
+
+      threadMeta.textContent = `${item.id} · ${item.branch} · Updated ${formatTime(item.updatedAt)} UTC`;
+      chatThread.innerHTML = item.thread.map(msg => {
+        const mine = msg.by === state.role;
+        return `
+          <article class="${mine ? 'ml-8' : 'mr-8'}">
+            <div class="rounded-xl border ${mine ? 'border-amber-500/40 bg-amber-500/10' : 'border-slate-700 bg-panelSoft'} p-3">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-semibold">${msg.by}</p>
+                <p class="text-xs text-slate-400">${formatTime(msg.at)} UTC</p>
+              </div>
+              <p class="text-sm text-slate-200 mt-2">${msg.text}</p>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      chatThread.scrollTop = chatThread.scrollHeight;
+    }
+
+    function allowedStatuses(item) {
+      const role = state.role;
+      const transitions = {
+        new: ['new', 'in_review'],
+        in_review: ['in_review', 'awaiting_approval', 'rejected'],
+        awaiting_approval: ['awaiting_approval', 'resolved', 'rejected'],
+        resolved: ['resolved'],
+        rejected: ['rejected', 'in_review']
+      };
+
+      const base = transitions[item.status] || ['new', 'in_review', 'awaiting_approval', 'resolved', 'rejected'];
+
+      if (role === 'Cash Custodian') {
+        return base.filter(s => ['new', 'in_review'].includes(s));
+      }
+      if (role === 'Finance Reviewer') {
+        return base.filter(s => ['in_review', 'awaiting_approval', 'rejected'].includes(s));
+      }
+      return base;
+    }
+
+    function policyMessage(item) {
+      const highVariance = Math.abs(item.delta) >= 150;
+      const highAmount = item.amount > 500;
+
+      if (highVariance || highAmount) {
+        return 'High-risk policy: variance ≥ €150 or declared cash > €500 requires Finance Manager resolution with approval code.';
+      }
+      return 'Standard policy: Finance Reviewer can move case through review; Finance Manager finalizes resolved/rejected state.';
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        emptyDetail.classList.remove('hidden');
+        detailPanel.classList.add('hidden');
+        auditTrail.innerHTML = '<li>No case selected.</li>';
+        return;
+      }
+
+      emptyDetail.classList.add('hidden');
+      detailPanel.classList.remove('hidden');
+
+      detailTitle.textContent = `${item.id} · ${item.custodian}`;
+      detailMeta.textContent = `${item.branch} · Declared €${item.amount} · Variance €${item.delta} · ${statusLabel[item.status]}`;
+      detailSummary.textContent = item.summary;
+      policyText.textContent = policyMessage(item);
+
+      const allowed = allowedStatuses(item);
+      nextStatus.innerHTML = allowed.map(s => `<option value="${s}">${statusLabel[s]}</option>`).join('');
+      nextStatus.value = allowed.includes(item.status) ? item.status : allowed[0];
+      approvalCode.value = item.approvalCode || '';
+      actionNote.value = '';
+      formError.textContent = '';
+
+      auditTrail.innerHTML = item.audit.map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`).join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'branch', 'custodian', 'amount', 'delta', 'status', 'updatedAt', 'approvalCode', 'summary'];
+      const lines = [headers.join(',')];
+      rows.forEach(item => {
+        lines.push(headers.map(h => `"${String(item[h] ?? '').replaceAll('"', '""')}"`).join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'petty-cash-chatdesk.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = sortedFiltered();
+      renderKpis(rows);
+      renderCaseList(rows);
+
+      const current = selectedCase();
+      const fallback = rows[0] || null;
+      const item = current && rows.some(r => r.id === current.id) ? current : fallback;
+      if (item) state.selectedId = item.id;
+
+      renderThread(item);
+      renderDetail(item);
+    }
+
+    chatForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const item = selectedCase();
+      if (!item) return;
+
+      const note = chatInput.value.trim();
+      if (note.length < 4) {
+        chatError.textContent = 'Please enter at least 4 characters.';
+        return;
+      }
+
+      item.thread.push({
+        by: state.role,
+        at: new Date().toISOString(),
+        text: note
+      });
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${formatTime(item.updatedAt)} UTC — ${state.role} posted thread update.`);
+      chatInput.value = '';
+      chatError.textContent = '';
+      render();
+    });
+
+    transitionForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const item = selectedCase();
+      if (!item) return;
+
+      const target = nextStatus.value;
+      const note = actionNote.value.trim();
+      const code = approvalCode.value.trim();
+      const highRisk = Math.abs(item.delta) >= 150 || item.amount > 500;
+      const role = state.role;
+
+      if (note.length < 10) {
+        formError.textContent = 'Action note must be at least 10 characters.';
+        return;
+      }
+
+      if ((target === 'resolved' || target === 'rejected') && role !== 'Finance Manager') {
+        formError.textContent = 'Only Finance Manager can resolve or reject cases.';
+        return;
+      }
+
+      if (target === 'awaiting_approval' && role === 'Cash Custodian') {
+        formError.textContent = 'Cash Custodian cannot send directly to Awaiting Approval.';
+        return;
+      }
+
+      if (target === 'resolved' && highRisk && !code) {
+        formError.textContent = 'Approval code is required for high-risk resolutions.';
+        return;
+      }
+
+      item.status = target;
+      item.approvalCode = code;
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${formatTime(item.updatedAt)} UTC — ${role}: ${note} (→ ${statusLabel[target]}${code ? `, ${code}` : ''})`);
+      item.thread.push({
+        by: role,
+        at: item.updatedAt,
+        text: `Workflow update: ${statusLabel[target]}${code ? ` (approval ${code})` : ''}. ${note}`
+      });
+
+      formError.textContent = '';
+      render();
+    });
+
+    newCaseForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const branch = newBranch.value;
+      const custodian = newCustodian.value.trim();
+      const amount = Number(newAmount.value);
+      const delta = Number(newDelta.value);
+      const summary = newSummary.value.trim();
+
+      if (!custodian) {
+        newError.textContent = 'Cash custodian is required.';
+        return;
+      }
+      if (!Number.isFinite(amount) || amount < 10) {
+        newError.textContent = 'Declared cash must be at least €10.';
+        return;
+      }
+      if (!Number.isFinite(delta) || Math.abs(delta) > 500) {
+        newError.textContent = 'Variance must be between -€500 and €500.';
+        return;
+      }
+      if (summary.length < 12) {
+        newError.textContent = 'Issue summary must be at least 12 characters.';
+        return;
+      }
+
+      const maxId = Math.max(...cases.map(c => Number(c.id.split('-')[1])));
+      const id = `PC-${maxId + 1}`;
+      const now = new Date().toISOString();
+
+      const entry = {
+        id,
+        branch,
+        custodian,
+        amount,
+        delta,
+        status: 'new',
+        updatedAt: now,
+        summary,
+        approvalCode: '',
+        thread: [
+          { by: state.role, at: now, text: summary }
+        ],
+        audit: [
+          `${formatTime(now)} UTC — Case created by ${state.role}.`
+        ]
+      };
+
+      cases.unshift(entry);
+      state.selectedId = entry.id;
+      newCaseForm.reset();
+      newAmount.value = 320;
+      newDelta.value = 0;
+      newError.textContent = '';
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      state.role = roleSelect.value;
+      render();
+    });
+
+    [statusFilter, branchFilter, sortBy].forEach(el => el.addEventListener('change', render));
+    searchInput.addEventListener('input', render);
+    exportBtn.addEventListener('click', () => exportCsv(sortedFiltered()));
+
+    render();
+  </script>
+</body>
+</html>

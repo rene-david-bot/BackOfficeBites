@@ -808,5 +808,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-13",
+    "day": 39,
+    "slug": "2026-03-13-petty-cash-chatdesk",
+    "name": "Petty Cash Reconciliation Chatdesk",
+    "description": "Chat-first finance workspace for petty cash variances with policy-gated approvals and audit-ready workflow updates.",
+    "category": "Finance",
+    "pattern": "Chat UI",
+    "tags": [
+      "petty cash",
+      "finance",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Shift Coverage Timeline** — timeline-first HR desk for staffing gap requests, overtime policy checks, and approval-ready coverage decisions.
+**Petty Cash Reconciliation Chatdesk** — chat-first finance desk for branch cash variance triage, policy-gated approvals, and audit-ready reconciliation threads.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
