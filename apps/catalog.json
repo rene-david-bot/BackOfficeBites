@@ -832,5 +832,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-14",
+    "day": 40,
+    "slug": "2026-03-14-performance-review-calibration-grid",
+    "name": "Performance Review Calibration Grid",
+    "description": "Calibrate performance ratings with role-based approvals, high-delta policy checks, and audit-ready workflow transitions.",
+    "category": "HR",
+    "pattern": "Data Grid",
+    "tags": [
+      "performance reviews",
+      "hr",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

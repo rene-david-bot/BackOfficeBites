@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Petty Cash Reconciliation Chatdesk** — chat-first finance desk for branch cash variance triage, policy-gated approvals, and audit-ready reconciliation threads.
+**Performance Review Calibration Grid** — policy-aware HR calibration queue for rating decisions with role-based approvals, high-delta checks, and audit-ready workflow history.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

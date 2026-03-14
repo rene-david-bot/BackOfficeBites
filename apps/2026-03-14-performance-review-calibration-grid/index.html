@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Review Calibration Grid — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-sm font-semibold text-amber-400 hover:text-amber-300">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold">Performance Review Calibration Grid</h1>
+        <p class="text-slate-300 mt-2 max-w-3xl">HR and leadership teams calibrate employee performance ratings with role-based approvals, policy guardrails, and audit-ready traceability.</p>
+      </div>
+      <fieldset class="bg-panel border border-slate-800 rounded-xl p-3">
+        <legend class="text-xs uppercase text-slate-400 px-1">Role view</legend>
+        <div class="mt-1 inline-flex rounded-lg overflow-hidden border border-slate-700" role="radiogroup" aria-label="Role selector">
+          <button type="button" class="role-btn px-3 py-2 text-sm bg-amber-500 text-slate-900" data-role="Manager">Manager</button>
+          <button type="button" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200" data-role="HRBP">HRBP</button>
+          <button type="button" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200" data-role="VP">VP</button>
+        </div>
+      </fieldset>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3" id="kpiCards"></section>
+
+    <section class="mt-4 bg-panel border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="text-sm" for="searchInput">Search
+          <input id="searchInput" type="text" placeholder="employee, manager, id..." class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+        </label>
+
+        <label class="text-sm" for="departmentFilter">Department
+          <select id="departmentFilter" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All departments</option>
+          </select>
+        </label>
+
+        <label class="text-sm" for="statusFilter">Status
+          <select id="statusFilter" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="manager_submitted">Manager Submitted</option>
+            <option value="calibration_review">Calibration Review</option>
+            <option value="needs_rework">Needs Rework</option>
+            <option value="approved">Approved</option>
+            <option value="locked">Locked</option>
+          </select>
+        </label>
+
+        <label class="text-sm" for="cycleFilter">Cycle
+          <select id="cycleFilter" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All cycles</option>
+            <option>H1 2026</option>
+            <option>H2 2026</option>
+          </select>
+        </label>
+
+        <label class="text-sm" for="sortBy">Sort
+          <select id="sortBy" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+            <option value="updated_desc">Recently updated</option>
+            <option value="delta_desc">Largest rating delta</option>
+            <option value="employee_asc">Employee A-Z</option>
+            <option value="department_asc">Department A-Z</option>
+          </select>
+        </label>
+
+        <div class="flex items-end gap-2">
+          <button id="resetBtn" type="button" class="w-full px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">Reset</button>
+          <button id="exportBtn" type="button" class="w-full px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 text-sm font-semibold">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <section class="xl:col-span-8 bg-panel border border-slate-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <h2 class="text-xl font-semibold">Calibration Queue</h2>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+        <div class="overflow-auto rounded-xl border border-slate-800">
+          <table class="w-full min-w-[900px] text-sm">
+            <thead class="bg-slate-900 text-slate-300">
+              <tr>
+                <th class="text-left p-3">ID</th>
+                <th class="text-left p-3">Employee</th>
+                <th class="text-left p-3">Department</th>
+                <th class="text-left p-3">Manager</th>
+                <th class="text-left p-3">Cycle</th>
+                <th class="text-left p-3">Current</th>
+                <th class="text-left p-3">Proposed</th>
+                <th class="text-left p-3">Delta</th>
+                <th class="text-left p-3">Status</th>
+                <th class="text-left p-3">Action</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="xl:col-span-4 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Review Detail</h2>
+          <p id="emptyState" class="text-sm text-slate-400 mt-2">Select a review row to calibrate rating and workflow state.</p>
+
+          <form id="reviewForm" class="hidden mt-3 space-y-3" novalidate>
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <p id="reviewTitle" class="font-semibold"></p>
+              <p id="reviewMeta" class="text-xs text-slate-300 mt-1"></p>
+            </div>
+
+            <p id="policyBox" class="text-xs bg-slate-900 border border-amber-500/40 text-amber-200 rounded-lg p-2"></p>
+
+            <label class="block text-sm" for="proposedRating">Proposed rating (1.0-5.0)
+              <input id="proposedRating" type="number" min="1" max="5" step="0.1" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+
+            <label class="block text-sm" for="calibrationSlot">Calibration slot
+              <select id="calibrationSlot" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option value="">Select slot (required for high delta)</option>
+                <option>Panel A — People Leads</option>
+                <option>Panel B — Exec Review</option>
+                <option>Panel C — Technical Ladder</option>
+              </select>
+            </label>
+
+            <label class="block text-sm" for="nextStatus">Workflow action
+              <select id="nextStatus" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2"></select>
+            </label>
+
+            <label class="block text-sm" for="justification">Justification (min 14 chars)
+              <textarea id="justification" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Explain evidence, outcomes, and calibration rationale."></textarea>
+            </label>
+
+            <p id="formError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold">Apply update</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Add Review Candidate</h2>
+          <form id="newReviewForm" class="mt-3 space-y-3" novalidate>
+            <label class="block text-sm" for="newEmployee">Employee
+              <input id="newEmployee" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Nina Schulz" />
+            </label>
+
+            <label class="block text-sm" for="newDepartment">Department
+              <select id="newDepartment" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option>Engineering</option>
+                <option>Sales</option>
+                <option>Operations</option>
+                <option>Finance</option>
+                <option>People</option>
+              </select>
+            </label>
+
+            <label class="block text-sm" for="newManager">Manager
+              <input id="newManager" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Laura Becker" />
+            </label>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newCurrent">Current
+                <input id="newCurrent" type="number" min="1" max="5" step="0.1" value="3.0" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newProposed">Proposed
+                <input id="newProposed" type="number" min="1" max="5" step="0.1" value="3.4" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+
+            <label class="block text-sm" for="newCycle">Cycle
+              <select id="newCycle" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                <option>H1 2026</option>
+                <option>H2 2026</option>
+              </select>
+            </label>
+
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold">Create review</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 space-y-2 text-xs text-slate-300 max-h-44 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const reviews = [
+      {
+        id: 'PR-401',
+        employee: 'Mila Novak',
+        department: 'Engineering',
+        manager: 'Laura Becker',
+        cycle: 'H1 2026',
+        currentRating: 3.2,
+        proposedRating: 4.1,
+        status: 'calibration_review',
+        updatedAt: '2026-03-14T07:10:00Z',
+        calibrationSlot: 'Panel A — People Leads',
+        justification: 'Led critical incident recovery and mentored two new hires.',
+        audit: [
+          '07:10 UTC — HRBP moved review to Calibration Review.',
+          '06:52 UTC — Manager submitted rating uplift with delivery evidence.'
+        ]
+      },
+      {
+        id: 'PR-402',
+        employee: 'Jonas Winter',
+        department: 'Sales',
+        manager: 'Marta Ruiz',
+        cycle: 'H1 2026',
+        currentRating: 3.8,
+        proposedRating: 3.6,
+        status: 'manager_submitted',
+        updatedAt: '2026-03-14T07:02:00Z',
+        calibrationSlot: '',
+        justification: 'Pipeline quality dropped in Q1 due to missed follow-up process.',
+        audit: [
+          '07:02 UTC — Manager submitted for calibration.'
+        ]
+      },
+      {
+        id: 'PR-403',
+        employee: 'Lena Vogt',
+        department: 'Finance',
+        manager: 'Kilian Frei',
+        cycle: 'H1 2026',
+        currentRating: 3.1,
+        proposedRating: 3.1,
+        status: 'approved',
+        updatedAt: '2026-03-13T17:46:00Z',
+        calibrationSlot: 'Panel B — Exec Review',
+        justification: 'Consistent forecast accuracy and process handover improvements.',
+        audit: [
+          '17:46 UTC — VP approved final rating at 3.1.',
+          '17:20 UTC — HRBP marked ready for approval.'
+        ]
+      },
+      {
+        id: 'PR-404',
+        employee: 'Arda Demir',
+        department: 'Operations',
+        manager: 'Nico Berg',
+        cycle: 'H1 2026',
+        currentRating: 2.9,
+        proposedRating: 4.2,
+        status: 'needs_rework',
+        updatedAt: '2026-03-14T06:48:00Z',
+        calibrationSlot: '',
+        justification: 'Large uplift proposed without complete KPI evidence package.',
+        audit: [
+          '06:48 UTC — HRBP requested rework due to missing evidence for +1.3 delta.',
+          '06:20 UTC — Manager submitted draft to calibration queue.'
+        ]
+      },
+      {
+        id: 'PR-405',
+        employee: 'Leonie Krauß',
+        department: 'People',
+        manager: 'Farah Osman',
+        cycle: 'H2 2026',
+        currentRating: 4.4,
+        proposedRating: 4.4,
+        status: 'locked',
+        updatedAt: '2026-03-13T14:30:00Z',
+        calibrationSlot: 'Panel C — Technical Ladder',
+        justification: 'Already finalized in prior cycle close.',
+        audit: [
+          '14:30 UTC — VP locked review for cycle close.'
+        ]
+      }
+    ];
+
+    const statusLabel = {
+      draft: 'Draft',
+      manager_submitted: 'Manager Submitted',
+      calibration_review: 'Calibration Review',
+      needs_rework: 'Needs Rework',
+      approved: 'Approved',
+      locked: 'Locked'
+    };
+
+    const state = {
+      role: 'Manager',
+      selectedId: reviews[0].id
+    };
+
+    const roleButtons = document.querySelectorAll('.role-btn');
+    const searchInput = document.getElementById('searchInput');
+    const departmentFilter = document.getElementById('departmentFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const cycleFilter = document.getElementById('cycleFilter');
+    const sortBy = document.getElementById('sortBy');
+    const resetBtn = document.getElementById('resetBtn');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const kpiCards = document.getElementById('kpiCards');
+    const resultCount = document.getElementById('resultCount');
+    const gridBody = document.getElementById('gridBody');
+
+    const emptyState = document.getElementById('emptyState');
+    const reviewForm = document.getElementById('reviewForm');
+    const reviewTitle = document.getElementById('reviewTitle');
+    const reviewMeta = document.getElementById('reviewMeta');
+    const policyBox = document.getElementById('policyBox');
+    const proposedRating = document.getElementById('proposedRating');
+    const calibrationSlot = document.getElementById('calibrationSlot');
+    const nextStatus = document.getElementById('nextStatus');
+    const justification = document.getElementById('justification');
+    const formError = document.getElementById('formError');
+
+    const newReviewForm = document.getElementById('newReviewForm');
+    const newEmployee = document.getElementById('newEmployee');
+    const newDepartment = document.getElementById('newDepartment');
+    const newManager = document.getElementById('newManager');
+    const newCurrent = document.getElementById('newCurrent');
+    const newProposed = document.getElementById('newProposed');
+    const newCycle = document.getElementById('newCycle');
+    const newError = document.getElementById('newError');
+
+    const auditTrail = document.getElementById('auditTrail');
+
+    function formatTime(iso) {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+    }
+
+    function statusBadge(status) {
+      const cls = {
+        draft: 'bg-slate-700 text-slate-100',
+        manager_submitted: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+        calibration_review: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40',
+        needs_rework: 'bg-rose-500/20 text-rose-300 border border-rose-500/40',
+        approved: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        locked: 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+      };
+      return `<span class="px-2 py-1 text-xs rounded-full ${cls[status] || cls.draft}">${statusLabel[status] || status}</span>`;
+    }
+
+    function getDelta(item, proposal = item.proposedRating) {
+      return Number((proposal - item.currentRating).toFixed(1));
+    }
+
+    function populateDepartments() {
+      const departments = [...new Set(reviews.map(item => item.department))].sort();
+      departments.forEach(dep => {
+        const option = document.createElement('option');
+        option.value = dep;
+        option.textContent = dep;
+        departmentFilter.appendChild(option);
+      });
+    }
+
+    function selectedReview() {
+      return reviews.find(item => item.id === state.selectedId) || null;
+    }
+
+    function allowedActions(item) {
+      if (!item) return [];
+      if (state.role === 'Manager') {
+        return ['draft', 'manager_submitted'];
+      }
+      if (state.role === 'HRBP') {
+        return ['calibration_review', 'needs_rework'];
+      }
+      return item.status === 'approved'
+        ? ['approved', 'locked', 'needs_rework']
+        : ['approved', 'needs_rework'];
+    }
+
+    function rolePolicyText(item) {
+      const delta = Math.abs(getDelta(item));
+      const base = {
+        Manager: 'Manager can draft and submit reviews. Cannot approve or lock.',
+        HRBP: 'HRBP can move reviews to calibration or rework.',
+        VP: 'VP can approve and lock final decisions.'
+      }[state.role];
+
+      const highDelta = delta > 1;
+      const extra = highDelta
+        ? ' High-delta policy active: rating changes above ±1.0 require calibration slot and detailed justification (30+ chars).'
+        : ' Standard policy: justification required for all changes.';
+
+      return `${base}${extra}`;
+    }
+
+    function matchesFilters(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (departmentFilter.value !== 'all' && item.department !== departmentFilter.value) return false;
+      if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+      if (cycleFilter.value !== 'all' && item.cycle !== cycleFilter.value) return false;
+
+      if (q) {
+        const corpus = `${item.id} ${item.employee} ${item.manager}`.toLowerCase();
+        if (!corpus.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function sortedFilteredRows() {
+      const rows = reviews.filter(matchesFilters);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'delta_desc') return Math.abs(getDelta(b)) - Math.abs(getDelta(a));
+        if (sortBy.value === 'employee_asc') return a.employee.localeCompare(b.employee);
+        if (sortBy.value === 'department_asc') return a.department.localeCompare(b.department);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const cards = [
+        ['Open', rows.filter(r => ['draft', 'manager_submitted', 'calibration_review'].includes(r.status)).length],
+        ['Needs Rework', rows.filter(r => r.status === 'needs_rework').length],
+        ['Approved', rows.filter(r => r.status === 'approved').length],
+        ['Locked', rows.filter(r => r.status === 'locked').length],
+        ['Avg Delta', (rows.reduce((sum, r) => sum + getDelta(r), 0) / Math.max(rows.length, 1)).toFixed(2)]
+      ];
+
+      kpiCards.innerHTML = cards.map(([label, value]) => `
+        <article class="bg-panel border border-slate-800 rounded-xl p-3">
+          <p class="text-xs uppercase text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderTable(rows) {
+      gridBody.innerHTML = rows.map(item => {
+        const selected = item.id === state.selectedId;
+        const delta = getDelta(item);
+        const deltaClass = delta > 1 || delta < -1 ? 'text-amber-300' : 'text-slate-200';
+
+        return `
+          <tr class="border-t border-slate-800 ${selected ? 'bg-slate-900/80' : 'hover:bg-slate-900/40'}">
+            <td class="p-3 font-semibold">${item.id}</td>
+            <td class="p-3">${item.employee}</td>
+            <td class="p-3">${item.department}</td>
+            <td class="p-3">${item.manager}</td>
+            <td class="p-3">${item.cycle}</td>
+            <td class="p-3">${item.currentRating.toFixed(1)}</td>
+            <td class="p-3">${item.proposedRating.toFixed(1)}</td>
+            <td class="p-3 ${deltaClass}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}</td>
+            <td class="p-3">${statusBadge(item.status)}</td>
+            <td class="p-3">
+              <button type="button" class="select-btn px-2 py-1 rounded-lg border border-slate-700 hover:border-amber-400" data-id="${item.id}">Select</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      resultCount.textContent = `${rows.length} review${rows.length === 1 ? '' : 's'} shown`;
+
+      gridBody.querySelectorAll('.select-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        emptyState.classList.remove('hidden');
+        reviewForm.classList.add('hidden');
+        auditTrail.innerHTML = '<li>No review selected.</li>';
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      reviewForm.classList.remove('hidden');
+
+      reviewTitle.textContent = `${item.id} · ${item.employee}`;
+      reviewMeta.textContent = `${item.department} · Manager: ${item.manager} · Updated ${formatTime(item.updatedAt)} UTC`;
+      policyBox.textContent = rolePolicyText(item);
+      proposedRating.value = item.proposedRating.toFixed(1);
+      calibrationSlot.value = item.calibrationSlot || '';
+      justification.value = item.justification || '';
+      formError.textContent = '';
+
+      const options = allowedActions(item);
+      nextStatus.innerHTML = options.map(status => `<option value="${status}">${statusLabel[status]}</option>`).join('');
+      if (options.includes(item.status)) nextStatus.value = item.status;
+
+      auditTrail.innerHTML = item.audit
+        .map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`)
+        .join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'employee', 'department', 'manager', 'cycle', 'currentRating', 'proposedRating', 'delta', 'status', 'calibrationSlot', 'justification', 'updatedAt'];
+      const lines = [headers.join(',')];
+      rows.forEach(item => {
+        const row = {
+          ...item,
+          delta: getDelta(item)
+        };
+        lines.push(headers.map(key => `"${String(row[key] ?? '').replaceAll('"', '""')}"`).join(','));
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'performance-review-calibration-grid.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = sortedFilteredRows();
+      renderKpis(rows);
+      renderTable(rows);
+
+      const active = selectedReview();
+      const fallback = rows[0] || null;
+      const detail = active && rows.some(row => row.id === active.id) ? active : fallback;
+      if (detail) state.selectedId = detail.id;
+      renderDetail(detail);
+    }
+
+    roleButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        state.role = button.dataset.role;
+        roleButtons.forEach(el => {
+          const active = el.dataset.role === state.role;
+          el.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-amber-500 text-slate-900' : 'bg-slate-900 text-slate-200'}`;
+        });
+        render();
+      });
+    });
+
+    [searchInput, departmentFilter, statusFilter, cycleFilter, sortBy].forEach(el => {
+      el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', render);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      departmentFilter.value = 'all';
+      statusFilter.value = 'all';
+      cycleFilter.value = 'all';
+      sortBy.value = 'updated_desc';
+      render();
+    });
+
+    exportBtn.addEventListener('click', () => exportCsv(sortedFilteredRows()));
+
+    reviewForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const item = selectedReview();
+      if (!item) return;
+
+      const newRating = Number(proposedRating.value);
+      const action = nextStatus.value;
+      const slot = calibrationSlot.value;
+      const note = justification.value.trim();
+
+      if (!Number.isFinite(newRating) || newRating < 1 || newRating > 5) {
+        formError.textContent = 'Proposed rating must be between 1.0 and 5.0.';
+        return;
+      }
+
+      if (note.length < 14) {
+        formError.textContent = 'Justification must be at least 14 characters.';
+        return;
+      }
+
+      const delta = Math.abs(newRating - item.currentRating);
+      if (delta > 1 && (!slot || note.length < 30)) {
+        formError.textContent = 'High-delta updates require a calibration slot and detailed justification (30+ chars).';
+        return;
+      }
+
+      const allowed = allowedActions(item);
+      if (!allowed.includes(action)) {
+        formError.textContent = `${state.role} is not allowed to apply that action.`;
+        return;
+      }
+
+      if (action === 'locked' && item.status !== 'approved') {
+        formError.textContent = 'Only approved reviews can be locked.';
+        return;
+      }
+
+      item.proposedRating = Number(newRating.toFixed(1));
+      item.status = action;
+      item.calibrationSlot = slot;
+      item.justification = note;
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${formatTime(item.updatedAt)} UTC — ${state.role} set rating ${item.proposedRating.toFixed(1)} and moved to ${statusLabel[action]}.`);
+
+      formError.textContent = '';
+      render();
+    });
+
+    newReviewForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const employee = newEmployee.value.trim();
+      const department = newDepartment.value;
+      const manager = newManager.value.trim();
+      const currentRating = Number(newCurrent.value);
+      const proposed = Number(newProposed.value);
+      const cycle = newCycle.value;
+
+      if (!employee) {
+        newError.textContent = 'Employee name is required.';
+        return;
+      }
+      if (!manager) {
+        newError.textContent = 'Manager name is required.';
+        return;
+      }
+      if (!Number.isFinite(currentRating) || currentRating < 1 || currentRating > 5) {
+        newError.textContent = 'Current rating must be between 1.0 and 5.0.';
+        return;
+      }
+      if (!Number.isFinite(proposed) || proposed < 1 || proposed > 5) {
+        newError.textContent = 'Proposed rating must be between 1.0 and 5.0.';
+        return;
+      }
+
+      const maxId = Math.max(...reviews.map(entry => Number(entry.id.split('-')[1])));
+      const now = new Date().toISOString();
+      const entry = {
+        id: `PR-${maxId + 1}`,
+        employee,
+        department,
+        manager,
+        cycle,
+        currentRating: Number(currentRating.toFixed(1)),
+        proposedRating: Number(proposed.toFixed(1)),
+        status: 'draft',
+        updatedAt: now,
+        calibrationSlot: '',
+        justification: 'Initial draft awaiting manager narrative.',
+        audit: [`${formatTime(now)} UTC — ${state.role} created review draft.`]
+      };
+
+      reviews.unshift(entry);
+      state.selectedId = entry.id;
+      newReviewForm.reset();
+      newCurrent.value = '3.0';
+      newProposed.value = '3.4';
+      newError.textContent = '';
+
+      if (![...departmentFilter.options].some(option => option.value === department)) {
+        const option = document.createElement('option');
+        option.value = department;
+        option.textContent = department;
+        departmentFilter.appendChild(option);
+      }
+
+      render();
+    });
+
+    populateDepartments();
+    render();
+  </script>
+</body>
+</html>
