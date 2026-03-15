@@ -856,5 +856,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-15",
+    "day": 41,
+    "slug": "2026-03-15-policy-ack-pulseboard",
+    "name": "Policy Acknowledgement Pulseboard",
+    "description": "Dashboard-first compliance workspace for policy attestations with exception routing, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "policy acknowledgements",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "role-based views",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

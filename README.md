@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Performance Review Calibration Grid** — policy-aware HR calibration queue for rating decisions with role-based approvals, high-delta checks, and audit-ready workflow history.
+**Policy Acknowledgement Pulseboard** — dashboard-first compliance workspace for policy attestations with exception routing, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

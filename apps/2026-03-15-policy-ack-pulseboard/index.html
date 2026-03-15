@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Policy Acknowledgement Pulseboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-2">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Policy Acknowledgement Pulseboard</h1>
+        <p class="text-slate-300 mt-2 max-w-3xl">Track policy acknowledgements, chase overdue attestations, and route exception requests with an audit-ready workflow.</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3 w-full md:w-auto">
+        <label for="roleSelect" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+        <select id="roleSelect" class="mt-1 w-full md:w-56 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="policyOwner">Policy Owner</option>
+          <option value="manager">Manager</option>
+          <option value="auditor">Auditor</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="kpiGrid"></section>
+
+    <section class="mt-6 grid gap-4 xl:grid-cols-3">
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 xl:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Acknowledgement by Team</h2>
+          <span class="text-xs text-slate-400">Live from filtered dataset</span>
+        </div>
+        <div id="teamBars" class="space-y-3"></div>
+      </article>
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-lg font-semibold mb-4">Workflow Mix</h2>
+        <div id="statusMix" class="space-y-3"></div>
+      </article>
+    </section>
+
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 w-full">
+          <div>
+            <label for="searchInput" class="text-xs text-slate-400 uppercase tracking-wide">Search</label>
+            <input id="searchInput" type="text" placeholder="Policy, owner, team" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="teamFilter" class="text-xs text-slate-400 uppercase tracking-wide">Team</label>
+            <select id="teamFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="statusFilter" class="text-xs text-slate-400 uppercase tracking-wide">Workflow State</label>
+            <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="riskFilter" class="text-xs text-slate-400 uppercase tracking-wide">Risk Tier</label>
+            <select id="riskFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="sortBy" class="text-xs text-slate-400 uppercase tracking-wide">Sort</label>
+            <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="dueSoon">Due date (soonest)</option>
+              <option value="ackDesc">Ack rate (high to low)</option>
+              <option value="riskDesc">Risk (high to low)</option>
+              <option value="exceptionsDesc">Exceptions (high to low)</option>
+            </select>
+          </div>
+        </div>
+        <button id="exportBtn" class="rounded-lg border border-emerald-600/60 bg-emerald-600/20 px-4 py-2 text-sm font-medium hover:bg-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-500">Export filtered CSV</button>
+      </div>
+
+      <div class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-sm" aria-label="Policy acknowledgement table">
+          <thead class="text-left text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-2 pr-4">Policy</th>
+              <th class="py-2 pr-4">Team</th>
+              <th class="py-2 pr-4">Owner</th>
+              <th class="py-2 pr-4">Due</th>
+              <th class="py-2 pr-4">Ack</th>
+              <th class="py-2 pr-4">Risk</th>
+              <th class="py-2 pr-4">State</th>
+              <th class="py-2 pr-4">Exceptions</th>
+              <th class="py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="policyRows" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <button id="clearAuditBtn" class="text-xs px-2 py-1 rounded border border-slate-700 hover:border-slate-600">Clear local session trail</button>
+      </div>
+      <ul id="auditList" class="mt-3 space-y-2 text-sm"></ul>
+    </section>
+  </div>
+
+  <div id="exceptionModal" class="fixed inset-0 hidden items-center justify-center bg-slate-950/80 p-4">
+    <div class="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <h3 class="text-lg font-semibold">Request Exception</h3>
+      <p class="text-sm text-slate-400 mt-1">Provide a business justification (minimum 10 characters).</p>
+      <label for="exceptionReason" class="mt-4 block text-xs uppercase tracking-wide text-slate-400">Reason</label>
+      <textarea id="exceptionReason" rows="4" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+      <p id="exceptionError" class="text-xs text-rose-400 mt-2 hidden">Reason must be at least 10 characters.</p>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="cancelException" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">Cancel</button>
+        <button id="submitException" class="rounded-lg border border-amber-600/60 bg-amber-600/20 px-3 py-2 text-sm">Submit exception</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const riskScore = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+    const stateColor = {
+      "On Track": "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+      "At Risk": "bg-amber-500/20 text-amber-300 border-amber-500/40",
+      "Exception Requested": "bg-violet-500/20 text-violet-300 border-violet-500/40",
+      "Overdue": "bg-rose-500/20 text-rose-300 border-rose-500/40",
+      "Completed": "bg-cyan-500/20 text-cyan-300 border-cyan-500/40"
+    };
+
+    const basePolicies = [
+      { id: "POL-201", title: "Acceptable Use v5", team: "IT Ops", owner: "Marta Klein", dueDate: "2026-03-18", ackRate: 82, risk: "High", state: "At Risk", exceptions: 3 },
+      { id: "POL-188", title: "Data Retention EMEA", team: "Legal", owner: "Jonas Weber", dueDate: "2026-03-16", ackRate: 91, risk: "Critical", state: "On Track", exceptions: 1 },
+      { id: "POL-233", title: "Remote Work Security", team: "HR", owner: "Lea Gruber", dueDate: "2026-03-14", ackRate: 64, risk: "Critical", state: "Overdue", exceptions: 6 },
+      { id: "POL-145", title: "Vendor Access Controls", team: "Supply Chain", owner: "Niko Brandt", dueDate: "2026-03-20", ackRate: 73, risk: "High", state: "At Risk", exceptions: 4 },
+      { id: "POL-209", title: "Discount Approval Matrix", team: "Sales", owner: "Pia Lorenz", dueDate: "2026-03-22", ackRate: 88, risk: "Medium", state: "On Track", exceptions: 2 },
+      { id: "POL-240", title: "Travel & Expense Guardrails", team: "Finance", owner: "Rico Hahn", dueDate: "2026-03-17", ackRate: 55, risk: "High", state: "Exception Requested", exceptions: 8 },
+      { id: "POL-198", title: "Incident Severity Rubric", team: "IT Ops", owner: "Marta Klein", dueDate: "2026-03-19", ackRate: 97, risk: "Medium", state: "Completed", exceptions: 0 },
+      { id: "POL-219", title: "Insider Trading Rules", team: "Legal", owner: "Jonas Weber", dueDate: "2026-03-21", ackRate: 79, risk: "High", state: "At Risk", exceptions: 5 }
+    ];
+
+    let policies = structuredClone(basePolicies);
+    let filtered = [];
+    let currentRole = "policyOwner";
+    let modalPolicyId = null;
+    let auditTrail = [
+      { ts: "2026-03-15 08:55", actor: "System", event: "Nightly sync imported acknowledgement statuses from HRIS + IdP." },
+      { ts: "2026-03-15 09:02", actor: "Marta Klein", event: "Marked POL-198 as Completed after 100% attestation." }
+    ];
+
+    const kpiGrid = document.getElementById("kpiGrid");
+    const teamBars = document.getElementById("teamBars");
+    const statusMix = document.getElementById("statusMix");
+    const policyRows = document.getElementById("policyRows");
+    const auditList = document.getElementById("auditList");
+
+    const roleSelect = document.getElementById("roleSelect");
+    const searchInput = document.getElementById("searchInput");
+    const teamFilter = document.getElementById("teamFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const riskFilter = document.getElementById("riskFilter");
+    const sortBy = document.getElementById("sortBy");
+
+    const exceptionModal = document.getElementById("exceptionModal");
+    const exceptionReason = document.getElementById("exceptionReason");
+    const exceptionError = document.getElementById("exceptionError");
+
+    const fmtPct = new Intl.NumberFormat("en", { maximumFractionDigits: 0 });
+
+    function uniqueValues(key) {
+      return [...new Set(policies.map(p => p[key]))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function buildSelect(select, label, values) {
+      select.innerHTML = `<option value="all">All ${label}</option>` + values.map(v => `<option value="${v}">${v}</option>`).join("");
+    }
+
+    function daysTo(dateStr) {
+      const now = new Date("2026-03-15T09:10:00Z");
+      const d = new Date(`${dateStr}T23:59:59Z`);
+      return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function severityText(daysLeft) {
+      if (daysLeft < 0) return `<span class="text-rose-300">${Math.abs(daysLeft)}d overdue</span>`;
+      if (daysLeft <= 2) return `<span class="text-amber-300">due in ${daysLeft}d</span>`;
+      return `<span class="text-slate-300">due in ${daysLeft}d</span>`;
+    }
+
+    function getFiltered() {
+      const q = searchInput.value.trim().toLowerCase();
+      const team = teamFilter.value;
+      const state = statusFilter.value;
+      const risk = riskFilter.value;
+      const sorter = sortBy.value;
+
+      let rows = policies.filter(p => {
+        const hay = `${p.id} ${p.title} ${p.owner} ${p.team}`.toLowerCase();
+        return (!q || hay.includes(q))
+          && (team === "all" || p.team === team)
+          && (state === "all" || p.state === state)
+          && (risk === "all" || p.risk === risk);
+      });
+
+      rows.sort((a, b) => {
+        if (sorter === "dueSoon") return new Date(a.dueDate) - new Date(b.dueDate);
+        if (sorter === "ackDesc") return b.ackRate - a.ackRate;
+        if (sorter === "riskDesc") return riskScore[b.risk] - riskScore[a.risk];
+        if (sorter === "exceptionsDesc") return b.exceptions - a.exceptions;
+        return 0;
+      });
+
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const avgAck = rows.length ? rows.reduce((sum, p) => sum + p.ackRate, 0) / rows.length : 0;
+      const overdue = rows.filter(p => daysTo(p.dueDate) < 0).length;
+      const critical = rows.filter(p => p.risk === "Critical").length;
+      const exceptionRequested = rows.filter(p => p.state === "Exception Requested").length;
+
+      const cards = [
+        { label: "Avg Ack Rate", value: `${fmtPct.format(avgAck)}%`, helper: "Filtered scope", tone: "emerald" },
+        { label: "Overdue Policies", value: overdue, helper: "Past due date", tone: "rose" },
+        { label: "Critical Tier", value: critical, helper: "High attention", tone: "amber" },
+        { label: "Exception Queue", value: exceptionRequested, helper: "Needs manager action", tone: "violet" }
+      ];
+
+      kpiGrid.innerHTML = cards.map(c => `
+        <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${c.label}</p>
+          <p class="text-3xl font-semibold mt-2 text-${c.tone}-300">${c.value}</p>
+          <p class="text-xs text-slate-400 mt-1">${c.helper}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderTeamBars(rows) {
+      const byTeam = rows.reduce((acc, p) => {
+        if (!acc[p.team]) acc[p.team] = { totalAck: 0, count: 0 };
+        acc[p.team].totalAck += p.ackRate;
+        acc[p.team].count += 1;
+        return acc;
+      }, {});
+
+      const teams = Object.entries(byTeam).map(([team, v]) => ({
+        team,
+        avg: Math.round(v.totalAck / v.count)
+      })).sort((a, b) => b.avg - a.avg);
+
+      if (!teams.length) {
+        teamBars.innerHTML = `<p class="text-sm text-slate-400">No rows match current filters.</p>`;
+        return;
+      }
+
+      teamBars.innerHTML = teams.map(t => `
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 mb-1">
+            <span>${t.team}</span><span>${t.avg}%</span>
+          </div>
+          <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-2 rounded-full bg-emerald-400" style="width:${t.avg}%"></div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderStatusMix(rows) {
+      const counts = rows.reduce((acc, p) => {
+        acc[p.state] = (acc[p.state] || 0) + 1;
+        return acc;
+      }, {});
+
+      const total = rows.length || 1;
+      const order = ["Completed", "On Track", "At Risk", "Exception Requested", "Overdue"];
+      statusMix.innerHTML = order.map(state => {
+        const count = counts[state] || 0;
+        const pct = Math.round((count / total) * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>${state}</span><span>${count} (${pct}%)</span></div>
+            <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-2 rounded-full ${state.includes("Overdue") ? "bg-rose-400" : state.includes("Exception") ? "bg-violet-400" : state.includes("Risk") ? "bg-amber-400" : state.includes("Completed") ? "bg-cyan-400" : "bg-emerald-400"}" style="width:${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function actionButtons(row) {
+      if (currentRole === "auditor") {
+        return `<span class="text-xs text-slate-500">Read-only</span>`;
+      }
+
+      const actions = [];
+      if (row.state !== "Completed") {
+        actions.push(`<button data-action="ack" data-id="${row.id}" class="px-2 py-1 rounded border border-emerald-600/60 bg-emerald-600/20 text-xs hover:bg-emerald-600/30">Acknowledge</button>`);
+      }
+
+      if (row.state !== "Exception Requested" && row.state !== "Completed") {
+        actions.push(`<button data-action="exception" data-id="${row.id}" class="px-2 py-1 rounded border border-amber-600/60 bg-amber-600/20 text-xs hover:bg-amber-600/30">Request exception</button>`);
+      }
+
+      if (currentRole === "manager" && row.state === "Exception Requested") {
+        actions.push(`<button data-action="approve" data-id="${row.id}" class="px-2 py-1 rounded border border-violet-600/60 bg-violet-600/20 text-xs hover:bg-violet-600/30">Approve exception</button>`);
+      }
+
+      return `<div class="flex flex-wrap gap-1">${actions.join("") || '<span class="text-xs text-slate-500">No action</span>'}</div>`;
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        policyRows.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-slate-400">No policies match current filters.</td></tr>`;
+        return;
+      }
+
+      policyRows.innerHTML = rows.map(row => {
+        const due = daysTo(row.dueDate);
+        return `
+          <tr class="align-top">
+            <td class="py-3 pr-4">
+              <p class="font-medium">${row.title}</p>
+              <p class="text-xs text-slate-500">${row.id}</p>
+            </td>
+            <td class="py-3 pr-4">${row.team}</td>
+            <td class="py-3 pr-4">${row.owner}</td>
+            <td class="py-3 pr-4">
+              <p>${row.dueDate}</p>
+              <p class="text-xs">${severityText(due)}</p>
+            </td>
+            <td class="py-3 pr-4">
+              <div class="w-24 h-2 rounded-full bg-slate-800 overflow-hidden">
+                <div class="h-2 rounded-full bg-emerald-400" style="width:${row.ackRate}%"></div>
+              </div>
+              <span class="text-xs text-slate-300">${row.ackRate}%</span>
+            </td>
+            <td class="py-3 pr-4">${row.risk}</td>
+            <td class="py-3 pr-4">
+              <span class="inline-flex rounded-full border px-2 py-1 text-xs ${stateColor[row.state]}">${row.state}</span>
+            </td>
+            <td class="py-3 pr-4">${row.exceptions}</td>
+            <td class="py-3">${actionButtons(row)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function addAudit(actor, event) {
+      const now = new Date();
+      const ts = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")} ${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")} UTC`;
+      auditTrail.unshift({ ts, actor, event });
+      renderAudit();
+    }
+
+    function renderAudit() {
+      if (!auditTrail.length) {
+        auditList.innerHTML = `<li class="text-sm text-slate-500">No audit entries in this session.</li>`;
+        return;
+      }
+
+      auditList.innerHTML = auditTrail.slice(0, 12).map(item => `
+        <li class="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+          <p class="text-xs text-slate-400">${item.ts} • ${item.actor}</p>
+          <p class="mt-1 text-slate-200">${item.event}</p>
+        </li>
+      `).join("");
+    }
+
+    function refresh() {
+      filtered = getFiltered();
+      renderKpis(filtered);
+      renderTeamBars(filtered);
+      renderStatusMix(filtered);
+      renderRows(filtered);
+    }
+
+    function openExceptionModal(policyId) {
+      modalPolicyId = policyId;
+      exceptionReason.value = "";
+      exceptionError.classList.add("hidden");
+      exceptionModal.classList.remove("hidden");
+      exceptionModal.classList.add("flex");
+      exceptionReason.focus();
+    }
+
+    function closeExceptionModal() {
+      modalPolicyId = null;
+      exceptionModal.classList.remove("flex");
+      exceptionModal.classList.add("hidden");
+    }
+
+    function handleTableClick(event) {
+      const btn = event.target.closest("button[data-action]");
+      if (!btn) return;
+      const { action, id } = btn.dataset;
+      const row = policies.find(p => p.id === id);
+      if (!row) return;
+
+      if (action === "ack") {
+        row.ackRate = 100;
+        row.state = "Completed";
+        row.exceptions = Math.max(0, row.exceptions - 1);
+        addAudit(currentRole === "manager" ? "Manager" : "Policy Owner", `Acknowledged ${row.id} (${row.title}). State moved to Completed.`);
+        refresh();
+      }
+
+      if (action === "exception") {
+        openExceptionModal(id);
+      }
+
+      if (action === "approve" && currentRole === "manager") {
+        row.state = "Completed";
+        row.ackRate = Math.max(row.ackRate, 95);
+        row.exceptions = Math.max(0, row.exceptions - 1);
+        addAudit("Manager", `Approved exception for ${row.id}. Compensating control attached; policy marked Completed.`);
+        refresh();
+      }
+    }
+
+    function exportCsv() {
+      const header = ["id", "title", "team", "owner", "dueDate", "ackRate", "risk", "state", "exceptions"];
+      const rows = filtered.map(p => [p.id, p.title, p.team, p.owner, p.dueDate, p.ackRate, p.risk, p.state, p.exceptions]);
+      const csv = [header.join(","), ...rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(","))].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "policy-ack-pulseboard-export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      addAudit(currentRole === "auditor" ? "Auditor" : currentRole === "manager" ? "Manager" : "Policy Owner", `Exported ${filtered.length} filtered records to CSV.`);
+    }
+
+    roleSelect.addEventListener("change", () => {
+      currentRole = roleSelect.value;
+      addAudit("System", `Role view switched to ${roleSelect.options[roleSelect.selectedIndex].text}.`);
+      refresh();
+    });
+
+    [searchInput, teamFilter, statusFilter, riskFilter, sortBy].forEach(el => {
+      el.addEventListener("input", refresh);
+      el.addEventListener("change", refresh);
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", exportCsv);
+    policyRows.addEventListener("click", handleTableClick);
+
+    document.getElementById("submitException").addEventListener("click", () => {
+      const reason = exceptionReason.value.trim();
+      if (reason.length < 10 || !modalPolicyId) {
+        exceptionError.classList.remove("hidden");
+        return;
+      }
+      const row = policies.find(p => p.id === modalPolicyId);
+      if (row) {
+        row.state = "Exception Requested";
+        row.exceptions += 1;
+        addAudit(currentRole === "manager" ? "Manager" : "Policy Owner", `Requested exception for ${row.id}: ${reason}`);
+      }
+      closeExceptionModal();
+      refresh();
+    });
+
+    document.getElementById("cancelException").addEventListener("click", closeExceptionModal);
+
+    exceptionModal.addEventListener("click", (event) => {
+      if (event.target === exceptionModal) closeExceptionModal();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !exceptionModal.classList.contains("hidden")) {
+        closeExceptionModal();
+      }
+    });
+
+    document.getElementById("clearAuditBtn").addEventListener("click", () => {
+      auditTrail = [];
+      renderAudit();
+      addAudit("System", "Cleared local audit panel and started a new session trail.");
+    });
+
+    function init() {
+      buildSelect(teamFilter, "teams", uniqueValues("team"));
+      buildSelect(statusFilter, "states", uniqueValues("state"));
+      buildSelect(riskFilter, "risk tiers", uniqueValues("risk"));
+      renderAudit();
+      refresh();
+    }
+
+    init();
+  </script>
+</body>
+</html>
