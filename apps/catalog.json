@@ -880,5 +880,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-16",
+    "day": 42,
+    "slug": "2026-03-16-contract-obligation-kanban",
+    "name": "Contract Obligation Kanban",
+    "description": "Role-aware legal workflow board for contract obligations with validation gates, drag-and-drop transitions, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Kanban",
+    "tags": [
+      "contract obligations",
+      "legal",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "drag-and-drop",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contract Obligation Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-2">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Contract Obligation Kanban</h1>
+        <p class="text-slate-300 mt-2 max-w-3xl">Track vendor contract obligations from intake to signature with role-aware approvals, policy validation gates, and an audit-ready trail.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3 w-full lg:w-auto">
+        <label for="roleSelect" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+        <select id="roleSelect" class="mt-1 w-full lg:w-56 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="legalCounsel">Legal Counsel</option>
+          <option value="businessOwner">Business Owner</option>
+          <option value="complianceLead">Compliance Lead</option>
+          <option value="auditor">Auditor (Read-only)</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="kpiGrid"></section>
+
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5 w-full">
+          <div>
+            <label for="searchInput" class="text-xs text-slate-400 uppercase tracking-wide">Search</label>
+            <input id="searchInput" type="text" placeholder="Vendor, clause, owner" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="ownerFilter" class="text-xs text-slate-400 uppercase tracking-wide">Owner</label>
+            <select id="ownerFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="riskFilter" class="text-xs text-slate-400 uppercase tracking-wide">Risk</label>
+            <select id="riskFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="regionFilter" class="text-xs text-slate-400 uppercase tracking-wide">Region</label>
+            <select id="regionFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div>
+            <label for="sortBy" class="text-xs text-slate-400 uppercase tracking-wide">Sort</label>
+            <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="dueSoon">Due date (soonest)</option>
+              <option value="riskDesc">Risk (high to low)</option>
+              <option value="valueDesc">Contract value (high to low)</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="exportBtn" class="rounded-lg border border-emerald-600/60 bg-emerald-600/20 px-4 py-2 text-sm font-medium hover:bg-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-500">Export filtered CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-4 2xl:grid-cols-[2fr_1fr]">
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Kanban Workflow</h2>
+          <p class="text-xs text-slate-400">Drag cards between valid columns or use action buttons.</p>
+        </div>
+
+        <div id="board" class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Contract obligation kanban board"></div>
+      </article>
+
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 class="text-lg font-semibold">Selected Obligation</h2>
+        <div id="detailPanel" class="mt-3 space-y-4"></div>
+      </article>
+    </section>
+
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <button id="clearAudit" class="text-xs px-2 py-1 rounded border border-slate-700 hover:border-slate-600">Clear local trail</button>
+      </div>
+      <ul id="auditList" class="mt-3 space-y-2 text-sm"></ul>
+    </section>
+  </div>
+
+  <div id="toast" class="fixed bottom-4 right-4 hidden rounded-lg border border-rose-500/50 bg-rose-600/20 px-4 py-2 text-sm text-rose-100"></div>
+
+  <script>
+    const stageOrder = ["Intake", "Legal Review", "Business Approval", "Signed"];
+    const riskScore = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const stageStyles = {
+      "Intake": "border-sky-600/40 bg-sky-600/10 text-sky-200",
+      "Legal Review": "border-violet-600/40 bg-violet-600/10 text-violet-200",
+      "Business Approval": "border-amber-600/40 bg-amber-600/10 text-amber-200",
+      "Signed": "border-emerald-600/40 bg-emerald-600/10 text-emerald-200"
+    };
+
+    const baseItems = [
+      {
+        id: "CTR-410",
+        vendor: "Nordic Cloud GmbH",
+        clause: "Data processing addendum refresh",
+        owner: "Lea Gruber",
+        region: "DACH",
+        risk: "High",
+        dueDate: "2026-03-18",
+        stage: "Legal Review",
+        valueK: 460,
+        blockers: 1,
+        validations: { msaLinked: true, dpaSigned: false, securityReviewed: true, budgetApproved: true }
+      },
+      {
+        id: "CTR-411",
+        vendor: "Delta Warehousing AG",
+        clause: "Volume rebate addendum",
+        owner: "Niko Brandt",
+        region: "EMEA",
+        risk: "Medium",
+        dueDate: "2026-03-17",
+        stage: "Business Approval",
+        valueK: 320,
+        blockers: 0,
+        validations: { msaLinked: true, dpaSigned: true, securityReviewed: true, budgetApproved: false }
+      },
+      {
+        id: "CTR-412",
+        vendor: "Helios Analytics",
+        clause: "AI inference liability cap",
+        owner: "Marta Klein",
+        region: "Global",
+        risk: "Critical",
+        dueDate: "2026-03-16",
+        stage: "Intake",
+        valueK: 910,
+        blockers: 2,
+        validations: { msaLinked: false, dpaSigned: false, securityReviewed: false, budgetApproved: true }
+      },
+      {
+        id: "CTR-413",
+        vendor: "Bluebird Payroll",
+        clause: "Sub-processor notification SLA",
+        owner: "Rico Hahn",
+        region: "DACH",
+        risk: "High",
+        dueDate: "2026-03-22",
+        stage: "Legal Review",
+        valueK: 280,
+        blockers: 0,
+        validations: { msaLinked: true, dpaSigned: true, securityReviewed: true, budgetApproved: true }
+      },
+      {
+        id: "CTR-414",
+        vendor: "Kepler Staffing Ltd",
+        clause: "Temporary labor compliance annex",
+        owner: "Lea Gruber",
+        region: "UK",
+        risk: "Medium",
+        dueDate: "2026-03-21",
+        stage: "Signed",
+        valueK: 180,
+        blockers: 0,
+        validations: { msaLinked: true, dpaSigned: true, securityReviewed: true, budgetApproved: true }
+      },
+      {
+        id: "CTR-415",
+        vendor: "Argo Robotics",
+        clause: "Field support indemnity",
+        owner: "Pia Lorenz",
+        region: "US",
+        risk: "High",
+        dueDate: "2026-03-20",
+        stage: "Business Approval",
+        valueK: 670,
+        blockers: 1,
+        validations: { msaLinked: true, dpaSigned: true, securityReviewed: true, budgetApproved: true }
+      },
+      {
+        id: "CTR-416",
+        vendor: "Orbit Secure Mail",
+        clause: "Retention and eDiscovery carve-out",
+        owner: "Jonas Weber",
+        region: "EMEA",
+        risk: "Critical",
+        dueDate: "2026-03-19",
+        stage: "Legal Review",
+        valueK: 740,
+        blockers: 1,
+        validations: { msaLinked: true, dpaSigned: false, securityReviewed: true, budgetApproved: false }
+      },
+      {
+        id: "CTR-417",
+        vendor: "Crown Mobility",
+        clause: "Travel policy exceptions annex",
+        owner: "Rico Hahn",
+        region: "DACH",
+        risk: "Low",
+        dueDate: "2026-03-25",
+        stage: "Intake",
+        valueK: 95,
+        blockers: 0,
+        validations: { msaLinked: true, dpaSigned: true, securityReviewed: true, budgetApproved: true }
+      }
+    ];
+
+    let items = structuredClone(baseItems);
+    let currentRole = "legalCounsel";
+    let selectedId = items[0].id;
+    let filtered = [];
+    let auditTrail = [
+      { ts: "2026-03-16 08:45", actor: "System", event: "Overnight sync imported contract metadata from CLM + ERP." },
+      { ts: "2026-03-16 08:52", actor: "Lea Gruber", event: "Attached missing MSA reference for CTR-410." }
+    ];
+
+    const board = document.getElementById("board");
+    const kpiGrid = document.getElementById("kpiGrid");
+    const detailPanel = document.getElementById("detailPanel");
+    const auditList = document.getElementById("auditList");
+
+    const roleSelect = document.getElementById("roleSelect");
+    const searchInput = document.getElementById("searchInput");
+    const ownerFilter = document.getElementById("ownerFilter");
+    const riskFilter = document.getElementById("riskFilter");
+    const regionFilter = document.getElementById("regionFilter");
+    const sortBy = document.getElementById("sortBy");
+
+    function nowStamp() {
+      const d = new Date();
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+    }
+
+    function addAudit(actor, event) {
+      auditTrail.unshift({ ts: nowStamp(), actor, event });
+      renderAudit();
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.add("hidden"), 2400);
+    }
+
+    function uniqueValues(key) {
+      return [...new Set(items.map(item => item[key]))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function populateSelect(select, label, values) {
+      select.innerHTML = `<option value="all">All ${label}</option>${values.map(v => `<option value="${v}">${v}</option>`).join("")}`;
+    }
+
+    function dayDelta(dateStr) {
+      const now = new Date("2026-03-16T09:13:00Z");
+      const due = new Date(`${dateStr}T23:59:59Z`);
+      return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function dueTone(days) {
+      if (days < 0) return '<span class="text-rose-300">overdue</span>';
+      if (days <= 2) return `<span class="text-amber-300">${days}d left</span>`;
+      return `<span class="text-slate-300">${days}d left</span>`;
+    }
+
+    function canRoleMove(role, from, to) {
+      if (role === "auditor") return false;
+      if (role === "complianceLead") return true;
+      if (role === "legalCounsel") return to !== "Signed";
+      if (role === "businessOwner") return from === "Business Approval" && ["Signed", "Legal Review"].includes(to);
+      return false;
+    }
+
+    function isAllowedTransition(from, to) {
+      const allowed = {
+        "Intake": ["Legal Review"],
+        "Legal Review": ["Intake", "Business Approval"],
+        "Business Approval": ["Legal Review", "Signed"],
+        "Signed": []
+      };
+      return allowed[from].includes(to);
+    }
+
+    function validationReady(item) {
+      return Object.values(item.validations).every(Boolean);
+    }
+
+    function getFiltered() {
+      const q = searchInput.value.trim().toLowerCase();
+      const owner = ownerFilter.value;
+      const risk = riskFilter.value;
+      const region = regionFilter.value;
+      const sorter = sortBy.value;
+
+      const rows = items.filter(item => {
+        const hay = `${item.id} ${item.vendor} ${item.clause} ${item.owner}`.toLowerCase();
+        return (!q || hay.includes(q))
+          && (owner === "all" || item.owner === owner)
+          && (risk === "all" || item.risk === risk)
+          && (region === "all" || item.region === region);
+      });
+
+      rows.sort((a, b) => {
+        if (sorter === "dueSoon") return new Date(a.dueDate) - new Date(b.dueDate);
+        if (sorter === "riskDesc") return riskScore[b.risk] - riskScore[a.risk];
+        if (sorter === "valueDesc") return b.valueK - a.valueK;
+        return 0;
+      });
+
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const open = rows.filter(r => r.stage !== "Signed");
+      const dueSoon = rows.filter(r => dayDelta(r.dueDate) <= 2 && r.stage !== "Signed").length;
+      const highRisk = rows.filter(r => ["High", "Critical"].includes(r.risk) && r.stage !== "Signed").length;
+      const signed = rows.filter(r => r.stage === "Signed").length;
+
+      const cards = [
+        { label: "Open Obligations", value: open.length, helper: "Filtered board", tone: "sky" },
+        { label: "High-Risk Open", value: highRisk, helper: "Needs legal attention", tone: "rose" },
+        { label: "Due ≤ 2 Days", value: dueSoon, helper: "Escalation candidates", tone: "amber" },
+        { label: "Signed", value: signed, helper: "Closed this scope", tone: "emerald" }
+      ];
+
+      kpiGrid.innerHTML = cards.map(card => `
+        <article class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${card.label}</p>
+          <p class="text-3xl font-semibold mt-2 text-${card.tone}-300">${card.value}</p>
+          <p class="text-xs text-slate-400 mt-1">${card.helper}</p>
+        </article>
+      `).join("");
+    }
+
+    function cardActions(item) {
+      if (currentRole === "auditor") {
+        return '<span class="text-xs text-slate-500">Read-only</span>';
+      }
+
+      const nextStage = {
+        "Intake": "Legal Review",
+        "Legal Review": "Business Approval",
+        "Business Approval": "Signed",
+        "Signed": null
+      }[item.stage];
+
+      const prevStage = {
+        "Intake": null,
+        "Legal Review": "Intake",
+        "Business Approval": "Legal Review",
+        "Signed": null
+      }[item.stage];
+
+      const buttons = [];
+
+      if (nextStage && canRoleMove(currentRole, item.stage, nextStage)) {
+        buttons.push(`<button data-action="advance" data-id="${item.id}" class="rounded border border-emerald-600/60 bg-emerald-600/20 px-2 py-1 text-xs hover:bg-emerald-600/30">Advance</button>`);
+      }
+
+      if (prevStage && canRoleMove(currentRole, item.stage, prevStage)) {
+        buttons.push(`<button data-action="sendback" data-id="${item.id}" class="rounded border border-amber-600/60 bg-amber-600/20 px-2 py-1 text-xs hover:bg-amber-600/30">Send back</button>`);
+      }
+
+      return buttons.join(" ") || '<span class="text-xs text-slate-500">No permitted action</span>';
+    }
+
+    function renderBoard(rows) {
+      board.innerHTML = stageOrder.map(stage => {
+        const stageRows = rows.filter(r => r.stage === stage);
+
+        return `
+          <section class="rounded-xl border border-slate-800 bg-slate-950/60 p-3" data-drop-stage="${stage}" tabindex="0">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold">${stage}</h3>
+              <span class="text-xs text-slate-400">${stageRows.length}</span>
+            </div>
+
+            <div class="space-y-3 min-h-20" data-drop-stage="${stage}">
+              ${stageRows.length ? stageRows.map(item => {
+                const isSelected = item.id === selectedId;
+                const d = dayDelta(item.dueDate);
+
+                return `
+                  <article
+                    class="rounded-lg border ${isSelected ? "border-emerald-500/70" : "border-slate-800"} bg-slate-900/70 p-3"
+                    draggable="${currentRole !== "auditor"}"
+                    data-card-id="${item.id}"
+                    tabindex="0"
+                    aria-label="${item.vendor} ${item.clause}"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <button data-action="select" data-id="${item.id}" class="text-left">
+                        <p class="text-sm font-medium">${item.vendor}</p>
+                        <p class="text-xs text-slate-400">${item.id}</p>
+                      </button>
+                      <span class="text-[10px] rounded-full border px-2 py-0.5 ${stageStyles[item.stage]}">${item.risk}</span>
+                    </div>
+
+                    <p class="mt-2 text-sm text-slate-300">${item.clause}</p>
+
+                    <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p>Owner: <span class="text-slate-200">${item.owner}</span></p>
+                      <p>Region: <span class="text-slate-200">${item.region}</span></p>
+                      <p>€${item.valueK}k</p>
+                      <p>${dueTone(d)}</p>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap gap-1">${cardActions(item)}</div>
+                  </article>
+                `;
+              }).join("") : '<p class="text-xs text-slate-500">No cards in this stage.</p>'}
+            </div>
+          </section>
+        `;
+      }).join("");
+
+      bindDragAndDrop();
+    }
+
+    function renderDetailPanel() {
+      const item = items.find(i => i.id === selectedId);
+      if (!item) {
+        detailPanel.innerHTML = '<p class="text-sm text-slate-500">Select a card to inspect details.</p>';
+        return;
+      }
+
+      const disabled = currentRole === "auditor" ? "disabled" : "";
+      const checks = [
+        ["msaLinked", "MSA linked to ERP supplier master"],
+        ["dpaSigned", "DPA / privacy annex signed"],
+        ["securityReviewed", "Security review completed"],
+        ["budgetApproved", "Budget owner approved value"]
+      ];
+
+      detailPanel.innerHTML = `
+        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+          <p class="text-xs text-slate-400">${item.id}</p>
+          <p class="text-base font-semibold mt-1">${item.vendor}</p>
+          <p class="text-sm text-slate-300 mt-1">${item.clause}</p>
+
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <p class="text-slate-400">Stage <span class="text-slate-200">${item.stage}</span></p>
+            <p class="text-slate-400">Risk <span class="text-slate-200">${item.risk}</span></p>
+            <p class="text-slate-400">Due <span class="text-slate-200">${item.dueDate}</span></p>
+            <p class="text-slate-400">Blockers <span class="text-slate-200">${item.blockers}</span></p>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+          <p class="text-sm font-medium">Policy Validation Gate</p>
+          <p class="text-xs text-slate-400 mt-1">All checks must be completed before moving to Signed.</p>
+          <div class="mt-3 space-y-2">
+            ${checks.map(([key, label]) => `
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" data-validation-key="${key}" ${item.validations[key] ? "checked" : ""} ${disabled} class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500" />
+                <span>${label}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-300">
+          <p class="font-medium text-slate-100 mb-1">Validation status</p>
+          <p>${validationReady(item) ? "✅ Ready for final signature" : "⚠️ Missing controls — cannot close yet"}</p>
+        </div>
+      `;
+    }
+
+    function renderAudit() {
+      if (!auditTrail.length) {
+        auditList.innerHTML = '<li class="text-sm text-slate-500">No local audit entries.</li>';
+        return;
+      }
+
+      auditList.innerHTML = auditTrail.slice(0, 14).map(entry => `
+        <li class="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+          <p class="text-xs text-slate-400">${entry.ts} • ${entry.actor}</p>
+          <p class="mt-1 text-slate-200">${entry.event}</p>
+        </li>
+      `).join("");
+    }
+
+    function attemptMove(item, toStage, source) {
+      if (item.stage === toStage) return;
+
+      if (!isAllowedTransition(item.stage, toStage)) {
+        showToast(`Transition ${item.stage} → ${toStage} is not allowed.`);
+        return;
+      }
+
+      if (!canRoleMove(currentRole, item.stage, toStage)) {
+        showToast("Your current role cannot perform this transition.");
+        return;
+      }
+
+      if (toStage === "Signed" && !validationReady(item)) {
+        showToast("Complete all policy validation checks before signing.");
+        return;
+      }
+
+      const from = item.stage;
+      item.stage = toStage;
+      addAudit(roleLabel(currentRole), `${item.id} moved ${from} → ${toStage} via ${source}.`);
+      refresh();
+    }
+
+    function roleLabel(role) {
+      return {
+        legalCounsel: "Legal Counsel",
+        businessOwner: "Business Owner",
+        complianceLead: "Compliance Lead",
+        auditor: "Auditor"
+      }[role] || "System";
+    }
+
+    function bindDragAndDrop() {
+      const cards = board.querySelectorAll("[data-card-id]");
+      cards.forEach(card => {
+        card.addEventListener("dragstart", (event) => {
+          if (currentRole === "auditor") {
+            event.preventDefault();
+            return;
+          }
+          event.dataTransfer.setData("text/plain", card.dataset.cardId);
+          event.dataTransfer.effectAllowed = "move";
+        });
+      });
+
+      const dropZones = board.querySelectorAll("[data-drop-stage]");
+      dropZones.forEach(zone => {
+        zone.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+        });
+
+        zone.addEventListener("drop", (event) => {
+          event.preventDefault();
+          const id = event.dataTransfer.getData("text/plain");
+          const targetStage = zone.dataset.dropStage;
+          const item = items.find(i => i.id === id);
+          if (!item || !targetStage) return;
+          attemptMove(item, targetStage, "drag-drop");
+        });
+      });
+    }
+
+    function exportCsv() {
+      const header = ["id", "vendor", "clause", "owner", "region", "risk", "dueDate", "stage", "valueK", "blockers"];
+      const rows = filtered.map(item => [item.id, item.vendor, item.clause, item.owner, item.region, item.risk, item.dueDate, item.stage, item.valueK, item.blockers]);
+      const csv = [header.join(","), ...rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(","))].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "contract-obligation-kanban.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      addAudit(roleLabel(currentRole), `Exported ${filtered.length} filtered obligations to CSV.`);
+    }
+
+    function refresh() {
+      filtered = getFiltered();
+      renderKpis(filtered);
+      renderBoard(filtered);
+
+      if (!filtered.some(item => item.id === selectedId) && filtered.length) {
+        selectedId = filtered[0].id;
+      }
+
+      renderDetailPanel();
+      renderAudit();
+    }
+
+    roleSelect.addEventListener("change", () => {
+      currentRole = roleSelect.value;
+      addAudit("System", `Role switched to ${roleLabel(currentRole)}.`);
+      refresh();
+    });
+
+    [searchInput, ownerFilter, riskFilter, regionFilter, sortBy].forEach(el => {
+      el.addEventListener("input", refresh);
+      el.addEventListener("change", refresh);
+    });
+
+    board.addEventListener("click", (event) => {
+      const selectBtn = event.target.closest('button[data-action="select"]');
+      if (selectBtn) {
+        selectedId = selectBtn.dataset.id;
+        renderBoard(filtered);
+        renderDetailPanel();
+        return;
+      }
+
+      const actionBtn = event.target.closest('button[data-action]');
+      if (!actionBtn) return;
+
+      const item = items.find(i => i.id === actionBtn.dataset.id);
+      if (!item) return;
+
+      const action = actionBtn.dataset.action;
+      if (action === "advance") {
+        const next = { "Intake": "Legal Review", "Legal Review": "Business Approval", "Business Approval": "Signed", "Signed": null }[item.stage];
+        if (next) attemptMove(item, next, "quick-action");
+      }
+
+      if (action === "sendback") {
+        const prev = { "Intake": null, "Legal Review": "Intake", "Business Approval": "Legal Review", "Signed": null }[item.stage];
+        if (prev) attemptMove(item, prev, "quick-action");
+      }
+    });
+
+    detailPanel.addEventListener("change", (event) => {
+      const box = event.target.closest("input[data-validation-key]");
+      if (!box) return;
+
+      const item = items.find(i => i.id === selectedId);
+      if (!item) return;
+
+      const key = box.dataset.validationKey;
+      item.validations[key] = box.checked;
+      addAudit(roleLabel(currentRole), `Updated ${item.id} validation: ${key} = ${box.checked ? "true" : "false"}.`);
+      renderDetailPanel();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", exportCsv);
+
+    document.getElementById("clearAudit").addEventListener("click", () => {
+      auditTrail = [];
+      renderAudit();
+      addAudit("System", "Cleared local audit trail.");
+    });
+
+    function init() {
+      populateSelect(ownerFilter, "owners", uniqueValues("owner"));
+      populateSelect(riskFilter, "risk tiers", uniqueValues("risk"));
+      populateSelect(regionFilter, "regions", uniqueValues("region"));
+      refresh();
+    }
+
+    init();
+  </script>
+</body>
+</html>
