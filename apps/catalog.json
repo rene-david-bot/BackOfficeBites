@@ -905,5 +905,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-16",
+    "day": 43,
+    "slug": "2026-03-16-goods-receipt-chatdesk",
+    "name": "Goods Receipt Exception Chatdesk",
+    "description": "Chat-first supply-chain triage workspace for goods receipt mismatches with policy validation, approvals, audit trail, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Chat UI",
+    "tags": [
+      "goods receipt",
+      "supply chain",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

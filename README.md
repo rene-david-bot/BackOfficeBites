@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Contract Obligation Kanban** — role-aware legal workflow board for contract obligations with validation gates, drag-and-drop transitions, audit trail, and CSV export.
+**Goods Receipt Exception Chatdesk** — chat-first supply-chain triage workspace for goods receipt mismatches with policy validation, approvals, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

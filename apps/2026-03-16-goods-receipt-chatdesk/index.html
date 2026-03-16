@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goods Receipt Exception Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Goods Receipt Exception Chatdesk</h1>
+        <p class="text-slate-300 mt-1">Chat-first triage for PO mismatches with policy checks, approvals, and audit trail.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <label class="text-sm" for="roleSelect">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>Warehouse Clerk</option>
+          <option>QA Reviewer</option>
+          <option>Supply Chain Lead</option>
+        </select>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 md:grid-cols-12">
+      <div class="md:col-span-4 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <div class="grid gap-2 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+            <input id="searchInput" type="text" placeholder="Vendor, SKU, PO..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+            <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option value="New">New</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Approved">Approved</option>
+              <option value="Blocked">Blocked</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+            <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="highest">Highest variance</option>
+            </select>
+          </div>
+        </div>
+
+        <ul id="caseList" class="mt-3 space-y-2 max-h-[56vh] overflow-auto pr-1"></ul>
+      </div>
+
+      <div class="md:col-span-5 bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col min-h-[32rem]">
+        <div class="border-b border-slate-800 pb-2">
+          <h2 id="caseTitle" class="text-lg font-semibold">Select an exception</h2>
+          <p id="caseMeta" class="text-sm text-slate-400"></p>
+        </div>
+        <div id="policyBox" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm"></div>
+        <div id="chatThread" class="mt-3 flex-1 overflow-auto space-y-2 pr-1"></div>
+
+        <form id="chatForm" class="mt-3 border-t border-slate-800 pt-3">
+          <label for="chatInput" class="text-xs uppercase tracking-wide text-slate-400">Message</label>
+          <div class="mt-1 flex gap-2">
+            <input id="chatInput" type="text" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Add a triage note..." />
+            <button class="bg-sky-600 hover:bg-sky-500 rounded px-3 py-1.5 text-sm font-medium" type="submit">Send</button>
+          </div>
+          <p id="chatError" class="text-xs text-rose-400 mt-1 hidden">Please enter a message.</p>
+        </form>
+      </div>
+
+      <div class="md:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <h2 class="font-semibold">Actions & Audit</h2>
+        <dl id="detailGrid" class="mt-3 text-sm space-y-1"></dl>
+
+        <div class="mt-3 grid gap-2">
+          <button id="reviewBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Move to Under Review</button>
+          <button id="approveBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Approve Tolerance</button>
+          <button id="blockBtn" class="bg-rose-600 hover:bg-rose-500 rounded px-3 py-1.5 text-sm font-medium">Block Receipt</button>
+        </div>
+        <p id="actionMsg" class="text-xs mt-2 text-amber-300"></p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-300">Audit Trail</h3>
+        <ul id="auditList" class="mt-2 text-xs space-y-1 max-h-40 overflow-auto pr-1"></ul>
+      </div>
+    </section>
+
+    <section class="mt-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+      <h2 class="font-semibold">Log New Exception</h2>
+      <form id="newCaseForm" class="mt-2 grid gap-2 sm:grid-cols-2">
+        <div>
+          <label for="vendorInput" class="text-xs uppercase tracking-wide text-slate-400">Vendor</label>
+          <input id="vendorInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="skuInput" class="text-xs uppercase tracking-wide text-slate-400">SKU</label>
+          <input id="skuInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="poInput" class="text-xs uppercase tracking-wide text-slate-400">PO Ref</label>
+          <input id="poInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="warehouseInput" class="text-xs uppercase tracking-wide text-slate-400">Warehouse</label>
+          <input id="warehouseInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="poQtyInput" class="text-xs uppercase tracking-wide text-slate-400">PO Qty</label>
+          <input id="poQtyInput" type="number" min="1" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="recvQtyInput" class="text-xs uppercase tracking-wide text-slate-400">Received Qty</label>
+          <input id="recvQtyInput" type="number" min="0" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div class="sm:col-span-2 flex items-center justify-between gap-2">
+          <p id="formError" class="text-xs text-rose-400 hidden">Please fill all fields and use valid quantities.</p>
+          <button type="submit" class="bg-amber-500 text-slate-950 hover:bg-amber-400 rounded px-3 py-1.5 text-sm font-semibold">Create Exception</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+<script>
+const cases = [
+  {
+    id: 'GR-1042',
+    vendor: 'Nordic Fasteners GmbH',
+    sku: 'NF-M8-HEX',
+    po: 'PO-77841',
+    warehouse: 'Leipzig DC',
+    poQty: 1200,
+    recvQty: 1120,
+    unitCost: 0.82,
+    status: 'Under Review',
+    createdAt: '2026-03-16T07:20:00Z',
+    owner: 'Warehouse Clerk',
+    messages: [
+      {author: 'Warehouse Clerk', text: 'Count mismatch found at dock 3. Pallet labels indicate 10 boxes short.', ts: '07:22'},
+      {author: 'QA Reviewer', text: 'Sampling confirms no damage. Requesting vendor packing list.', ts: '07:41'}
+    ],
+    audit: ['07:20 Exception created', '07:25 Routed to QA Reviewer', '07:41 Missing quantity evidence requested']
+  },
+  {
+    id: 'GR-1043',
+    vendor: 'BlueMold Plastics',
+    sku: 'BM-CASING-44',
+    po: 'PO-77852',
+    warehouse: 'Dresden Hub',
+    poQty: 400,
+    recvQty: 438,
+    unitCost: 12.4,
+    status: 'New',
+    createdAt: '2026-03-16T08:02:00Z',
+    owner: 'Warehouse Clerk',
+    messages: [
+      {author: 'Warehouse Clerk', text: 'Received overage. Dock accepted due to carrier deadline.', ts: '08:05'}
+    ],
+    audit: ['08:02 Exception created']
+  },
+  {
+    id: 'GR-1044',
+    vendor: 'Acme Sensors Ltd.',
+    sku: 'AS-TEMP-19',
+    po: '',
+    warehouse: 'Prague Overflow',
+    poQty: 300,
+    recvQty: 300,
+    unitCost: 5.6,
+    status: 'Blocked',
+    createdAt: '2026-03-16T08:40:00Z',
+    owner: 'Supply Chain Lead',
+    messages: [
+      {author: 'QA Reviewer', text: 'No linked PO in ERP snapshot.', ts: '08:43'},
+      {author: 'Supply Chain Lead', text: 'Receipt blocked until procurement links PO.', ts: '08:49'}
+    ],
+    audit: ['08:40 Exception created', '08:48 Policy check failed: missing PO', '08:49 Receipt blocked']
+  }
+];
+
+let selectedId = cases[0]?.id;
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const sortSelect = document.getElementById('sortSelect');
+const caseList = document.getElementById('caseList');
+const caseTitle = document.getElementById('caseTitle');
+const caseMeta = document.getElementById('caseMeta');
+const policyBox = document.getElementById('policyBox');
+const chatThread = document.getElementById('chatThread');
+const detailGrid = document.getElementById('detailGrid');
+const auditList = document.getElementById('auditList');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatError = document.getElementById('chatError');
+const actionMsg = document.getElementById('actionMsg');
+const reviewBtn = document.getElementById('reviewBtn');
+const approveBtn = document.getElementById('approveBtn');
+const blockBtn = document.getElementById('blockBtn');
+const exportBtn = document.getElementById('exportBtn');
+const newCaseForm = document.getElementById('newCaseForm');
+const formError = document.getElementById('formError');
+
+const statusColors = {
+  'New': 'bg-sky-500/20 text-sky-200 border-sky-400/30',
+  'Under Review': 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+  'Approved': 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30',
+  'Blocked': 'bg-rose-500/20 text-rose-200 border-rose-400/30'
+};
+
+function variancePct(item) {
+  if (!item.poQty) return 0;
+  return Math.round(((item.recvQty - item.poQty) / item.poQty) * 1000) / 10;
+}
+
+function policyFor(item) {
+  const variance = Math.abs(variancePct(item));
+  if (!item.po) {
+    return { level: 'critical', text: 'Critical policy breach: PO reference missing. Receipt cannot be approved.' };
+  }
+  if (variance > 5) {
+    return { level: 'warning', text: `Variance is ${variance}%. Lead approval is required above 5%.` };
+  }
+  return { level: 'ok', text: `Variance ${variance}% is within tolerance. Standard review path applies.` };
+}
+
+function filteredCases() {
+  const q = searchInput.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  const sort = sortSelect.value;
+
+  let data = cases.filter(item => {
+    const haystack = `${item.id} ${item.vendor} ${item.sku} ${item.po} ${item.warehouse}`.toLowerCase();
+    const matchesQ = !q || haystack.includes(q);
+    const matchesStatus = status === 'all' || item.status === status;
+    return matchesQ && matchesStatus;
+  });
+
+  if (sort === 'newest') data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (sort === 'oldest') data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  if (sort === 'highest') data.sort((a, b) => Math.abs(variancePct(b)) - Math.abs(variancePct(a)));
+  return data;
+}
+
+function renderList() {
+  const data = filteredCases();
+  if (!data.find(item => item.id === selectedId)) {
+    selectedId = data[0]?.id || null;
+  }
+
+  caseList.innerHTML = '';
+  if (data.length === 0) {
+    caseList.innerHTML = '<li class="text-sm text-slate-400">No exceptions match filters.</li>';
+    renderDetail();
+    return;
+  }
+
+  data.forEach(item => {
+    const active = item.id === selectedId;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <button data-id="${item.id}" class="w-full text-left rounded-lg border ${active ? 'border-emerald-500 bg-slate-800' : 'border-slate-700 bg-slate-900 hover:bg-slate-800'} p-2 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-medium text-sm">${item.id}</span>
+          <span class="text-[11px] px-2 py-0.5 rounded border ${statusColors[item.status] || 'border-slate-700'}">${item.status}</span>
+        </div>
+        <p class="text-sm text-slate-300 mt-1">${item.vendor}</p>
+        <p class="text-xs text-slate-400 mt-1">${item.sku} · ${variancePct(item)}% variance</p>
+      </button>`;
+    caseList.appendChild(li);
+  });
+}
+
+function renderDetail() {
+  const item = cases.find(c => c.id === selectedId);
+  actionMsg.textContent = '';
+
+  if (!item) {
+    caseTitle.textContent = 'Select an exception';
+    caseMeta.textContent = '';
+    chatThread.innerHTML = '';
+    detailGrid.innerHTML = '';
+    auditList.innerHTML = '';
+    policyBox.classList.add('hidden');
+    [reviewBtn, approveBtn, blockBtn].forEach(btn => btn.disabled = true);
+    return;
+  }
+
+  caseTitle.textContent = `${item.id} · ${item.vendor}`;
+  caseMeta.textContent = `${item.sku} · ${item.warehouse} · PO ${item.po || 'MISSING'}`;
+
+  const policy = policyFor(item);
+  policyBox.classList.remove('hidden', 'border-rose-500/40', 'text-rose-200', 'bg-rose-500/10', 'border-amber-500/40', 'text-amber-100', 'bg-amber-500/10', 'border-emerald-500/40', 'text-emerald-100', 'bg-emerald-500/10');
+  if (policy.level === 'critical') policyBox.classList.add('border-rose-500/40', 'text-rose-200', 'bg-rose-500/10');
+  else if (policy.level === 'warning') policyBox.classList.add('border-amber-500/40', 'text-amber-100', 'bg-amber-500/10');
+  else policyBox.classList.add('border-emerald-500/40', 'text-emerald-100', 'bg-emerald-500/10');
+  policyBox.textContent = policy.text;
+
+  chatThread.innerHTML = item.messages.map(msg => `
+    <article class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+      <div class="flex justify-between text-xs text-slate-400"><span>${msg.author}</span><span>${msg.ts}</span></div>
+      <p class="mt-1 text-sm text-slate-200">${msg.text}</p>
+    </article>
+  `).join('');
+
+  const variance = variancePct(item);
+  detailGrid.innerHTML = `
+    <div><dt class="text-slate-400">PO Qty</dt><dd>${item.poQty}</dd></div>
+    <div><dt class="text-slate-400">Received Qty</dt><dd>${item.recvQty}</dd></div>
+    <div><dt class="text-slate-400">Variance</dt><dd>${variance}%</dd></div>
+    <div><dt class="text-slate-400">Unit Cost</dt><dd>€${item.unitCost.toFixed(2)}</dd></div>
+    <div><dt class="text-slate-400">Current Owner</dt><dd>${item.owner}</dd></div>
+  `;
+
+  auditList.innerHTML = item.audit.map(line => `<li class="text-slate-300">• ${line}</li>`).join('');
+
+  const role = roleSelect.value;
+  const canReview = item.status === 'New';
+  const canApprove = ['Under Review', 'New'].includes(item.status);
+  const canBlock = item.status !== 'Blocked';
+
+  reviewBtn.disabled = !canReview;
+  approveBtn.disabled = !canApprove;
+  blockBtn.disabled = !canBlock;
+
+  [reviewBtn, approveBtn, blockBtn].forEach(btn => {
+    btn.classList.toggle('opacity-40', btn.disabled);
+    btn.classList.toggle('cursor-not-allowed', btn.disabled);
+  });
+
+  if (role === 'Warehouse Clerk') {
+    approveBtn.disabled = true;
+    approveBtn.classList.add('opacity-40', 'cursor-not-allowed');
+  }
+}
+
+function updateSelected(id) {
+  selectedId = id;
+  renderList();
+  renderDetail();
+}
+
+caseList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-id]');
+  if (!btn) return;
+  updateSelected(btn.dataset.id);
+});
+
+[roleSelect, searchInput, statusFilter, sortSelect].forEach(el => {
+  el.addEventListener('input', () => {
+    renderList();
+    renderDetail();
+  });
+});
+
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const item = cases.find(c => c.id === selectedId);
+  const msg = chatInput.value.trim();
+  if (!item) return;
+  if (!msg) {
+    chatError.classList.remove('hidden');
+    return;
+  }
+  chatError.classList.add('hidden');
+  item.messages.push({author: roleSelect.value, text: msg, ts: new Date().toISOString().slice(11,16)});
+  item.audit.unshift(`${new Date().toISOString().slice(11,16)} Note added by ${roleSelect.value}`);
+  chatInput.value = '';
+  renderDetail();
+});
+
+function transition(targetStatus) {
+  const item = cases.find(c => c.id === selectedId);
+  if (!item) return;
+  const role = roleSelect.value;
+  const policy = policyFor(item);
+  const now = new Date().toISOString().slice(11,16);
+
+  if (targetStatus === 'Under Review' && item.status !== 'New') {
+    actionMsg.textContent = 'Only NEW exceptions can move to Under Review.';
+    return;
+  }
+
+  if (targetStatus === 'Approved') {
+    if (role === 'Warehouse Clerk') {
+      actionMsg.textContent = 'Warehouse Clerk cannot approve. Escalate to QA or Lead.';
+      return;
+    }
+    if (policy.level === 'critical') {
+      actionMsg.textContent = 'Cannot approve: PO is missing.';
+      return;
+    }
+    if (policy.level === 'warning' && role !== 'Supply Chain Lead') {
+      actionMsg.textContent = 'Variance above 5% requires Supply Chain Lead.';
+      return;
+    }
+  }
+
+  item.status = targetStatus;
+  item.owner = targetStatus === 'Approved' ? 'AP Matching Bot' : role;
+  item.audit.unshift(`${now} Status changed to ${targetStatus} by ${role}`);
+  item.messages.push({author: role, text: `Status update: ${targetStatus}.`, ts: now});
+  actionMsg.textContent = `Updated ${item.id} → ${targetStatus}.`;
+
+  renderList();
+  renderDetail();
+}
+
+reviewBtn.addEventListener('click', () => transition('Under Review'));
+approveBtn.addEventListener('click', () => transition('Approved'));
+blockBtn.addEventListener('click', () => transition('Blocked'));
+
+exportBtn.addEventListener('click', () => {
+  const rows = filteredCases();
+  const header = ['id','vendor','sku','po','warehouse','status','poQty','recvQty','variancePct'];
+  const csv = [header.join(',')].concat(rows.map(item => [
+    item.id,
+    `"${item.vendor}"`,
+    item.sku,
+    item.po || 'MISSING',
+    `"${item.warehouse}"`,
+    item.status,
+    item.poQty,
+    item.recvQty,
+    variancePct(item)
+  ].join(','))).join('\n');
+
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'goods-receipt-exceptions.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+newCaseForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const vendor = document.getElementById('vendorInput').value.trim();
+  const sku = document.getElementById('skuInput').value.trim();
+  const po = document.getElementById('poInput').value.trim();
+  const warehouse = document.getElementById('warehouseInput').value.trim();
+  const poQty = Number(document.getElementById('poQtyInput').value);
+  const recvQty = Number(document.getElementById('recvQtyInput').value);
+
+  if (!vendor || !sku || !warehouse || poQty < 1 || recvQty < 0 || Number.isNaN(poQty) || Number.isNaN(recvQty)) {
+    formError.classList.remove('hidden');
+    return;
+  }
+
+  formError.classList.add('hidden');
+  const nextNum = 1040 + cases.length + 1;
+  const id = `GR-${nextNum}`;
+  cases.push({
+    id,
+    vendor,
+    sku,
+    po,
+    warehouse,
+    poQty,
+    recvQty,
+    unitCost: 1.0,
+    status: 'New',
+    createdAt: new Date().toISOString(),
+    owner: 'Warehouse Clerk',
+    messages: [{author: roleSelect.value, text: 'New exception logged from inbound dock.', ts: new Date().toISOString().slice(11,16)}],
+    audit: [`${new Date().toISOString().slice(11,16)} Exception created by ${roleSelect.value}`]
+  });
+
+  newCaseForm.reset();
+  selectedId = id;
+  renderList();
+  renderDetail();
+});
+
+renderList();
+renderDetail();
+</script>
+</body>
+</html>
