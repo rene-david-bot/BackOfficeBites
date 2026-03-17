@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asset Checkout Escalation Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Asset Checkout Escalation Timeline</h1>
+        <p class="text-slate-300 mt-1">Timeline-first supply chain desk for overdue high-value assets, with policy gates, approvals, and audit-ready escalation history.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="roleSelect" class="text-sm">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>Logistics Coordinator</option>
+          <option>Finance Controller</option>
+          <option>Security Lead</option>
+        </select>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 lg:grid-cols-12">
+      <aside class="lg:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <div class="grid gap-2">
+          <div>
+            <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+            <input id="searchInput" type="text" placeholder="Asset, owner, site..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+            <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option value="Open">Open</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Extended">Extended</option>
+              <option value="Escalated">Escalated</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+            <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="dueSoon">Due soonest</option>
+              <option value="dueLate">Most overdue</option>
+              <option value="risk">Highest risk</option>
+            </select>
+          </div>
+        </div>
+
+        <h2 class="mt-4 text-sm font-semibold text-slate-300">Create Checkout Case</h2>
+        <form id="newCaseForm" class="mt-2 grid gap-2">
+          <div>
+            <label for="assetInput" class="text-xs uppercase tracking-wide text-slate-400">Asset</label>
+            <input id="assetInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="holderInput" class="text-xs uppercase tracking-wide text-slate-400">Current Holder</label>
+            <input id="holderInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="siteInput" class="text-xs uppercase tracking-wide text-slate-400">Site</label>
+            <input id="siteInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Dresden, Berlin, ..." />
+          </div>
+          <div>
+            <label for="valueInput" class="text-xs uppercase tracking-wide text-slate-400">Asset Value (€)</label>
+            <input id="valueInput" type="number" min="100" step="100" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="daysInput" class="text-xs uppercase tracking-wide text-slate-400">Overdue (days)</label>
+            <input id="daysInput" type="number" min="1" max="60" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <p id="formError" class="text-xs text-rose-400 hidden">All fields required. Holder and asset need at least 3 chars.</p>
+          <button type="submit" class="bg-amber-500 text-slate-950 hover:bg-amber-400 rounded px-3 py-1.5 text-sm font-semibold">Add Case</button>
+        </form>
+      </aside>
+
+      <section class="lg:col-span-6 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-semibold">Escalation Timeline</h2>
+          <p id="listMeta" class="text-xs text-slate-400"></p>
+        </div>
+        <ul id="timelineList" class="mt-3 space-y-3 max-h-[68vh] overflow-auto pr-2"></ul>
+      </section>
+
+      <aside class="lg:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col">
+        <h2 id="detailTitle" class="font-semibold text-lg">Select a case</h2>
+        <p id="detailMeta" class="text-xs text-slate-400 mt-1"></p>
+
+        <div id="policyBox" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm"></div>
+        <dl id="detailGrid" class="mt-3 grid gap-2 text-sm"></dl>
+
+        <div class="mt-3 border-t border-slate-800 pt-3">
+          <label for="noteInput" class="text-xs uppercase tracking-wide text-slate-400">Action note</label>
+          <textarea id="noteInput" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Describe why this transition is valid..."></textarea>
+          <p id="noteError" class="text-xs text-rose-400 mt-1 hidden">Please enter at least 10 characters.</p>
+          <p id="roleHint" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+
+        <div class="mt-3 grid gap-2">
+          <button id="reviewBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Move to Review</button>
+          <button id="extendBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Approve 7-Day Extension</button>
+          <button id="escalateBtn" class="bg-amber-500 text-slate-950 hover:bg-amber-400 rounded px-3 py-1.5 text-sm font-semibold">Escalate Security</button>
+          <button id="closeBtn" class="bg-slate-200 text-slate-900 hover:bg-white rounded px-3 py-1.5 text-sm font-medium">Close Case</button>
+        </div>
+        <p id="actionMsg" class="text-xs text-emerald-300 mt-2 min-h-4"></p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-300">Audit Trail</h3>
+        <ul id="auditList" class="mt-2 text-xs space-y-1 max-h-40 overflow-auto pr-1"></ul>
+      </aside>
+    </section>
+  </main>
+
+<script>
+const cases = [
+  {
+    id: 'AC-521',
+    asset: 'Rugged Tablet RT-44',
+    holder: 'Fabian Kruger',
+    team: 'Field Service',
+    site: 'Dresden',
+    value: 2400,
+    overdueDays: 5,
+    status: 'Open',
+    risk: 48,
+    reason: 'Awaiting site handover sign-off',
+    dueAt: '2026-03-12T08:00:00Z',
+    audit: ['08:00 Checkout overdue alert triggered', '08:20 Reminder sent to holder']
+  },
+  {
+    id: 'AC-522',
+    asset: 'Thermal Camera TC-9',
+    holder: 'Elena Novak',
+    team: 'Quality Engineering',
+    site: 'Leipzig',
+    value: 6100,
+    overdueDays: 9,
+    status: 'Under Review',
+    risk: 76,
+    reason: 'Device used in unresolved customer defect investigation',
+    dueAt: '2026-03-08T11:30:00Z',
+    audit: ['11:30 Overdue alert triggered', '12:00 Auto-routed to Finance Controller (value > €5k)']
+  },
+  {
+    id: 'AC-523',
+    asset: 'Forklift Key Set FL-17',
+    holder: 'Liam Petro',
+    team: 'Warehouse Ops',
+    site: 'Berlin',
+    value: 800,
+    overdueDays: 3,
+    status: 'Extended',
+    risk: 24,
+    reason: 'Night shift handover delay',
+    dueAt: '2026-03-14T06:40:00Z',
+    audit: ['06:40 Overdue alert triggered', '07:10 Coordinator granted temporary extension']
+  },
+  {
+    id: 'AC-524',
+    asset: 'Edge Router ER-12',
+    holder: 'Nora Schmidt',
+    team: 'Plant IT',
+    site: 'Prague',
+    value: 4200,
+    overdueDays: 14,
+    status: 'Escalated',
+    risk: 88,
+    reason: 'Cross-border project closure blocked',
+    dueAt: '2026-03-03T10:00:00Z',
+    audit: ['10:00 Overdue alert triggered', '10:33 Escalated to Security Lead due to international transfer']
+  }
+];
+
+let selectedId = cases[0]?.id || null;
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const sortSelect = document.getElementById('sortSelect');
+const timelineList = document.getElementById('timelineList');
+const listMeta = document.getElementById('listMeta');
+const detailTitle = document.getElementById('detailTitle');
+const detailMeta = document.getElementById('detailMeta');
+const detailGrid = document.getElementById('detailGrid');
+const policyBox = document.getElementById('policyBox');
+const noteInput = document.getElementById('noteInput');
+const noteError = document.getElementById('noteError');
+const roleHint = document.getElementById('roleHint');
+const reviewBtn = document.getElementById('reviewBtn');
+const extendBtn = document.getElementById('extendBtn');
+const escalateBtn = document.getElementById('escalateBtn');
+const closeBtn = document.getElementById('closeBtn');
+const actionMsg = document.getElementById('actionMsg');
+const auditList = document.getElementById('auditList');
+const exportBtn = document.getElementById('exportBtn');
+const newCaseForm = document.getElementById('newCaseForm');
+const formError = document.getElementById('formError');
+
+const statusClass = {
+  Open: 'bg-sky-500/20 text-sky-200 border-sky-400/30',
+  'Under Review': 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
+  Extended: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30',
+  Escalated: 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+  Closed: 'bg-slate-500/20 text-slate-200 border-slate-400/30'
+};
+
+function selectedCase() {
+  return cases.find(item => item.id === selectedId) || null;
+}
+
+function policyCheck(item) {
+  if (!item) return { level: 'neutral', text: '' };
+  if (item.value >= 5000 && item.status !== 'Escalated' && item.status !== 'Closed') {
+    return { level: 'critical', text: 'Policy gate: assets above €5k require Finance + Security escalation before closure.' };
+  }
+  if (item.site !== 'Dresden' && item.overdueDays >= 10 && item.status !== 'Escalated' && item.status !== 'Closed') {
+    return { level: 'warning', text: 'Cross-site overdue asset. Escalation recommended within SLA window.' };
+  }
+  return { level: 'ok', text: 'Policy check passed for current workflow stage.' };
+}
+
+function filteredCases() {
+  const q = searchInput.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  const sort = sortSelect.value;
+
+  const data = cases.filter(item => {
+    const haystack = `${item.id} ${item.asset} ${item.holder} ${item.site} ${item.team}`.toLowerCase();
+    const matchesSearch = !q || haystack.includes(q);
+    const matchesStatus = status === 'all' || item.status === status;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (sort === 'dueSoon') data.sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+  if (sort === 'dueLate') data.sort((a, b) => b.overdueDays - a.overdueDays);
+  if (sort === 'risk') data.sort((a, b) => b.risk - a.risk);
+  return data;
+}
+
+function renderTimeline() {
+  const data = filteredCases();
+  if (!data.some(item => item.id === selectedId)) selectedId = data[0]?.id || null;
+
+  listMeta.textContent = `${data.length} case${data.length === 1 ? '' : 's'} shown`;
+  timelineList.innerHTML = '';
+
+  if (!data.length) {
+    timelineList.innerHTML = '<li class="text-sm text-slate-400">No cases match current filters.</li>';
+    renderDetail();
+    return;
+  }
+
+  data.forEach(item => {
+    const active = item.id === selectedId;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <button type="button" data-id="${item.id}" class="w-full text-left rounded-lg border ${active ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-slate-600'} p-3 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-medium">${item.asset}</span>
+          <span class="text-[11px] border rounded-full px-2 py-0.5 ${statusClass[item.status] || statusClass.Open}">${item.status}</span>
+        </div>
+        <div class="mt-1 text-xs text-slate-300">${item.id} · ${item.holder} · ${item.site}</div>
+        <div class="mt-1 text-xs text-slate-500">Overdue ${item.overdueDays}d · Risk ${item.risk} · €${item.value.toLocaleString('en-GB')}</div>
+      </button>
+    `;
+    timelineList.appendChild(li);
+  });
+
+  timelineList.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedId = btn.dataset.id;
+      actionMsg.textContent = '';
+      noteError.classList.add('hidden');
+      render();
+    });
+  });
+}
+
+function renderDetail() {
+  const item = selectedCase();
+  if (!item) {
+    detailTitle.textContent = 'Select a case';
+    detailMeta.textContent = 'No matching case in current filter';
+    detailGrid.innerHTML = '';
+    policyBox.classList.add('hidden');
+    auditList.innerHTML = '';
+    setActionAvailability();
+    return;
+  }
+
+  detailTitle.textContent = `${item.asset}`;
+  detailMeta.textContent = `${item.id} · ${item.team} · due ${new Date(item.dueAt).toLocaleString('en-GB', { hour12: false })}`;
+
+  const fields = [
+    ['Holder', item.holder],
+    ['Site', item.site],
+    ['Asset Value', `€${item.value.toLocaleString('en-GB')}`],
+    ['Overdue', `${item.overdueDays} days`],
+    ['Reason', item.reason],
+    ['Risk Score', `${item.risk}/100`],
+    ['Status', item.status]
+  ];
+
+  detailGrid.innerHTML = fields.map(([label, value]) => `
+    <div class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+      <dt class="text-xs uppercase tracking-wide text-slate-400">${label}</dt>
+      <dd class="mt-0.5 text-sm">${value}</dd>
+    </div>
+  `).join('');
+
+  const policy = policyCheck(item);
+  policyBox.classList.remove('hidden');
+  policyBox.textContent = policy.text;
+  policyBox.className = 'mt-3 rounded-lg border px-3 py-2 text-sm';
+  if (policy.level === 'critical') policyBox.classList.add('border-rose-400/40', 'bg-rose-500/10', 'text-rose-200');
+  else if (policy.level === 'warning') policyBox.classList.add('border-amber-400/40', 'bg-amber-500/10', 'text-amber-200');
+  else policyBox.classList.add('border-emerald-400/40', 'bg-emerald-500/10', 'text-emerald-200');
+
+  auditList.innerHTML = item.audit.map(entry => `<li class="rounded border border-slate-800 bg-slate-950 px-2 py-1">${entry}</li>`).join('');
+  setActionAvailability();
+}
+
+function setActionAvailability() {
+  const role = roleSelect.value;
+  const item = selectedCase();
+  const policy = policyCheck(item);
+
+  let canReview = false;
+  let canExtend = false;
+  let canEscalate = false;
+  let canClose = false;
+
+  if (role === 'Logistics Coordinator') {
+    roleHint.textContent = 'Coordinator: can move to review, escalate, and close non-critical cases.';
+    canReview = item && item.status === 'Open';
+    canExtend = item && item.status === 'Under Review' && item.risk < 60;
+    canEscalate = item && item.status !== 'Escalated' && item.status !== 'Closed';
+    canClose = item && item.status !== 'Closed' && policy.level !== 'critical';
+  }
+
+  if (role === 'Finance Controller') {
+    roleHint.textContent = 'Finance: approves extensions and closes value-sensitive cases.';
+    canReview = item && item.status === 'Open';
+    canExtend = item && ['Under Review', 'Escalated'].includes(item.status);
+    canEscalate = item && item.status !== 'Escalated' && item.status !== 'Closed';
+    canClose = item && item.status !== 'Closed';
+  }
+
+  if (role === 'Security Lead') {
+    roleHint.textContent = 'Security: can escalate or close after security check.';
+    canReview = item && item.status === 'Open';
+    canExtend = false;
+    canEscalate = item && item.status !== 'Escalated' && item.status !== 'Closed';
+    canClose = item && ['Escalated', 'Under Review', 'Extended'].includes(item.status);
+  }
+
+  reviewBtn.disabled = !canReview;
+  extendBtn.disabled = !canExtend;
+  escalateBtn.disabled = !canEscalate;
+  closeBtn.disabled = !canClose;
+
+  [reviewBtn, extendBtn, escalateBtn, closeBtn].forEach(btn => {
+    if (btn.disabled) btn.classList.add('opacity-40', 'cursor-not-allowed');
+    else btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  });
+}
+
+function requireNote() {
+  const note = noteInput.value.trim();
+  if (note.length < 10) {
+    noteError.classList.remove('hidden');
+    return null;
+  }
+  noteError.classList.add('hidden');
+  return note;
+}
+
+function pushAudit(item, eventText) {
+  const stamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  item.audit.unshift(`${stamp} ${eventText}`);
+}
+
+function transitionCase(nextStatus, actionText, riskDelta = 0, overdueDelta = 0) {
+  const item = selectedCase();
+  if (!item) return;
+  const note = requireNote();
+  if (!note) return;
+
+  item.status = nextStatus;
+  item.risk = Math.max(0, Math.min(99, item.risk + riskDelta));
+  item.overdueDays = Math.max(0, item.overdueDays + overdueDelta);
+  pushAudit(item, `${roleSelect.value}: ${actionText} — ${note}`);
+  actionMsg.textContent = `${item.id} moved to “${nextStatus}”.`;
+  noteInput.value = '';
+  render();
+}
+
+function toCsv(items) {
+  const headers = ['id','asset','holder','team','site','value','overdueDays','status','risk'];
+  const lines = [headers.join(',')];
+  items.forEach(item => {
+    const row = headers.map(key => `"${String(item[key]).replaceAll('"', '""')}"`);
+    lines.push(row.join(','));
+  });
+  return lines.join('\n');
+}
+
+function downloadCsv() {
+  const csv = toCsv(filteredCases());
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'asset-checkout-escalation-timeline.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function scoreRisk(value, days, site) {
+  return Math.min(99, 20 + Math.floor(value / 250) + days * 2 + (site.toLowerCase() === 'dresden' ? 0 : 8));
+}
+
+function createCase(event) {
+  event.preventDefault();
+  const asset = document.getElementById('assetInput').value.trim();
+  const holder = document.getElementById('holderInput').value.trim();
+  const site = document.getElementById('siteInput').value.trim();
+  const value = Number(document.getElementById('valueInput').value);
+  const days = Number(document.getElementById('daysInput').value);
+
+  const valid = asset.length >= 3 && holder.length >= 3 && site.length >= 2 && Number.isFinite(value) && value >= 100 && Number.isFinite(days) && days >= 1;
+  if (!valid) {
+    formError.classList.remove('hidden');
+    return;
+  }
+  formError.classList.add('hidden');
+
+  const maxId = Math.max(...cases.map(item => Number(item.id.split('-')[1])));
+  const id = `AC-${maxId + 1}`;
+
+  cases.unshift({
+    id,
+    asset,
+    holder,
+    team: 'Supply Chain Ops',
+    site,
+    value,
+    overdueDays: days,
+    status: 'Open',
+    risk: scoreRisk(value, days, site),
+    reason: 'Manual intake from warehouse return audit',
+    dueAt: new Date(Date.now() - days * 24 * 3600 * 1000).toISOString(),
+    audit: ['Case created from manual intake form']
+  });
+
+  selectedId = id;
+  newCaseForm.reset();
+  actionMsg.textContent = `Created ${id} and added to timeline.`;
+  render();
+}
+
+function render() {
+  renderTimeline();
+  renderDetail();
+}
+
+[searchInput, statusFilter, sortSelect].forEach(el => el.addEventListener('input', render));
+[statusFilter, sortSelect, roleSelect].forEach(el => el.addEventListener('change', render));
+reviewBtn.addEventListener('click', () => transitionCase('Under Review', 'moved case to review queue', -4, 0));
+extendBtn.addEventListener('click', () => transitionCase('Extended', 'approved 7-day extension', -12, -7));
+escalateBtn.addEventListener('click', () => transitionCase('Escalated', 'escalated to security workflow', 8, 0));
+closeBtn.addEventListener('click', () => transitionCase('Closed', 'closed case after verification', -10, 0));
+exportBtn.addEventListener('click', downloadCsv);
+newCaseForm.addEventListener('submit', createCase);
+
+render();
+</script>
+</body>
+</html>

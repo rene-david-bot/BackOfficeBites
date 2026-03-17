@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Access Request Review Desk** — master-detail IT Ops workspace for application access requests with SoD policy checks, role-based approvals, audit trail, and CSV export.
+**Asset Checkout Escalation Timeline** — timeline-first supply chain desk for overdue high-value assets with policy-gated escalations, approvals, and audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -953,5 +953,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-17",
+    "day": 45,
+    "slug": "2026-03-17-asset-checkout-escalation-timeline",
+    "name": "Asset Checkout Escalation Timeline",
+    "description": "Timeline-first supply chain desk for overdue high-value assets with policy-gated escalations, approvals, and audit trail.",
+    "category": "Supply Chain",
+    "pattern": "Timeline",
+    "tags": [
+      "asset checkout",
+      "supply chain",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
