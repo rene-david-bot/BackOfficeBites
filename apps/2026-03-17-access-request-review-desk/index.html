@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Request Review Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Access Request Review Desk</h1>
+        <p class="text-slate-300 mt-1">Master-detail queue for app access with SoD policy validation, role-based approvals, and audit history.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="roleSelect" class="text-sm">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>Team Manager</option>
+          <option>Security Reviewer</option>
+          <option>IT Admin</option>
+        </select>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 md:grid-cols-12">
+      <aside class="md:col-span-4 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <div class="grid gap-2 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+            <input id="searchInput" type="text" placeholder="Name, app, role..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+            <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option value="Draft">Draft</option>
+              <option value="Pending">Pending</option>
+              <option value="Needs Info">Needs Info</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+            <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="risk">Highest risk</option>
+            </select>
+          </div>
+        </div>
+        <ul id="requestList" class="mt-3 space-y-2 max-h-[58vh] overflow-auto pr-1"></ul>
+      </aside>
+
+      <section class="md:col-span-5 bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col min-h-[33rem]">
+        <div class="border-b border-slate-800 pb-2">
+          <h2 id="detailTitle" class="text-lg font-semibold">Select a request</h2>
+          <p id="detailMeta" class="text-sm text-slate-400"></p>
+        </div>
+
+        <div id="policyBox" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm"></div>
+
+        <dl id="detailGrid" class="mt-3 grid grid-cols-1 gap-2 text-sm"></dl>
+
+        <form id="commentForm" class="mt-auto border-t border-slate-800 pt-3">
+          <label for="commentInput" class="text-xs uppercase tracking-wide text-slate-400">Reviewer note</label>
+          <textarea id="commentInput" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Add context for your decision..."></textarea>
+          <p id="commentError" class="text-xs text-rose-400 mt-1 hidden">Please add a note (min 8 characters).</p>
+        </form>
+      </section>
+
+      <aside class="md:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <h2 class="font-semibold">Workflow Actions</h2>
+        <p id="roleHint" class="text-xs text-slate-400 mt-1">Role permissions apply.</p>
+
+        <div class="mt-3 grid gap-2">
+          <button id="requestInfoBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Request Info</button>
+          <button id="approveBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Approve Access</button>
+          <button id="rejectBtn" class="bg-rose-600 hover:bg-rose-500 rounded px-3 py-1.5 text-sm font-medium">Reject Request</button>
+        </div>
+        <p id="actionMsg" class="text-xs text-amber-300 mt-2 min-h-4"></p>
+
+        <h3 class="mt-4 text-sm font-semibold text-slate-300">Audit Trail</h3>
+        <ul id="auditList" class="mt-2 text-xs space-y-1 max-h-56 overflow-auto pr-1"></ul>
+      </aside>
+    </section>
+
+    <section class="mt-3 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+      <h2 class="font-semibold">Create New Request</h2>
+      <form id="newRequestForm" class="mt-2 grid gap-2 sm:grid-cols-2">
+        <div>
+          <label for="employeeInput" class="text-xs uppercase tracking-wide text-slate-400">Employee</label>
+          <input id="employeeInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="departmentInput" class="text-xs uppercase tracking-wide text-slate-400">Department</label>
+          <input id="departmentInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="appInput" class="text-xs uppercase tracking-wide text-slate-400">Application</label>
+          <input id="appInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="targetRoleInput" class="text-xs uppercase tracking-wide text-slate-400">Requested Role</label>
+          <input id="targetRoleInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Viewer, Editor, Admin..." />
+        </div>
+        <div>
+          <label for="regionInput" class="text-xs uppercase tracking-wide text-slate-400">Data Region</label>
+          <select id="regionInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option>EU</option>
+            <option>US</option>
+            <option>Global</option>
+          </select>
+        </div>
+        <div>
+          <label for="envInput" class="text-xs uppercase tracking-wide text-slate-400">Environment</label>
+          <select id="envInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option>Production</option>
+            <option>Staging</option>
+            <option>Sandbox</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2 flex items-center justify-between gap-2">
+          <p id="formError" class="text-xs text-rose-400 hidden">Fill all fields and use names with at least 2 characters.</p>
+          <button type="submit" class="bg-amber-500 text-slate-950 hover:bg-amber-400 rounded px-3 py-1.5 text-sm font-semibold">Submit Request</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+<script>
+const requests = [
+  {
+    id: 'AR-3381',
+    employee: 'Mila Hartmann',
+    department: 'Finance',
+    app: 'SpendFlow ERP',
+    requestedRole: 'Approver',
+    region: 'EU',
+    environment: 'Production',
+    status: 'Pending',
+    submittedBy: 'mila.h@corp.example',
+    submittedAt: '2026-03-17T06:35:00Z',
+    risk: 72,
+    audit: ['06:35 Request submitted', '06:41 Team Manager approved budget center', '06:43 Routed to Security Reviewer (SoD check)']
+  },
+  {
+    id: 'AR-3382',
+    employee: 'Jonas Petrov',
+    department: 'Sales',
+    app: 'QuoteForge',
+    requestedRole: 'Editor',
+    region: 'EU',
+    environment: 'Staging',
+    status: 'Needs Info',
+    submittedBy: 'jonas.p@corp.example',
+    submittedAt: '2026-03-17T07:02:00Z',
+    risk: 35,
+    audit: ['07:02 Request submitted', '07:04 Security Reviewer asked for manager justification']
+  },
+  {
+    id: 'AR-3383',
+    employee: 'Lea Novak',
+    department: 'IT Ops',
+    app: 'InfraWatch',
+    requestedRole: 'Admin',
+    region: 'Global',
+    environment: 'Production',
+    status: 'Pending',
+    submittedBy: 'lea.n@corp.example',
+    submittedAt: '2026-03-17T08:14:00Z',
+    risk: 89,
+    audit: ['08:14 Request submitted', '08:16 Policy flag: Admin + Production requires IT Admin sign-off']
+  },
+  {
+    id: 'AR-3384',
+    employee: 'Nina Schultz',
+    department: 'HR',
+    app: 'PeoplePulse',
+    requestedRole: 'Viewer',
+    region: 'EU',
+    environment: 'Production',
+    status: 'Approved',
+    submittedBy: 'nina.s@corp.example',
+    submittedAt: '2026-03-17T05:58:00Z',
+    risk: 18,
+    audit: ['05:58 Request submitted', '06:05 Team Manager approved', '06:07 Security Reviewer approved']
+  }
+];
+
+let selectedId = requests[0]?.id;
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const sortSelect = document.getElementById('sortSelect');
+const requestList = document.getElementById('requestList');
+const detailTitle = document.getElementById('detailTitle');
+const detailMeta = document.getElementById('detailMeta');
+const detailGrid = document.getElementById('detailGrid');
+const policyBox = document.getElementById('policyBox');
+const commentInput = document.getElementById('commentInput');
+const commentError = document.getElementById('commentError');
+const requestInfoBtn = document.getElementById('requestInfoBtn');
+const approveBtn = document.getElementById('approveBtn');
+const rejectBtn = document.getElementById('rejectBtn');
+const actionMsg = document.getElementById('actionMsg');
+const roleHint = document.getElementById('roleHint');
+const auditList = document.getElementById('auditList');
+const exportBtn = document.getElementById('exportBtn');
+const newRequestForm = document.getElementById('newRequestForm');
+const formError = document.getElementById('formError');
+
+const statusClass = {
+  Draft: 'bg-slate-700/50 text-slate-200 border-slate-500/30',
+  Pending: 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+  'Needs Info': 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
+  Approved: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30',
+  Rejected: 'bg-rose-500/20 text-rose-200 border-rose-400/30'
+};
+
+function selectedRequest() {
+  return requests.find(item => item.id === selectedId) || null;
+}
+
+function policyCheck(item) {
+  if (!item) return { level: 'neutral', text: '' };
+  const isPrivileged = /admin|approver/i.test(item.requestedRole);
+  if (isPrivileged && item.environment === 'Production') {
+    return { level: 'critical', text: 'Policy gate: privileged role in Production requires Security + IT Admin sign-off.' };
+  }
+  if (item.region === 'Global') {
+    return { level: 'warning', text: 'Global data scope detected. Confirm legal basis before approval.' };
+  }
+  return { level: 'ok', text: 'Policy check passed for standard review path.' };
+}
+
+function filteredRequests() {
+  const q = searchInput.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  const sort = sortSelect.value;
+
+  let data = requests.filter(item => {
+    const haystack = `${item.id} ${item.employee} ${item.department} ${item.app} ${item.requestedRole}`.toLowerCase();
+    const matchQ = !q || haystack.includes(q);
+    const matchStatus = status === 'all' || item.status === status;
+    return matchQ && matchStatus;
+  });
+
+  if (sort === 'newest') data.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  if (sort === 'oldest') data.sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
+  if (sort === 'risk') data.sort((a, b) => b.risk - a.risk);
+  return data;
+}
+
+function renderList() {
+  const data = filteredRequests();
+  if (!data.some(item => item.id === selectedId)) selectedId = data[0]?.id || null;
+
+  requestList.innerHTML = '';
+  if (!data.length) {
+    requestList.innerHTML = '<li class="text-sm text-slate-400">No requests match this filter.</li>';
+    renderDetail();
+    return;
+  }
+
+  data.forEach(item => {
+    const li = document.createElement('li');
+    const isActive = item.id === selectedId;
+    li.innerHTML = `
+      <button type="button" data-id="${item.id}" class="w-full text-left rounded-lg border px-3 py-2 ${isActive ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-slate-600'} focus:outline-none focus:ring-2 focus:ring-emerald-400">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-medium">${item.employee}</span>
+          <span class="text-[11px] border rounded-full px-2 py-0.5 ${statusClass[item.status] || statusClass.Draft}">${item.status}</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">${item.app} · ${item.requestedRole}</div>
+        <div class="text-xs text-slate-500 mt-1">${item.id} · Risk ${item.risk}</div>
+      </button>
+    `;
+    requestList.appendChild(li);
+  });
+
+  requestList.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedId = btn.dataset.id;
+      actionMsg.textContent = '';
+      commentError.classList.add('hidden');
+      render();
+    });
+  });
+}
+
+function renderDetail() {
+  const item = selectedRequest();
+  if (!item) {
+    detailTitle.textContent = 'Select a request';
+    detailMeta.textContent = 'No request in current filter';
+    detailGrid.innerHTML = '';
+    policyBox.classList.add('hidden');
+    auditList.innerHTML = '';
+    setActionAvailability();
+    return;
+  }
+
+  detailTitle.textContent = `${item.employee} — ${item.requestedRole}`;
+  detailMeta.textContent = `${item.id} · ${item.department} · submitted ${new Date(item.submittedAt).toLocaleString('en-GB', { hour12: false })}`;
+
+  const fields = [
+    ['Application', item.app],
+    ['Department', item.department],
+    ['Requested Role', item.requestedRole],
+    ['Environment', item.environment],
+    ['Data Region', item.region],
+    ['Submitted By', item.submittedBy],
+    ['Risk Score', `${item.risk}/100`],
+    ['Status', item.status]
+  ];
+
+  detailGrid.innerHTML = fields.map(([label, value]) => `
+    <div class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+      <dt class="text-xs uppercase tracking-wide text-slate-400">${label}</dt>
+      <dd class="mt-0.5 text-sm">${value}</dd>
+    </div>
+  `).join('');
+
+  const policy = policyCheck(item);
+  policyBox.classList.remove('hidden');
+  policyBox.textContent = policy.text;
+  policyBox.className = 'mt-3 rounded-lg border px-3 py-2 text-sm';
+  if (policy.level === 'critical') policyBox.classList.add('border-rose-400/40', 'bg-rose-500/10', 'text-rose-200');
+  else if (policy.level === 'warning') policyBox.classList.add('border-amber-400/40', 'bg-amber-500/10', 'text-amber-200');
+  else policyBox.classList.add('border-emerald-400/40', 'bg-emerald-500/10', 'text-emerald-200');
+
+  auditList.innerHTML = item.audit.map(entry => `<li class="rounded border border-slate-800 bg-slate-950 px-2 py-1">${entry}</li>`).join('');
+  setActionAvailability();
+}
+
+function setActionAvailability() {
+  const role = roleSelect.value;
+  const item = selectedRequest();
+  const policy = policyCheck(item);
+
+  let canApprove = false;
+  let canReject = false;
+  let canNeedInfo = false;
+
+  if (role === 'Team Manager') {
+    canNeedInfo = true;
+    canApprove = item && item.risk <= 60 && item.status !== 'Approved' && item.status !== 'Rejected';
+    canReject = item && item.status !== 'Approved' && item.status !== 'Rejected';
+    roleHint.textContent = 'Team Manager: approves low-risk access, can reject/request info.';
+  }
+
+  if (role === 'Security Reviewer') {
+    canNeedInfo = true;
+    canApprove = item && policy.level !== 'critical' && item.status !== 'Approved' && item.status !== 'Rejected';
+    canReject = item && item.status !== 'Approved' && item.status !== 'Rejected';
+    roleHint.textContent = 'Security Reviewer: approves non-critical policy cases.';
+  }
+
+  if (role === 'IT Admin') {
+    canNeedInfo = true;
+    canApprove = item && item.status !== 'Approved' && item.status !== 'Rejected';
+    canReject = item && item.status !== 'Approved' && item.status !== 'Rejected';
+    roleHint.textContent = 'IT Admin: final approver for privileged production roles.';
+  }
+
+  requestInfoBtn.disabled = !canNeedInfo;
+  approveBtn.disabled = !canApprove;
+  rejectBtn.disabled = !canReject;
+
+  [requestInfoBtn, approveBtn, rejectBtn].forEach(btn => {
+    if (btn.disabled) btn.classList.add('opacity-40', 'cursor-not-allowed');
+    else btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  });
+}
+
+function requireComment() {
+  const note = commentInput.value.trim();
+  if (note.length < 8) {
+    commentError.classList.remove('hidden');
+    return null;
+  }
+  commentError.classList.add('hidden');
+  return note;
+}
+
+function applyAction(nextStatus, verb) {
+  const item = selectedRequest();
+  if (!item) return;
+  const note = requireComment();
+  if (!note) return;
+
+  item.status = nextStatus;
+  const stamp = new Date().toLocaleTimeString('en-GB', {hour12: false});
+  item.audit.unshift(`${stamp} ${roleSelect.value}: ${verb} — ${note}`);
+  actionMsg.textContent = `Updated ${item.id} to “${nextStatus}”.`;
+  commentInput.value = '';
+  render();
+}
+
+function toCsv(items) {
+  const headers = ['id','employee','department','app','requestedRole','environment','region','status','risk'];
+  const lines = [headers.join(',')];
+  items.forEach(item => {
+    const row = headers.map(k => `"${String(item[k]).replaceAll('"', '""')}"`);
+    lines.push(row.join(','));
+  });
+  return lines.join('\n');
+}
+
+function downloadCsv() {
+  const csv = toCsv(filteredRequests());
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'access-request-review-desk.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function handleNewRequest(event) {
+  event.preventDefault();
+  const employee = document.getElementById('employeeInput').value.trim();
+  const department = document.getElementById('departmentInput').value.trim();
+  const app = document.getElementById('appInput').value.trim();
+  const requestedRole = document.getElementById('targetRoleInput').value.trim();
+  const region = document.getElementById('regionInput').value;
+  const environment = document.getElementById('envInput').value;
+
+  const valid = [employee, department, app, requestedRole].every(v => v.length >= 2);
+  if (!valid) {
+    formError.classList.remove('hidden');
+    return;
+  }
+  formError.classList.add('hidden');
+
+  const nextId = `AR-${Math.max(...requests.map(i => Number(i.id.split('-')[1]))) + 1}`;
+  const risk = (requestedRole.toLowerCase().includes('admin') ? 75 : 35) + (environment === 'Production' ? 12 : 0) + (region === 'Global' ? 8 : 0);
+
+  requests.unshift({
+    id: nextId,
+    employee,
+    department,
+    app,
+    requestedRole,
+    region,
+    environment,
+    status: 'Draft',
+    submittedBy: `${employee.toLowerCase().replaceAll(' ', '.')}@corp.example`,
+    submittedAt: new Date().toISOString(),
+    risk: Math.min(risk, 98),
+    audit: ['Draft request created in review desk']
+  });
+
+  selectedId = nextId;
+  newRequestForm.reset();
+  actionMsg.textContent = `Created ${nextId}. Validate details and submit for review.`;
+  render();
+}
+
+function render() {
+  renderList();
+  renderDetail();
+}
+
+[searchInput, statusFilter, sortSelect].forEach(el => el.addEventListener('input', render));
+[statusFilter, sortSelect, roleSelect].forEach(el => el.addEventListener('change', render));
+requestInfoBtn.addEventListener('click', () => applyAction('Needs Info', 'requested additional evidence'));
+approveBtn.addEventListener('click', () => applyAction('Approved', 'approved access'));
+rejectBtn.addEventListener('click', () => applyAction('Rejected', 'rejected request'));
+exportBtn.addEventListener('click', downloadCsv);
+newRequestForm.addEventListener('submit', handleNewRequest);
+
+render();
+</script>
+</body>
+</html>

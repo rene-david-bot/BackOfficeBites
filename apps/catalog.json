@@ -929,5 +929,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-17",
+    "day": 44,
+    "slug": "2026-03-17-access-request-review-desk",
+    "name": "Access Request Review Desk",
+    "description": "Master-detail IT Ops workspace for application access requests with SoD policy checks, role-based approvals, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Master-Detail",
+    "tags": [
+      "access requests",
+      "it ops",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
