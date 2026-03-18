@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**NPS Response Command Center** — dashboard-first sales workspace for closing NPS loops with policy-gated concessions, role-based actions, and audit-ready workflow state changes.
+**Incident Escalation Kanban** — policy-aware IT Ops board for incident reports with SLA triage, approval-gated P1 closure, and audit-ready workflow tracking.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

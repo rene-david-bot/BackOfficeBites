@@ -1002,5 +1002,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-18",
+    "day": 47,
+    "slug": "2026-03-18-incident-escalation-kanban",
+    "name": "Incident Escalation Kanban",
+    "description": "Policy-aware IT Ops board for incident reports with SLA triage, approval-gated P1 closure, and audit-ready workflow tracking.",
+    "category": "IT Ops",
+    "pattern": "Kanban",
+    "tags": [
+      "incident reports",
+      "it ops",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

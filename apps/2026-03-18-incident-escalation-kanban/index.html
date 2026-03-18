@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incident Escalation Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-[1500px] mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Incident Escalation Kanban</h1>
+        <p class="text-slate-300 mt-1 max-w-4xl">Policy-aware IT Ops board for incident reports with SLA triage, approval-gated P1 closure, audit trail tracking, and CSV export.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="roleSelect" class="text-sm">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>On-call Engineer</option>
+          <option>Incident Manager</option>
+          <option>Head of IT Ops</option>
+        </select>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Incidents in view</p>
+        <p id="metricCount" class="mt-1 text-2xl font-semibold">0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open P1/P2</p>
+        <p id="metricCritical" class="mt-1 text-2xl font-semibold text-rose-300">0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">SLA breaches</p>
+        <p id="metricBreaches" class="mt-1 text-2xl font-semibold text-amber-300">0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Approval waiting</p>
+        <p id="metricApprovals" class="mt-1 text-2xl font-semibold text-sky-300">0</p>
+      </article>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+      <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+        <div class="xl:col-span-2">
+          <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="ID, service, title, owner..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="severityFilter" class="text-xs uppercase tracking-wide text-slate-400">Severity</label>
+          <select id="severityFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option value="all">All</option>
+            <option>P1</option>
+            <option>P2</option>
+            <option>P3</option>
+            <option>P4</option>
+          </select>
+        </div>
+        <div>
+          <label for="serviceFilter" class="text-xs uppercase tracking-wide text-slate-400">Service</label>
+          <select id="serviceFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option value="all">All</option>
+            <option>Identity Platform</option>
+            <option>Order API</option>
+            <option>Warehouse Scanner</option>
+            <option>Finance ETL</option>
+            <option>Customer Portal</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+          <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option value="all">All</option>
+            <option>Reported</option>
+            <option>Investigating</option>
+            <option>Mitigating</option>
+            <option>Resolved</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+          <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option value="severity">Highest severity</option>
+            <option value="sla">SLA due soon</option>
+            <option value="newest">Newest reported</option>
+          </select>
+        </div>
+      </div>
+      <p id="filterMeta" class="mt-2 text-xs text-slate-400">0 incidents shown</p>
+    </section>
+
+    <section class="mt-4 grid gap-3 xl:grid-cols-12">
+      <section class="xl:col-span-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4" id="boardColumns"></section>
+
+      <aside class="xl:col-span-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <h2 id="detailTitle" class="text-lg font-semibold">Select an incident</h2>
+        <p id="detailMeta" class="mt-1 text-xs text-slate-400">Choose a card to view policy checks and actions.</p>
+
+        <div id="policyBox" class="hidden mt-3 rounded-lg border px-3 py-2 text-sm"></div>
+
+        <dl id="detailFields" class="mt-3 grid gap-2 text-sm"></dl>
+
+        <div class="mt-4 border-t border-slate-800 pt-3">
+          <h3 class="font-semibold">Action Log</h3>
+          <div class="mt-2 grid gap-2 md:grid-cols-2">
+            <div>
+              <label for="ownerInput" class="text-xs uppercase tracking-wide text-slate-400">Owner</label>
+              <input id="ownerInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label for="etaInput" class="text-xs uppercase tracking-wide text-slate-400">Mitigation ETA</label>
+              <input id="etaInput" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label for="noteInput" class="text-xs uppercase tracking-wide text-slate-400">Update note</label>
+              <textarea id="noteInput" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Summarize triage / mitigation step..."></textarea>
+            </div>
+            <div class="md:col-span-2">
+              <label for="postmortemInput" class="text-xs uppercase tracking-wide text-slate-400">Postmortem URL (required for resolve)</label>
+              <input id="postmortemInput" type="url" placeholder="https://confluence.company/postmortem-123" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+          </div>
+          <p id="actionError" class="mt-1 text-xs text-rose-400 hidden">Owner, ETA and a 12+ char update note are required.</p>
+          <p id="roleHint" class="mt-1 text-xs text-slate-400"></p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button id="logActionBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Log update</button>
+            <button id="requestApprovalBtn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 rounded px-3 py-1.5 text-sm font-semibold">Request P1 closure approval</button>
+            <button id="approveBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Approve closure</button>
+          </div>
+        </div>
+
+        <div class="mt-4 border-t border-slate-800 pt-3">
+          <h3 class="font-semibold">Workflow</h3>
+          <div class="mt-2 grid gap-2 md:grid-cols-2">
+            <button id="prevBtn" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">Move to previous state</button>
+            <button id="nextBtn" class="bg-sky-600 hover:bg-sky-500 rounded px-3 py-1.5 text-sm font-medium">Move to next state</button>
+          </div>
+          <p id="actionMsg" class="mt-2 text-xs text-emerald-300 min-h-4"></p>
+        </div>
+
+        <div class="mt-4 border-t border-slate-800 pt-3">
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditList" class="mt-2 space-y-1 text-xs max-h-64 overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+      <h2 class="font-semibold">Create New Incident</h2>
+      <form id="newForm" class="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        <div class="xl:col-span-2">
+          <label for="titleInput" class="text-xs uppercase tracking-wide text-slate-400">Title</label>
+          <input id="titleInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label for="newSeverityInput" class="text-xs uppercase tracking-wide text-slate-400">Severity</label>
+          <select id="newSeverityInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option>P1</option>
+            <option>P2</option>
+            <option>P3</option>
+            <option>P4</option>
+          </select>
+        </div>
+        <div>
+          <label for="newServiceInput" class="text-xs uppercase tracking-wide text-slate-400">Service</label>
+          <select id="newServiceInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+            <option>Identity Platform</option>
+            <option>Order API</option>
+            <option>Warehouse Scanner</option>
+            <option>Finance ETL</option>
+            <option>Customer Portal</option>
+          </select>
+        </div>
+        <div>
+          <label for="newSlaInput" class="text-xs uppercase tracking-wide text-slate-400">SLA due</label>
+          <input id="newSlaInput" type="datetime-local" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div class="md:col-span-2 xl:col-span-5">
+          <label for="impactInput" class="text-xs uppercase tracking-wide text-slate-400">Business impact</label>
+          <textarea id="impactInput" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Who is affected and what is the impact?"></textarea>
+        </div>
+        <p id="newError" class="md:col-span-2 xl:col-span-5 text-xs text-rose-400 hidden">Title, SLA due, and a business impact description (20+ chars) are required.</p>
+        <div class="md:col-span-2 xl:col-span-5">
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Add incident</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+<script>
+const states = ['Reported', 'Investigating', 'Mitigating', 'Resolved'];
+const severityRank = { P1: 4, P2: 3, P3: 2, P4: 1 };
+
+const incidents = [
+  {
+    id: 'INC-7412',
+    title: 'SSO login loops for warehouse supervisors',
+    service: 'Identity Platform',
+    severity: 'P1',
+    status: 'Investigating',
+    owner: 'Lea Schmidt',
+    reportedAt: '2026-03-18T06:05:00Z',
+    slaDue: '2026-03-18T10:00:00Z',
+    impact: '57 supervisors cannot access scanner consoles; outbound loading is delayed in 3 hubs.',
+    mitigationEta: '2026-03-18T09:30',
+    postmortemUrl: '',
+    updates: 2,
+    approval: 'requested',
+    audit: [
+      '06:05 Alert fired from IAM synthetic checks',
+      '06:14 Incident Manager assigned triage bridge',
+      '07:10 Temporary token TTL rollback deployed'
+    ]
+  },
+  {
+    id: 'INC-7418',
+    title: 'Order API latency spike above checkout SLO',
+    service: 'Order API',
+    severity: 'P2',
+    status: 'Mitigating',
+    owner: 'Mina Yilmaz',
+    reportedAt: '2026-03-18T07:20:00Z',
+    slaDue: '2026-03-18T11:20:00Z',
+    impact: 'Average checkout response 5.8s causing conversion drop in DACH and Benelux.',
+    mitigationEta: '2026-03-18T10:45',
+    postmortemUrl: '',
+    updates: 1,
+    approval: 'not-required',
+    audit: [
+      '07:20 Latency alert promoted to major incident',
+      '07:42 Cache stampede identified on promotions endpoint'
+    ]
+  },
+  {
+    id: 'INC-7421',
+    title: 'Finance ETL missed nightly ledger reconciliation',
+    service: 'Finance ETL',
+    severity: 'P3',
+    status: 'Reported',
+    owner: 'Unassigned',
+    reportedAt: '2026-03-18T05:55:00Z',
+    slaDue: '2026-03-18T13:30:00Z',
+    impact: 'Morning CFO dashboard shows stale margin values for 18 legal entities.',
+    mitigationEta: '',
+    postmortemUrl: '',
+    updates: 0,
+    approval: 'not-required',
+    audit: [
+      '05:55 Pipeline health check failed at transformation stage'
+    ]
+  },
+  {
+    id: 'INC-7424',
+    title: 'Scanner sync conflicts in Prague distribution center',
+    service: 'Warehouse Scanner',
+    severity: 'P2',
+    status: 'Resolved',
+    owner: 'Jonas Weber',
+    reportedAt: '2026-03-17T21:10:00Z',
+    slaDue: '2026-03-18T02:10:00Z',
+    impact: 'Cycle counts duplicated for 2,100 SKUs; receiving slowed for 70 minutes.',
+    mitigationEta: '2026-03-17T23:00',
+    postmortemUrl: 'https://wiki.example.com/postmortem/inc-7424',
+    updates: 3,
+    approval: 'not-required',
+    audit: [
+      '21:10 Ops desk logged scanner conflict',
+      '22:05 Conflict replay queue drained',
+      '23:12 Incident moved to resolved after warehouse validation'
+    ]
+  }
+];
+
+let selectedId = incidents[0]?.id || null;
+
+const roleSelect = document.getElementById('roleSelect');
+const exportBtn = document.getElementById('exportBtn');
+const searchInput = document.getElementById('searchInput');
+const severityFilter = document.getElementById('severityFilter');
+const serviceFilter = document.getElementById('serviceFilter');
+const statusFilter = document.getElementById('statusFilter');
+const sortSelect = document.getElementById('sortSelect');
+const filterMeta = document.getElementById('filterMeta');
+
+const metricCount = document.getElementById('metricCount');
+const metricCritical = document.getElementById('metricCritical');
+const metricBreaches = document.getElementById('metricBreaches');
+const metricApprovals = document.getElementById('metricApprovals');
+
+const boardColumns = document.getElementById('boardColumns');
+const detailTitle = document.getElementById('detailTitle');
+const detailMeta = document.getElementById('detailMeta');
+const detailFields = document.getElementById('detailFields');
+const policyBox = document.getElementById('policyBox');
+
+const ownerInput = document.getElementById('ownerInput');
+const etaInput = document.getElementById('etaInput');
+const noteInput = document.getElementById('noteInput');
+const postmortemInput = document.getElementById('postmortemInput');
+const actionError = document.getElementById('actionError');
+const roleHint = document.getElementById('roleHint');
+const actionMsg = document.getElementById('actionMsg');
+const auditList = document.getElementById('auditList');
+
+const logActionBtn = document.getElementById('logActionBtn');
+const requestApprovalBtn = document.getElementById('requestApprovalBtn');
+const approveBtn = document.getElementById('approveBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+const newForm = document.getElementById('newForm');
+const titleInput = document.getElementById('titleInput');
+const newSeverityInput = document.getElementById('newSeverityInput');
+const newServiceInput = document.getElementById('newServiceInput');
+const newSlaInput = document.getElementById('newSlaInput');
+const impactInput = document.getElementById('impactInput');
+const newError = document.getElementById('newError');
+
+const severityClasses = {
+  P1: 'bg-rose-500/20 text-rose-200 border-rose-400/30',
+  P2: 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+  P3: 'bg-sky-500/20 text-sky-200 border-sky-400/30',
+  P4: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30'
+};
+
+function currentIncident() {
+  return incidents.find(item => item.id === selectedId) || null;
+}
+
+function toLocalInputValue(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function filteredIncidents() {
+  const q = searchInput.value.trim().toLowerCase();
+  const sev = severityFilter.value;
+  const svc = serviceFilter.value;
+  const status = statusFilter.value;
+  const sortBy = sortSelect.value;
+
+  const data = incidents.filter(item => {
+    const haystack = `${item.id} ${item.title} ${item.service} ${item.owner}`.toLowerCase();
+    const matchSearch = !q || haystack.includes(q);
+    const matchSev = sev === 'all' || item.severity === sev;
+    const matchSvc = svc === 'all' || item.service === svc;
+    const matchStatus = status === 'all' || item.status === status;
+    return matchSearch && matchSev && matchSvc && matchStatus;
+  });
+
+  if (sortBy === 'severity') {
+    data.sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || new Date(a.slaDue) - new Date(b.slaDue));
+  }
+  if (sortBy === 'sla') {
+    data.sort((a, b) => new Date(a.slaDue) - new Date(b.slaDue));
+  }
+  if (sortBy === 'newest') {
+    data.sort((a, b) => new Date(b.reportedAt) - new Date(a.reportedAt));
+  }
+
+  return data;
+}
+
+function updateMetrics(data) {
+  const now = Date.now();
+  metricCount.textContent = String(data.length);
+  metricCritical.textContent = String(data.filter(i => ['P1', 'P2'].includes(i.severity) && i.status !== 'Resolved').length);
+  metricBreaches.textContent = String(data.filter(i => i.status !== 'Resolved' && new Date(i.slaDue).getTime() < now).length);
+  metricApprovals.textContent = String(data.filter(i => i.approval === 'requested').length);
+}
+
+function renderBoard(data) {
+  if (!data.some(item => item.id === selectedId)) selectedId = data[0]?.id || null;
+
+  const buckets = states.map(state => ({ state, items: data.filter(item => item.status === state) }));
+
+  boardColumns.innerHTML = buckets.map(bucket => {
+    const color = bucket.state === 'Reported' ? 'border-slate-700' : bucket.state === 'Investigating' ? 'border-indigo-500/50' : bucket.state === 'Mitigating' ? 'border-amber-500/50' : 'border-emerald-500/50';
+    return `
+      <section class="rounded-xl border ${color} bg-slate-900/70 p-2">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold text-sm">${bucket.state}</h2>
+          <span class="text-xs text-slate-400">${bucket.items.length}</span>
+        </div>
+        <div class="mt-2 space-y-2 max-h-[520px] overflow-auto pr-1">
+          ${bucket.items.length ? bucket.items.map(cardTemplate).join('') : '<p class="text-xs text-slate-500">No incidents</p>'}
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  boardColumns.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedId = btn.dataset.id;
+      actionMsg.textContent = '';
+      actionError.classList.add('hidden');
+      render();
+    });
+  });
+
+  filterMeta.textContent = `${data.length} incident${data.length === 1 ? '' : 's'} shown across ${buckets.filter(b => b.items.length).length} active lanes`;
+}
+
+function cardTemplate(item) {
+  const active = item.id === selectedId;
+  const approvalBadge = item.approval === 'requested'
+    ? '<span class="text-[10px] border border-amber-400/40 text-amber-200 bg-amber-500/10 rounded-full px-2 py-0.5">Approval requested</span>'
+    : item.approval === 'approved'
+      ? '<span class="text-[10px] border border-emerald-400/40 text-emerald-200 bg-emerald-500/10 rounded-full px-2 py-0.5">Approved</span>'
+      : '';
+
+  return `
+    <article class="rounded-lg border ${active ? 'border-emerald-400/70 bg-emerald-500/10' : 'border-slate-800 bg-slate-950'} p-2">
+      <button data-id="${item.id}" class="w-full text-left">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="text-xs text-slate-400">${item.id}</p>
+            <p class="text-sm font-medium leading-snug">${item.title}</p>
+          </div>
+          <span class="text-[11px] border rounded-full px-2 py-0.5 ${severityClasses[item.severity] || severityClasses.P4}">${item.severity}</span>
+        </div>
+        <p class="mt-1 text-xs text-slate-400">${item.service}</p>
+        <p class="mt-1 text-xs text-slate-300">Owner: ${item.owner}</p>
+        <p class="text-xs text-slate-400">SLA: ${new Date(item.slaDue).toLocaleString('en-GB', { hour12: false })}</p>
+        ${approvalBadge}
+      </button>
+    </article>
+  `;
+}
+
+function policyCheck(item) {
+  if (!item) return { level: 'neutral', text: '' };
+  const role = roleSelect.value;
+  if (item.severity === 'P1' && item.status === 'Mitigating' && item.approval !== 'approved') {
+    return { level: 'critical', text: 'Policy gate: P1 incidents require Incident Manager or Head of IT Ops closure approval before resolving.' };
+  }
+  if (role === 'On-call Engineer' && item.status === 'Reported') {
+    return { level: 'warning', text: 'On-call can triage and investigate but cannot skip required workflow stages.' };
+  }
+  return { level: 'ok', text: 'Policy check passed for current role and workflow stage.' };
+}
+
+function setRolePermissions(item) {
+  const role = roleSelect.value;
+  const hasItem = Boolean(item);
+
+  let canLog = hasItem;
+  let canRequest = hasItem && item.severity === 'P1' && item.approval !== 'approved';
+  let canApprove = hasItem && item.severity === 'P1' && item.approval === 'requested' && role !== 'On-call Engineer';
+
+  let canPrev = hasItem && item.status !== 'Reported';
+  let canNext = hasItem && item.status !== 'Resolved';
+
+  if (role === 'On-call Engineer') {
+    roleHint.textContent = 'On-call Engineer: can log updates and progress incidents, but cannot approve P1 closure.';
+    if (item && item.severity === 'P1' && item.status === 'Mitigating' && item.approval !== 'approved') canNext = false;
+  } else if (role === 'Incident Manager') {
+    roleHint.textContent = 'Incident Manager: can approve P1 closure and complete all workflow transitions.';
+  } else {
+    roleHint.textContent = 'Head of IT Ops: full override authority, including direct approval and closure.';
+    canNext = hasItem && item.status !== 'Resolved';
+    canPrev = hasItem && item.status !== 'Reported';
+  }
+
+  if (item && role === 'On-call Engineer' && item.status === 'Reported' && item.severity !== 'P4') {
+    // cannot skip directly from Reported to Mitigating through repeated next-click logic
+    canNext = true;
+  }
+
+  [
+    [logActionBtn, canLog],
+    [requestApprovalBtn, canRequest],
+    [approveBtn, canApprove],
+    [prevBtn, canPrev],
+    [nextBtn, canNext]
+  ].forEach(([btn, allowed]) => {
+    btn.disabled = !allowed;
+    if (btn.disabled) btn.classList.add('opacity-40', 'cursor-not-allowed');
+    else btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  });
+}
+
+function renderDetail() {
+  const item = currentIncident();
+  if (!item) {
+    detailTitle.textContent = 'Select an incident';
+    detailMeta.textContent = 'Choose a card to view policy checks and actions.';
+    detailFields.innerHTML = '';
+    policyBox.classList.add('hidden');
+    auditList.innerHTML = '';
+    setRolePermissions(null);
+    return;
+  }
+
+  detailTitle.textContent = `${item.id} · ${item.title}`;
+  detailMeta.textContent = `${item.service} · ${item.severity} · reported ${new Date(item.reportedAt).toLocaleString('en-GB', { hour12: false })}`;
+
+  const fields = [
+    ['Status', item.status],
+    ['Owner', item.owner],
+    ['SLA due', new Date(item.slaDue).toLocaleString('en-GB', { hour12: false })],
+    ['Approval', item.approval.replace('-', ' ')],
+    ['Logged updates', String(item.updates)],
+    ['Business impact', item.impact]
+  ];
+
+  detailFields.innerHTML = fields.map(([label, value]) => `
+    <div class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+      <dt class="text-xs uppercase tracking-wide text-slate-400">${label}</dt>
+      <dd class="mt-0.5 text-sm">${value}</dd>
+    </div>
+  `).join('');
+
+  ownerInput.value = item.owner === 'Unassigned' ? '' : item.owner;
+  etaInput.value = item.mitigationEta || '';
+  postmortemInput.value = item.postmortemUrl || '';
+
+  const policy = policyCheck(item);
+  policyBox.classList.remove('hidden');
+  policyBox.textContent = policy.text;
+  policyBox.className = 'mt-3 rounded-lg border px-3 py-2 text-sm';
+  if (policy.level === 'critical') policyBox.classList.add('border-rose-400/40', 'bg-rose-500/10', 'text-rose-200');
+  else if (policy.level === 'warning') policyBox.classList.add('border-amber-400/40', 'bg-amber-500/10', 'text-amber-200');
+  else policyBox.classList.add('border-emerald-400/40', 'bg-emerald-500/10', 'text-emerald-200');
+
+  auditList.innerHTML = item.audit.map(entry => `<li class="rounded border border-slate-800 bg-slate-950 px-2 py-1">${entry}</li>`).join('');
+  setRolePermissions(item);
+}
+
+function pushAudit(item, text) {
+  const stamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  item.audit.unshift(`${stamp} ${text}`);
+}
+
+function validateAction(item) {
+  const owner = ownerInput.value.trim();
+  const eta = etaInput.value;
+  const note = noteInput.value.trim();
+
+  if (!owner || !eta || note.length < 12) {
+    actionError.textContent = 'Owner, ETA and a 12+ char update note are required.';
+    actionError.classList.remove('hidden');
+    return null;
+  }
+
+  actionError.classList.add('hidden');
+  return { owner, eta, note };
+}
+
+function logAction() {
+  const item = currentIncident();
+  if (!item) return;
+  const payload = validateAction(item);
+  if (!payload) return;
+
+  item.owner = payload.owner;
+  item.mitigationEta = payload.eta;
+  item.postmortemUrl = postmortemInput.value.trim();
+  item.updates += 1;
+
+  pushAudit(item, `${roleSelect.value}: update logged by ${payload.owner} — ${payload.note}`);
+  noteInput.value = '';
+  actionMsg.textContent = `${item.id} update logged.`;
+  render();
+}
+
+function requestApproval() {
+  const item = currentIncident();
+  if (!item || item.severity !== 'P1') return;
+  item.approval = 'requested';
+  pushAudit(item, `${roleSelect.value}: requested P1 closure approval`);
+  actionMsg.textContent = `${item.id} approval request sent.`;
+  render();
+}
+
+function approveClosure() {
+  const item = currentIncident();
+  if (!item || item.severity !== 'P1') return;
+  if (roleSelect.value === 'On-call Engineer') {
+    actionMsg.textContent = 'Policy gate: On-call cannot approve P1 closure.';
+    return;
+  }
+  item.approval = 'approved';
+  pushAudit(item, `${roleSelect.value}: approved P1 closure gate`);
+  actionMsg.textContent = `${item.id} closure approved.`;
+  render();
+}
+
+function transition(direction) {
+  const item = currentIncident();
+  if (!item) return;
+  const currentIndex = states.indexOf(item.status);
+  const role = roleSelect.value;
+
+  const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+  if (nextIndex < 0 || nextIndex >= states.length) return;
+
+  const target = states[nextIndex];
+
+  if (direction === 'next' && item.status === 'Mitigating' && target === 'Resolved') {
+    if (item.updates < 1) {
+      actionMsg.textContent = 'Cannot resolve: log at least one mitigation update first.';
+      return;
+    }
+
+    const postmortem = postmortemInput.value.trim();
+    if (!/^https?:\/\//.test(postmortem)) {
+      actionMsg.textContent = 'Cannot resolve: valid postmortem URL is required.';
+      return;
+    }
+
+    item.postmortemUrl = postmortem;
+
+    if (item.severity === 'P1' && item.approval !== 'approved' && role !== 'Head of IT Ops') {
+      actionMsg.textContent = 'Cannot resolve: P1 closure approval is still pending.';
+      return;
+    }
+  }
+
+  if (direction === 'next' && item.status === 'Reported' && target === 'Investigating' && role === 'On-call Engineer' && item.owner === 'Unassigned') {
+    actionMsg.textContent = 'Assign an owner before moving a reported incident to investigating.';
+    return;
+  }
+
+  item.status = target;
+  pushAudit(item, `${role}: moved incident to ${target}`);
+  actionMsg.textContent = `${item.id} moved to ${target}.`;
+  render();
+}
+
+function toCsv(items) {
+  const headers = ['id','title','service','severity','status','owner','reportedAt','slaDue','approval'];
+  const lines = [headers.join(',')];
+  items.forEach(item => {
+    lines.push(headers.map(key => `"${String(item[key]).replaceAll('"', '""')}"`).join(','));
+  });
+  return lines.join('\n');
+}
+
+function exportCsv() {
+  const csv = toCsv(filteredIncidents());
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'incident-escalation-kanban.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function addIncident(event) {
+  event.preventDefault();
+  const title = titleInput.value.trim();
+  const severity = newSeverityInput.value;
+  const service = newServiceInput.value;
+  const sla = newSlaInput.value;
+  const impact = impactInput.value.trim();
+
+  if (!title || !sla || impact.length < 20) {
+    newError.classList.remove('hidden');
+    return;
+  }
+
+  newError.classList.add('hidden');
+
+  const maxId = Math.max(...incidents.map(item => Number(item.id.split('-')[1])));
+  const id = `INC-${maxId + 1}`;
+
+  incidents.unshift({
+    id,
+    title,
+    service,
+    severity,
+    status: 'Reported',
+    owner: 'Unassigned',
+    reportedAt: new Date().toISOString(),
+    slaDue: new Date(sla).toISOString(),
+    impact,
+    mitigationEta: '',
+    postmortemUrl: '',
+    updates: 0,
+    approval: severity === 'P1' ? 'required' : 'not-required',
+    audit: ['Incident created from intake form']
+  });
+
+  selectedId = id;
+  newForm.reset();
+  actionMsg.textContent = `${id} added to board.`;
+  render();
+}
+
+function render() {
+  const data = filteredIncidents();
+  updateMetrics(data);
+  renderBoard(data);
+  renderDetail();
+}
+
+[searchInput, severityFilter, serviceFilter, statusFilter, sortSelect].forEach(el => {
+  const evt = el.tagName === 'INPUT' ? 'input' : 'change';
+  el.addEventListener(evt, render);
+});
+
+roleSelect.addEventListener('change', render);
+exportBtn.addEventListener('click', exportCsv);
+
+logActionBtn.addEventListener('click', logAction);
+requestApprovalBtn.addEventListener('click', requestApproval);
+approveBtn.addEventListener('click', approveClosure);
+prevBtn.addEventListener('click', () => transition('prev'));
+nextBtn.addEventListener('click', () => transition('next'));
+
+newForm.addEventListener('submit', addIncident);
+
+render();
+</script>
+</body>
+</html>
