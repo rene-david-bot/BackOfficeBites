@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NPS Response Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">NPS Response Command Center</h1>
+        <p class="text-slate-300 mt-1">Dashboard-first Sales workspace to close NPS loops with role-based approvals, policy validation, and audit-ready workflow state changes.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="roleSelect" class="text-sm">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>CX Analyst</option>
+          <option>Regional Manager</option>
+          <option>VP Sales</option>
+        </select>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Responses in view</p>
+        <p id="metricResponses" class="mt-1 text-2xl font-semibold">0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Detractors open</p>
+        <p id="metricDetractors" class="mt-1 text-2xl font-semibold text-rose-300">0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Average score</p>
+        <p id="metricAvg" class="mt-1 text-2xl font-semibold">0.0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Follow-ups overdue</p>
+        <p id="metricOverdue" class="mt-1 text-2xl font-semibold text-amber-300">0</p>
+      </article>
+    </section>
+
+    <section class="mt-4 grid gap-3 xl:grid-cols-12">
+      <div class="xl:col-span-7 space-y-3">
+        <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <h2 class="font-semibold">Score Distribution</h2>
+          <div id="scoreBuckets" class="mt-3 grid gap-2"></div>
+        </section>
+
+        <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+            <div class="xl:col-span-2">
+              <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+              <input id="searchInput" type="text" placeholder="Account, comment, owner..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label for="regionFilter" class="text-xs uppercase tracking-wide text-slate-400">Region</label>
+              <select id="regionFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option value="all">All</option>
+                <option>EMEA</option>
+                <option>DACH</option>
+                <option>North America</option>
+              </select>
+            </div>
+            <div>
+              <label for="statusFilter" class="text-xs uppercase tracking-wide text-slate-400">Status</label>
+              <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option value="all">All</option>
+                <option>New</option>
+                <option>Investigating</option>
+                <option>Action Planned</option>
+                <option>Waiting Customer</option>
+                <option>Closed</option>
+              </select>
+            </div>
+            <div>
+              <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+              <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option value="riskDesc">Highest risk</option>
+                <option value="scoreAsc">Lowest score</option>
+                <option value="latest">Most recent response</option>
+                <option value="dueSoon">Follow-up due soon</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-3 overflow-auto">
+            <table class="w-full text-sm min-w-[760px]">
+              <thead>
+                <tr class="text-left text-slate-400 border-b border-slate-800">
+                  <th class="py-2 pr-2">Case</th>
+                  <th class="py-2 pr-2">Account</th>
+                  <th class="py-2 pr-2">Region</th>
+                  <th class="py-2 pr-2">Score</th>
+                  <th class="py-2 pr-2">Risk</th>
+                  <th class="py-2 pr-2">Status</th>
+                  <th class="py-2 pr-2">Owner</th>
+                  <th class="py-2 pr-2">Follow-up</th>
+                </tr>
+              </thead>
+              <tbody id="responseRows"></tbody>
+            </table>
+          </div>
+          <p id="listMeta" class="mt-2 text-xs text-slate-400"></p>
+        </section>
+
+        <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <h2 class="font-semibold">Log New NPS Response</h2>
+          <form id="newResponseForm" class="mt-2 grid gap-2 md:grid-cols-2">
+            <div>
+              <label for="accountInput" class="text-xs uppercase tracking-wide text-slate-400">Account</label>
+              <input id="accountInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label for="segmentInput" class="text-xs uppercase tracking-wide text-slate-400">Segment</label>
+              <select id="segmentInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option>Enterprise</option>
+                <option>Mid-Market</option>
+                <option>SMB</option>
+              </select>
+            </div>
+            <div>
+              <label for="regionInput" class="text-xs uppercase tracking-wide text-slate-400">Region</label>
+              <select id="regionInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option>DACH</option>
+                <option>EMEA</option>
+                <option>North America</option>
+              </select>
+            </div>
+            <div>
+              <label for="scoreInput" class="text-xs uppercase tracking-wide text-slate-400">Score (0-10)</label>
+              <input id="scoreInput" type="number" min="0" max="10" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label for="commentInput" class="text-xs uppercase tracking-wide text-slate-400">Customer comment</label>
+              <textarea id="commentInput" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="What drove this score?"></textarea>
+            </div>
+            <p id="newResponseError" class="md:col-span-2 text-xs text-rose-400 hidden">Provide account, valid score 0-10, and at least 15 characters of comment.</p>
+            <div class="md:col-span-2">
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Add Response</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <aside class="xl:col-span-5 rounded-xl border border-slate-800 bg-slate-900/70 p-3 flex flex-col">
+        <h2 id="detailTitle" class="text-lg font-semibold">Select a case</h2>
+        <p id="detailMeta" class="mt-1 text-xs text-slate-400"></p>
+
+        <div id="policyBox" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm"></div>
+
+        <dl id="detailGrid" class="mt-3 grid gap-2 text-sm"></dl>
+
+        <div class="mt-4 border-t border-slate-800 pt-3">
+          <h3 class="font-semibold">Follow-up Action</h3>
+          <div class="mt-2 grid gap-2 md:grid-cols-2">
+            <div>
+              <label for="ownerInput" class="text-xs uppercase tracking-wide text-slate-400">Owner</label>
+              <input id="ownerInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label for="dueInput" class="text-xs uppercase tracking-wide text-slate-400">Due date</label>
+              <input id="dueInput" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label for="playbookInput" class="text-xs uppercase tracking-wide text-slate-400">Playbook</label>
+              <select id="playbookInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option>24h Recovery Call</option>
+                <option>Executive Sponsor Outreach</option>
+                <option>Product Fix Workshop</option>
+                <option>Commercial Concession</option>
+              </select>
+            </div>
+            <div>
+              <label for="creditInput" class="text-xs uppercase tracking-wide text-slate-400">Credit Offer (€)</label>
+              <input id="creditInput" type="number" min="0" step="50" value="0" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label for="noteInput" class="text-xs uppercase tracking-wide text-slate-400">Action note</label>
+              <textarea id="noteInput" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Summarize what will be done and why..."></textarea>
+            </div>
+          </div>
+          <p id="actionError" class="mt-1 text-xs text-rose-400 hidden">Owner, due date, and note (12+ chars) are required.</p>
+          <p id="roleHint" class="mt-1 text-xs text-slate-400"></p>
+          <button id="logActionBtn" class="mt-2 bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Log Action</button>
+        </div>
+
+        <div class="mt-4 border-t border-slate-800 pt-3 grid gap-2">
+          <h3 class="font-semibold">Workflow</h3>
+          <button id="toInvestigatingBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Move to Investigating</button>
+          <button id="toPlannedBtn" class="bg-sky-600 hover:bg-sky-500 rounded px-3 py-1.5 text-sm font-medium">Move to Action Planned</button>
+          <button id="toWaitingBtn" class="bg-amber-500 text-slate-950 hover:bg-amber-400 rounded px-3 py-1.5 text-sm font-semibold">Send Follow-up</button>
+          <button id="toClosedBtn" class="bg-slate-200 text-slate-900 hover:bg-white rounded px-3 py-1.5 text-sm font-medium">Close Loop</button>
+          <p id="actionMsg" class="text-xs text-emerald-300 min-h-4"></p>
+        </div>
+
+        <div class="mt-4 border-t border-slate-800 pt-3">
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditList" class="mt-2 space-y-1 text-xs max-h-52 overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+<script>
+const responses = [
+  {
+    id: 'NPS-601',
+    account: 'Nordlicht Logistics GmbH',
+    segment: 'Enterprise',
+    region: 'DACH',
+    score: 4,
+    risk: 86,
+    status: 'New',
+    owner: 'Unassigned',
+    comment: 'Support handoffs are slow and onboarding promises were missed.',
+    submittedAt: '2026-03-17T08:20:00Z',
+    nextFollowUp: '2026-03-19',
+    playbook: '24h Recovery Call',
+    creditOffer: 0,
+    outboundActions: 0,
+    audit: [
+      '08:20 Survey imported from CRM',
+      '08:23 Auto-tagged as Detractor High Risk'
+    ]
+  },
+  {
+    id: 'NPS-602',
+    account: 'BluePeak Retail AG',
+    segment: 'Mid-Market',
+    region: 'EMEA',
+    score: 6,
+    risk: 68,
+    status: 'Investigating',
+    owner: 'Sofia Klein',
+    comment: 'Pricing is okay, but issue resolution still takes too long.',
+    submittedAt: '2026-03-16T10:10:00Z',
+    nextFollowUp: '2026-03-18',
+    playbook: 'Product Fix Workshop',
+    creditOffer: 150,
+    outboundActions: 1,
+    audit: [
+      '10:10 Survey imported from CRM',
+      '10:44 CX Analyst opened investigation'
+    ]
+  },
+  {
+    id: 'NPS-603',
+    account: 'Helios Manufacturing SE',
+    segment: 'Enterprise',
+    region: 'DACH',
+    score: 2,
+    risk: 95,
+    status: 'Action Planned',
+    owner: 'Marius Vogel',
+    comment: 'Major go-live defects created downtime and we felt unheard.',
+    submittedAt: '2026-03-15T14:30:00Z',
+    nextFollowUp: '2026-03-18',
+    playbook: 'Executive Sponsor Outreach',
+    creditOffer: 300,
+    outboundActions: 2,
+    audit: [
+      '14:30 Survey imported from CRM',
+      '15:05 Investigation started by CX Analyst',
+      '16:20 Regional Manager approved €300 concession offer'
+    ]
+  },
+  {
+    id: 'NPS-604',
+    account: 'Atlas Cloud Inc.',
+    segment: 'SMB',
+    region: 'North America',
+    score: 8,
+    risk: 32,
+    status: 'Waiting Customer',
+    owner: 'Julia Becker',
+    comment: 'Good product value, still waiting for one feature request.',
+    submittedAt: '2026-03-17T18:00:00Z',
+    nextFollowUp: '2026-03-21',
+    playbook: 'Product Fix Workshop',
+    creditOffer: 0,
+    outboundActions: 1,
+    audit: [
+      '18:00 Survey imported from CRM',
+      '18:45 Product workshop scheduled',
+      '19:10 Follow-up mail sent to customer'
+    ]
+  },
+  {
+    id: 'NPS-605',
+    account: 'Rivertown Mobility',
+    segment: 'Mid-Market',
+    region: 'EMEA',
+    score: 10,
+    risk: 8,
+    status: 'Closed',
+    owner: 'Sofia Klein',
+    comment: 'Fast rollout, great CSM quality, and clean reporting.',
+    submittedAt: '2026-03-14T09:05:00Z',
+    nextFollowUp: '2026-03-15',
+    playbook: '24h Recovery Call',
+    creditOffer: 0,
+    outboundActions: 1,
+    audit: [
+      '09:05 Survey imported from CRM',
+      '10:00 Thank-you call completed',
+      '11:15 Case closed as promoter follow-up complete'
+    ]
+  }
+];
+
+let selectedId = responses[0]?.id || null;
+
+const roleSelect = document.getElementById('roleSelect');
+const exportBtn = document.getElementById('exportBtn');
+const searchInput = document.getElementById('searchInput');
+const regionFilter = document.getElementById('regionFilter');
+const statusFilter = document.getElementById('statusFilter');
+const sortSelect = document.getElementById('sortSelect');
+const scoreBuckets = document.getElementById('scoreBuckets');
+const responseRows = document.getElementById('responseRows');
+const listMeta = document.getElementById('listMeta');
+
+const metricResponses = document.getElementById('metricResponses');
+const metricDetractors = document.getElementById('metricDetractors');
+const metricAvg = document.getElementById('metricAvg');
+const metricOverdue = document.getElementById('metricOverdue');
+
+const detailTitle = document.getElementById('detailTitle');
+const detailMeta = document.getElementById('detailMeta');
+const detailGrid = document.getElementById('detailGrid');
+const policyBox = document.getElementById('policyBox');
+const ownerInput = document.getElementById('ownerInput');
+const dueInput = document.getElementById('dueInput');
+const playbookInput = document.getElementById('playbookInput');
+const creditInput = document.getElementById('creditInput');
+const noteInput = document.getElementById('noteInput');
+const actionError = document.getElementById('actionError');
+const roleHint = document.getElementById('roleHint');
+const logActionBtn = document.getElementById('logActionBtn');
+const actionMsg = document.getElementById('actionMsg');
+const auditList = document.getElementById('auditList');
+
+const toInvestigatingBtn = document.getElementById('toInvestigatingBtn');
+const toPlannedBtn = document.getElementById('toPlannedBtn');
+const toWaitingBtn = document.getElementById('toWaitingBtn');
+const toClosedBtn = document.getElementById('toClosedBtn');
+
+const newResponseForm = document.getElementById('newResponseForm');
+const accountInput = document.getElementById('accountInput');
+const segmentInput = document.getElementById('segmentInput');
+const regionInput = document.getElementById('regionInput');
+const scoreInput = document.getElementById('scoreInput');
+const commentInput = document.getElementById('commentInput');
+const newResponseError = document.getElementById('newResponseError');
+
+const statusStyles = {
+  New: 'bg-rose-500/20 text-rose-200 border-rose-400/30',
+  Investigating: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
+  'Action Planned': 'bg-sky-500/20 text-sky-200 border-sky-400/30',
+  'Waiting Customer': 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+  Closed: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30'
+};
+
+function selectedCase() {
+  return responses.find(item => item.id === selectedId) || null;
+}
+
+function policyCheck(item) {
+  if (!item) return { level: 'neutral', text: '' };
+  if (item.score <= 4 && Number(item.creditOffer) > 200) {
+    return { level: 'critical', text: 'Policy gate: detractor concessions above €200 require Regional Manager or VP Sales approval.' };
+  }
+  if (item.score <= 6 && item.status !== 'Closed') {
+    return { level: 'warning', text: 'Detractor/passive case. SLA target: first callback within 24h and documented action owner.' };
+  }
+  return { level: 'ok', text: 'Policy check passed for current workflow stage.' };
+}
+
+function filteredResponses() {
+  const q = searchInput.value.trim().toLowerCase();
+  const region = regionFilter.value;
+  const status = statusFilter.value;
+  const sort = sortSelect.value;
+
+  const data = responses.filter(item => {
+    const haystack = `${item.id} ${item.account} ${item.comment} ${item.owner}`.toLowerCase();
+    const matchesSearch = !q || haystack.includes(q);
+    const matchesRegion = region === 'all' || item.region === region;
+    const matchesStatus = status === 'all' || item.status === status;
+    return matchesSearch && matchesRegion && matchesStatus;
+  });
+
+  if (sort === 'riskDesc') data.sort((a, b) => b.risk - a.risk);
+  if (sort === 'scoreAsc') data.sort((a, b) => a.score - b.score);
+  if (sort === 'latest') data.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  if (sort === 'dueSoon') data.sort((a, b) => new Date(a.nextFollowUp) - new Date(b.nextFollowUp));
+
+  return data;
+}
+
+function updateMetrics(data) {
+  const today = new Date().toISOString().slice(0, 10);
+  const detractors = data.filter(item => item.score <= 6 && item.status !== 'Closed').length;
+  const openOverdue = data.filter(item => item.status !== 'Closed' && item.nextFollowUp < today).length;
+  const avg = data.length ? data.reduce((sum, item) => sum + item.score, 0) / data.length : 0;
+
+  metricResponses.textContent = String(data.length);
+  metricDetractors.textContent = String(detractors);
+  metricAvg.textContent = avg.toFixed(1);
+  metricOverdue.textContent = String(openOverdue);
+}
+
+function renderScoreBuckets(data) {
+  const buckets = [
+    { label: '0-3 Critical', match: item => item.score <= 3, color: 'bg-rose-500' },
+    { label: '4-6 Detractor', match: item => item.score >= 4 && item.score <= 6, color: 'bg-amber-500' },
+    { label: '7-8 Passive', match: item => item.score >= 7 && item.score <= 8, color: 'bg-sky-500' },
+    { label: '9-10 Promoter', match: item => item.score >= 9, color: 'bg-emerald-500' }
+  ];
+
+  const max = Math.max(1, ...buckets.map(bucket => data.filter(bucket.match).length));
+  scoreBuckets.innerHTML = buckets.map(bucket => {
+    const count = data.filter(bucket.match).length;
+    const width = Math.max(6, Math.round((count / max) * 100));
+    return `
+      <div>
+        <div class="flex items-center justify-between text-xs text-slate-300">
+          <span>${bucket.label}</span>
+          <span>${count}</span>
+        </div>
+        <div class="mt-1 h-2 w-full rounded bg-slate-800 overflow-hidden">
+          <div class="h-2 ${bucket.color}" style="width:${width}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRows(data) {
+  if (!data.some(item => item.id === selectedId)) selectedId = data[0]?.id || null;
+
+  responseRows.innerHTML = '';
+  if (!data.length) {
+    responseRows.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-slate-400">No responses match the current filters.</td></tr>';
+    listMeta.textContent = '0 rows shown';
+    renderDetail();
+    return;
+  }
+
+  listMeta.textContent = `${data.length} response${data.length === 1 ? '' : 's'} shown`;
+
+  data.forEach(item => {
+    const active = item.id === selectedId;
+    const tr = document.createElement('tr');
+    tr.className = `border-b border-slate-800/70 ${active ? 'bg-emerald-500/10' : 'hover:bg-slate-800/40'}`;
+    tr.innerHTML = `
+      <td class="py-2 pr-2"><button data-id="${item.id}" class="underline decoration-slate-600 hover:decoration-emerald-300 text-left">${item.id}</button></td>
+      <td class="py-2 pr-2">${item.account}</td>
+      <td class="py-2 pr-2">${item.region}</td>
+      <td class="py-2 pr-2 font-semibold">${item.score}</td>
+      <td class="py-2 pr-2">${item.risk}</td>
+      <td class="py-2 pr-2"><span class="text-[11px] border rounded-full px-2 py-0.5 ${statusStyles[item.status] || statusStyles.New}">${item.status}</span></td>
+      <td class="py-2 pr-2">${item.owner}</td>
+      <td class="py-2 pr-2">${item.nextFollowUp}</td>
+    `;
+    responseRows.appendChild(tr);
+  });
+
+  responseRows.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedId = btn.dataset.id;
+      actionMsg.textContent = '';
+      actionError.classList.add('hidden');
+      render();
+    });
+  });
+}
+
+function setRolePermissions(item) {
+  const role = roleSelect.value;
+  let canLogAction = !!item;
+  let canInvestigate = item && item.status === 'New';
+  let canPlan = item && item.status === 'Investigating';
+  let canWait = item && item.status === 'Action Planned';
+  let canClose = item && item.status === 'Waiting Customer';
+
+  if (role === 'CX Analyst') {
+    roleHint.textContent = 'CX Analyst: can investigate, log actions, and send follow-ups; cannot approve >€200 concessions or close loops.';
+    canClose = false;
+  }
+
+  if (role === 'Regional Manager') {
+    roleHint.textContent = 'Regional Manager: can approve high-value concessions and close standard loops.';
+  }
+
+  if (role === 'VP Sales') {
+    roleHint.textContent = 'VP Sales: full override authority across all workflow transitions.';
+    canInvestigate = item && item.status !== 'Closed';
+    canPlan = item && item.status !== 'Closed';
+    canWait = item && item.status !== 'Closed';
+    canClose = item && item.status !== 'Closed';
+  }
+
+  if (role === 'CX Analyst' && Number(creditInput.value || 0) > 200) {
+    canLogAction = false;
+  }
+
+  logActionBtn.disabled = !canLogAction;
+  toInvestigatingBtn.disabled = !canInvestigate;
+  toPlannedBtn.disabled = !canPlan;
+  toWaitingBtn.disabled = !canWait;
+  toClosedBtn.disabled = !canClose;
+
+  [logActionBtn, toInvestigatingBtn, toPlannedBtn, toWaitingBtn, toClosedBtn].forEach(btn => {
+    if (btn.disabled) btn.classList.add('opacity-40', 'cursor-not-allowed');
+    else btn.classList.remove('opacity-40', 'cursor-not-allowed');
+  });
+}
+
+function renderDetail() {
+  const item = selectedCase();
+  if (!item) {
+    detailTitle.textContent = 'Select a case';
+    detailMeta.textContent = 'No matching case in current filter view';
+    detailGrid.innerHTML = '';
+    policyBox.classList.add('hidden');
+    auditList.innerHTML = '';
+    setRolePermissions(null);
+    return;
+  }
+
+  detailTitle.textContent = `${item.account} (${item.id})`;
+  detailMeta.textContent = `${item.segment} · ${item.region} · submitted ${new Date(item.submittedAt).toLocaleString('en-GB', { hour12: false })}`;
+
+  const fields = [
+    ['Score', item.score],
+    ['Risk', `${item.risk}/100`],
+    ['Status', item.status],
+    ['Owner', item.owner],
+    ['Next Follow-up', item.nextFollowUp],
+    ['Playbook', item.playbook],
+    ['Credit Offer', `€${Number(item.creditOffer).toLocaleString('en-GB')}`],
+    ['Comment', item.comment]
+  ];
+
+  detailGrid.innerHTML = fields.map(([label, value]) => `
+    <div class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+      <dt class="text-xs uppercase tracking-wide text-slate-400">${label}</dt>
+      <dd class="mt-0.5 text-sm">${value}</dd>
+    </div>
+  `).join('');
+
+  ownerInput.value = item.owner === 'Unassigned' ? '' : item.owner;
+  dueInput.value = item.nextFollowUp;
+  playbookInput.value = item.playbook;
+  creditInput.value = item.creditOffer;
+
+  const policy = policyCheck(item);
+  policyBox.classList.remove('hidden');
+  policyBox.textContent = policy.text;
+  policyBox.className = 'mt-3 rounded-lg border px-3 py-2 text-sm';
+  if (policy.level === 'critical') policyBox.classList.add('border-rose-400/40', 'bg-rose-500/10', 'text-rose-200');
+  else if (policy.level === 'warning') policyBox.classList.add('border-amber-400/40', 'bg-amber-500/10', 'text-amber-200');
+  else policyBox.classList.add('border-emerald-400/40', 'bg-emerald-500/10', 'text-emerald-200');
+
+  auditList.innerHTML = item.audit.map(entry => `<li class="rounded border border-slate-800 bg-slate-950 px-2 py-1">${entry}</li>`).join('');
+  setRolePermissions(item);
+}
+
+function pushAudit(item, text) {
+  const stamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  item.audit.unshift(`${stamp} ${text}`);
+}
+
+function updateRisk(item) {
+  const base = Math.max(0, (7 - item.score) * 12);
+  const statusPenalty = item.status === 'Closed' ? -30 : item.status === 'Waiting Customer' ? -8 : item.status === 'Action Planned' ? 0 : 8;
+  const creditPenalty = Number(item.creditOffer) > 200 ? 10 : 0;
+  item.risk = Math.max(2, Math.min(99, base + statusPenalty + creditPenalty));
+}
+
+function validateAction(item) {
+  const owner = ownerInput.value.trim();
+  const due = dueInput.value;
+  const note = noteInput.value.trim();
+  const credit = Number(creditInput.value || 0);
+
+  if (!owner || !due || note.length < 12 || !Number.isFinite(credit) || credit < 0) {
+    actionError.textContent = 'Owner, due date, non-negative credit, and note (12+ chars) are required.';
+    actionError.classList.remove('hidden');
+    return null;
+  }
+
+  if (item.score <= 4 && credit > 200 && roleSelect.value === 'CX Analyst') {
+    actionError.textContent = 'Policy gate: CX Analyst cannot log concessions above €200 for critical detractor cases.';
+    actionError.classList.remove('hidden');
+    return null;
+  }
+
+  actionError.classList.add('hidden');
+  return { owner, due, note, credit };
+}
+
+function logAction() {
+  const item = selectedCase();
+  if (!item) return;
+  const payload = validateAction(item);
+  if (!payload) return;
+
+  item.owner = payload.owner;
+  item.nextFollowUp = payload.due;
+  item.playbook = playbookInput.value;
+  item.creditOffer = payload.credit;
+  item.outboundActions += 1;
+
+  pushAudit(item, `${roleSelect.value}: logged ${item.playbook} action by ${payload.owner} (credit €${payload.credit}) — ${payload.note}`);
+  updateRisk(item);
+  noteInput.value = '';
+  actionMsg.textContent = `${item.id} action logged.`;
+  render();
+}
+
+function transition(targetStatus, expectedStatuses, label) {
+  const item = selectedCase();
+  if (!item) return;
+
+  const allowedByState = expectedStatuses.includes(item.status) || roleSelect.value === 'VP Sales';
+  if (!allowedByState) {
+    actionMsg.textContent = `Transition blocked: ${item.status} cannot move directly to ${targetStatus}.`;
+    return;
+  }
+
+  if (targetStatus === 'Closed' && item.outboundActions < 1) {
+    actionMsg.textContent = 'Cannot close: at least one outbound follow-up action is required.';
+    return;
+  }
+
+  if (targetStatus === 'Closed' && roleSelect.value === 'CX Analyst') {
+    actionMsg.textContent = 'Policy gate: CX Analyst cannot close loops.';
+    return;
+  }
+
+  item.status = targetStatus;
+  pushAudit(item, `${roleSelect.value}: ${label}`);
+  updateRisk(item);
+  actionMsg.textContent = `${item.id} moved to “${targetStatus}”.`;
+  render();
+}
+
+function toCsv(items) {
+  const headers = ['id','account','segment','region','score','risk','status','owner','nextFollowUp','creditOffer'];
+  const lines = [headers.join(',')];
+  items.forEach(item => {
+    lines.push(headers.map(key => `"${String(item[key]).replaceAll('"', '""')}"`).join(','));
+  });
+  return lines.join('\n');
+}
+
+function exportCsv() {
+  const csv = toCsv(filteredResponses());
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nps-response-command-center.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function scoreToRisk(score) {
+  return Math.max(4, Math.min(99, (7 - score) * 12 + 18));
+}
+
+function addResponse(event) {
+  event.preventDefault();
+  const account = accountInput.value.trim();
+  const score = Number(scoreInput.value);
+  const comment = commentInput.value.trim();
+
+  if (!account || !Number.isFinite(score) || score < 0 || score > 10 || comment.length < 15) {
+    newResponseError.classList.remove('hidden');
+    return;
+  }
+  newResponseError.classList.add('hidden');
+
+  const maxId = Math.max(...responses.map(item => Number(item.id.split('-')[1])));
+  const id = `NPS-${maxId + 1}`;
+
+  responses.unshift({
+    id,
+    account,
+    segment: segmentInput.value,
+    region: regionInput.value,
+    score,
+    risk: scoreToRisk(score),
+    status: 'New',
+    owner: 'Unassigned',
+    comment,
+    submittedAt: new Date().toISOString(),
+    nextFollowUp: new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10),
+    playbook: '24h Recovery Call',
+    creditOffer: 0,
+    outboundActions: 0,
+    audit: ['Response created manually from command center intake form']
+  });
+
+  selectedId = id;
+  newResponseForm.reset();
+  actionMsg.textContent = `${id} added to queue.`;
+  render();
+}
+
+function render() {
+  const data = filteredResponses();
+  updateMetrics(data);
+  renderScoreBuckets(data);
+  renderRows(data);
+  renderDetail();
+}
+
+[searchInput, regionFilter, statusFilter, sortSelect].forEach(el => {
+  const evt = el.tagName === 'INPUT' ? 'input' : 'change';
+  el.addEventListener(evt, render);
+});
+
+roleSelect.addEventListener('change', render);
+creditInput.addEventListener('input', () => setRolePermissions(selectedCase()));
+logActionBtn.addEventListener('click', logAction);
+
+toInvestigatingBtn.addEventListener('click', () => transition('Investigating', ['New'], 'moved case to investigation'));
+toPlannedBtn.addEventListener('click', () => transition('Action Planned', ['Investigating'], 'created approved action plan'));
+toWaitingBtn.addEventListener('click', () => transition('Waiting Customer', ['Action Planned'], 'sent follow-up package to customer'));
+toClosedBtn.addEventListener('click', () => transition('Closed', ['Waiting Customer'], 'closed loop after customer confirmation'));
+
+exportBtn.addEventListener('click', exportCsv);
+newResponseForm.addEventListener('submit', addResponse);
+
+render();
+</script>
+</body>
+</html>

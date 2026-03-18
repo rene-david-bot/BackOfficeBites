@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Asset Checkout Escalation Timeline** — timeline-first supply chain desk for overdue high-value assets with policy-gated escalations, approvals, and audit trail.
+**NPS Response Command Center** — dashboard-first sales workspace for closing NPS loops with policy-gated concessions, role-based actions, and audit-ready workflow state changes.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -977,5 +977,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-18",
+    "day": 46,
+    "slug": "2026-03-18-nps-response-command-center",
+    "name": "NPS Response Command Center",
+    "description": "Dashboard-first Sales workspace for closing NPS loops with policy-gated concessions, role-based actions, and audit-ready workflow state changes.",
+    "category": "Sales",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "nps portal",
+      "sales",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
