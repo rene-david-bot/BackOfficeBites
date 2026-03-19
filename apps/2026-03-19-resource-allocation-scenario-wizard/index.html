@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resource Allocation Scenario Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-[1500px] mx-auto px-4 py-6">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Resource Allocation Scenario Wizard</h1>
+        <p class="mt-1 text-slate-300 max-w-4xl">Planning wizard for quarterly staffing scenarios with policy validation, role-based approval workflow, audit trail, and CSV export.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="roleSelect" class="text-sm">Role</label>
+        <select id="roleSelect" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+          <option>Planner</option>
+          <option>PMO Lead</option>
+          <option>Finance Controller</option>
+        </select>
+        <span id="statusBadge" class="text-xs rounded-full border border-sky-400/40 bg-sky-500/10 text-sky-200 px-2 py-1">Status: Draft</span>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Total assigned hours</p>
+        <p id="metricHours" class="mt-1 text-2xl font-semibold">0h</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Projected labor cost</p>
+        <p id="metricCost" class="mt-1 text-2xl font-semibold text-amber-200">€0</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Average utilization</p>
+        <p id="metricUtil" class="mt-1 text-2xl font-semibold text-emerald-200">0%</p>
+      </article>
+      <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy violations</p>
+        <p id="metricViolations" class="mt-1 text-2xl font-semibold text-rose-300">0</p>
+      </article>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+      <nav class="grid gap-2 md:grid-cols-4" aria-label="Wizard steps">
+        <button class="step-btn rounded border px-3 py-2 text-left text-sm font-medium border-emerald-400/50 bg-emerald-500/10" data-step="1">1. Scenario Intake</button>
+        <button class="step-btn rounded border px-3 py-2 text-left text-sm font-medium border-slate-700 bg-slate-950" data-step="2">2. Capacity Planning</button>
+        <button class="step-btn rounded border px-3 py-2 text-left text-sm font-medium border-slate-700 bg-slate-950" data-step="3">3. Policy & Approval</button>
+        <button class="step-btn rounded border px-3 py-2 text-left text-sm font-medium border-slate-700 bg-slate-950" data-step="4">4. Review & Export</button>
+      </nav>
+
+      <section id="step1" class="mt-4 step-panel">
+        <h2 class="text-lg font-semibold">Scenario Intake</h2>
+        <p class="text-sm text-slate-400 mt-1">Define planning constraints for the next delivery cycle.</p>
+
+        <form id="scenarioForm" class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label for="scenarioName" class="text-xs uppercase tracking-wide text-slate-400">Scenario name</label>
+            <input id="scenarioName" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" value="Q2 SAP Rollout Wave" />
+          </div>
+          <div>
+            <label for="startDate" class="text-xs uppercase tracking-wide text-slate-400">Start date</label>
+            <input id="startDate" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" value="2026-04-06" />
+          </div>
+          <div>
+            <label for="horizonWeeks" class="text-xs uppercase tracking-wide text-slate-400">Horizon (weeks)</label>
+            <input id="horizonWeeks" type="number" min="1" max="24" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" value="12" />
+          </div>
+          <div>
+            <label for="prioritySelect" class="text-xs uppercase tracking-wide text-slate-400">Priority</label>
+            <select id="prioritySelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option>Strategic</option>
+              <option>Mandatory Compliance</option>
+              <option>Revenue Protection</option>
+            </select>
+          </div>
+          <div>
+            <label for="budgetCap" class="text-xs uppercase tracking-wide text-slate-400">Budget cap (€)</label>
+            <input id="budgetCap" type="number" min="10000" step="1000" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" value="220000" />
+          </div>
+          <div>
+            <label for="minUtilization" class="text-xs uppercase tracking-wide text-slate-400">Minimum utilization (%)</label>
+            <input id="minUtilization" type="number" min="40" max="100" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" value="72" />
+          </div>
+          <div class="md:col-span-2 xl:col-span-2">
+            <label for="businessGoal" class="text-xs uppercase tracking-wide text-slate-400">Business goal</label>
+            <textarea id="businessGoal" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="Describe expected outcome and value.">Stabilize rollout quality while keeping contractor spend under control in DACH subsidiaries.</textarea>
+          </div>
+          <p id="scenarioError" class="md:col-span-2 xl:col-span-4 text-xs text-rose-400 hidden">Please provide a scenario name, valid horizon, budget cap, and a business goal (20+ chars).</p>
+        </form>
+      </section>
+
+      <section id="step2" class="mt-4 step-panel hidden">
+        <h2 class="text-lg font-semibold">Capacity Planning</h2>
+        <p class="text-sm text-slate-400 mt-1">Allocate effort by role. Search, filter, and sort the pool before assigning hours.</p>
+
+        <div class="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <div class="xl:col-span-2">
+            <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+            <input id="searchInput" placeholder="Name, role, squad..." class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="teamFilter" class="text-xs uppercase tracking-wide text-slate-400">Team</label>
+            <select id="teamFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option>Platform</option>
+              <option>Business Apps</option>
+              <option>Data</option>
+              <option>QA</option>
+            </select>
+          </div>
+          <div>
+            <label for="roleFilter" class="text-xs uppercase tracking-wide text-slate-400">Role type</label>
+            <select id="roleFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option>Solution Architect</option>
+              <option>Senior Engineer</option>
+              <option>Data Engineer</option>
+              <option>QA Lead</option>
+              <option>Business Analyst</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+            <select id="sortSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="availability">Highest availability</option>
+              <option value="utilization">Lowest utilization</option>
+              <option value="rate">Lowest rate</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-3 overflow-x-auto rounded-xl border border-slate-800">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-900">
+              <tr class="text-left text-xs uppercase tracking-wide text-slate-400">
+                <th class="px-3 py-2">Resource</th>
+                <th class="px-3 py-2">Team</th>
+                <th class="px-3 py-2">Rate/h</th>
+                <th class="px-3 py-2">Available</th>
+                <th class="px-3 py-2">Assign</th>
+                <th class="px-3 py-2">Utilization</th>
+              </tr>
+            </thead>
+            <tbody id="resourceTable" class="bg-slate-950"></tbody>
+          </table>
+        </div>
+        <p id="tableMeta" class="mt-2 text-xs text-slate-400">0 resources shown</p>
+      </section>
+
+      <section id="step3" class="mt-4 step-panel hidden">
+        <h2 class="text-lg font-semibold">Policy Validation & Approval</h2>
+        <p class="text-sm text-slate-400 mt-1">Run controls before asking PMO/Finance to approve the plan.</p>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="validateBtn" class="bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-1.5 text-sm font-medium">Run policy validation</button>
+          <button id="requestBtn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 rounded px-3 py-1.5 text-sm font-semibold">Request approval</button>
+          <button id="approveBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Approve scenario</button>
+        </div>
+        <p id="roleHint" class="mt-2 text-xs text-slate-400"></p>
+        <p id="actionMsg" class="mt-1 text-xs text-emerald-300 min-h-4"></p>
+
+        <div id="policyBox" class="mt-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+          <h3 class="font-semibold">Policy checks</h3>
+          <ul id="policyList" class="mt-2 space-y-2 text-sm"></ul>
+        </div>
+      </section>
+
+      <section id="step4" class="mt-4 step-panel hidden">
+        <h2 class="text-lg font-semibold">Review & Export</h2>
+        <p class="text-sm text-slate-400 mt-1">Audit-ready summary for governance board circulation.</p>
+
+        <div class="mt-3 grid gap-3 lg:grid-cols-2">
+          <article class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Scenario summary</h3>
+            <dl id="summaryList" class="mt-2 space-y-2 text-sm"></dl>
+          </article>
+          <article class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit trail</h3>
+            <ul id="auditList" class="mt-2 space-y-1 text-xs max-h-56 overflow-auto pr-1"></ul>
+          </article>
+        </div>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="exportAssignmentsBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-1.5 text-sm font-medium">Export assignments CSV</button>
+          <button id="exportAuditBtn" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">Export audit CSV</button>
+        </div>
+      </section>
+
+      <div class="mt-4 flex items-center justify-between gap-2 border-t border-slate-800 pt-3">
+        <button id="prevStepBtn" class="bg-slate-700 hover:bg-slate-600 rounded px-3 py-1.5 text-sm">Previous</button>
+        <button id="nextStepBtn" class="bg-sky-600 hover:bg-sky-500 rounded px-3 py-1.5 text-sm font-medium">Next</button>
+      </div>
+    </section>
+  </main>
+
+<script>
+const resources = [
+  { id: 'R-101', name: 'Mara Neumann', role: 'Solution Architect', team: 'Platform', rate: 148, available: 320, assigned: 180 },
+  { id: 'R-102', name: 'Jonas Reimann', role: 'Senior Engineer', team: 'Platform', rate: 122, available: 360, assigned: 210 },
+  { id: 'R-103', name: 'Leyla Toprak', role: 'Business Analyst', team: 'Business Apps', rate: 108, available: 300, assigned: 168 },
+  { id: 'R-104', name: 'Felix Hahn', role: 'Data Engineer', team: 'Data', rate: 128, available: 280, assigned: 150 },
+  { id: 'R-105', name: 'Petra Lang', role: 'QA Lead', team: 'QA', rate: 111, available: 260, assigned: 132 },
+  { id: 'R-106', name: 'Nico Alvarez', role: 'Senior Engineer', team: 'Business Apps', rate: 119, available: 340, assigned: 198 }
+];
+
+const scenario = {
+  name: 'Q2 SAP Rollout Wave',
+  startDate: '2026-04-06',
+  horizonWeeks: 12,
+  priority: 'Strategic',
+  budgetCap: 220000,
+  minUtilization: 72,
+  businessGoal: 'Stabilize rollout quality while keeping contractor spend under control in DACH subsidiaries.',
+  state: 'draft',
+  approvalRequested: false,
+  approvedBy: ''
+};
+
+const stateLabels = {
+  draft: 'Draft',
+  failed: 'Validation Failed',
+  ready: 'Ready for Approval',
+  requested: 'Approval Requested',
+  approved: 'Approved'
+};
+
+let currentStep = 1;
+let lastValidation = { ok: false, issues: ['Validation has not been run yet.'] };
+const auditTrail = [
+  '09:10 Scenario initialized from template',
+  '09:12 Baseline staffing imported from PMO forecast',
+  '09:15 Planner adjusted engineer allocation for integration stream'
+];
+
+const stepButtons = Array.from(document.querySelectorAll('.step-btn'));
+const panels = {
+  1: document.getElementById('step1'),
+  2: document.getElementById('step2'),
+  3: document.getElementById('step3'),
+  4: document.getElementById('step4')
+};
+
+const metricHours = document.getElementById('metricHours');
+const metricCost = document.getElementById('metricCost');
+const metricUtil = document.getElementById('metricUtil');
+const metricViolations = document.getElementById('metricViolations');
+const statusBadge = document.getElementById('statusBadge');
+
+const roleSelect = document.getElementById('roleSelect');
+const scenarioName = document.getElementById('scenarioName');
+const startDate = document.getElementById('startDate');
+const horizonWeeks = document.getElementById('horizonWeeks');
+const prioritySelect = document.getElementById('prioritySelect');
+const budgetCap = document.getElementById('budgetCap');
+const minUtilization = document.getElementById('minUtilization');
+const businessGoal = document.getElementById('businessGoal');
+const scenarioError = document.getElementById('scenarioError');
+
+const searchInput = document.getElementById('searchInput');
+const teamFilter = document.getElementById('teamFilter');
+const roleFilter = document.getElementById('roleFilter');
+const sortSelect = document.getElementById('sortSelect');
+const resourceTable = document.getElementById('resourceTable');
+const tableMeta = document.getElementById('tableMeta');
+
+const validateBtn = document.getElementById('validateBtn');
+const requestBtn = document.getElementById('requestBtn');
+const approveBtn = document.getElementById('approveBtn');
+const roleHint = document.getElementById('roleHint');
+const actionMsg = document.getElementById('actionMsg');
+const policyList = document.getElementById('policyList');
+
+const summaryList = document.getElementById('summaryList');
+const auditList = document.getElementById('auditList');
+const exportAssignmentsBtn = document.getElementById('exportAssignmentsBtn');
+const exportAuditBtn = document.getElementById('exportAuditBtn');
+
+const prevStepBtn = document.getElementById('prevStepBtn');
+const nextStepBtn = document.getElementById('nextStepBtn');
+
+function stamp() {
+  return new Date().toLocaleTimeString('en-GB', { hour12: false });
+}
+
+function logAudit(text) {
+  auditTrail.unshift(`${stamp()} ${text}`);
+}
+
+function euro(value) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+}
+
+function toPercent(value) {
+  return `${Math.round(value)}%`;
+}
+
+function getTotals() {
+  const totalAssigned = resources.reduce((sum, r) => sum + r.assigned, 0);
+  const totalAvailable = resources.reduce((sum, r) => sum + r.available, 0);
+  const totalCost = resources.reduce((sum, r) => sum + (r.assigned * r.rate), 0);
+  const avgUtil = totalAvailable ? (totalAssigned / totalAvailable) * 100 : 0;
+  return { totalAssigned, totalAvailable, totalCost, avgUtil };
+}
+
+function updateMetrics() {
+  const totals = getTotals();
+  metricHours.textContent = `${totals.totalAssigned}h`;
+  metricCost.textContent = euro(totals.totalCost);
+  metricUtil.textContent = toPercent(totals.avgUtil);
+  metricViolations.textContent = String(lastValidation.issues.filter(i => i.level === 'error').length);
+
+  const label = stateLabels[scenario.state] || 'Draft';
+  statusBadge.textContent = `Status: ${label}`;
+  statusBadge.className = 'text-xs rounded-full border px-2 py-1';
+  if (scenario.state === 'approved') statusBadge.classList.add('border-emerald-400/40','bg-emerald-500/10','text-emerald-200');
+  else if (scenario.state === 'failed') statusBadge.classList.add('border-rose-400/40','bg-rose-500/10','text-rose-200');
+  else if (scenario.state === 'requested') statusBadge.classList.add('border-amber-400/40','bg-amber-500/10','text-amber-200');
+  else statusBadge.classList.add('border-sky-400/40','bg-sky-500/10','text-sky-200');
+}
+
+function filteredResources() {
+  const q = searchInput.value.trim().toLowerCase();
+  const team = teamFilter.value;
+  const role = roleFilter.value;
+  const sortBy = sortSelect.value;
+
+  const data = resources.filter(r => {
+    const hay = `${r.name} ${r.role} ${r.team}`.toLowerCase();
+    const matchesQ = !q || hay.includes(q);
+    const matchesTeam = team === 'all' || r.team === team;
+    const matchesRole = role === 'all' || r.role === role;
+    return matchesQ && matchesTeam && matchesRole;
+  });
+
+  if (sortBy === 'availability') data.sort((a, b) => b.available - a.available);
+  if (sortBy === 'utilization') data.sort((a, b) => (a.assigned / a.available) - (b.assigned / b.available));
+  if (sortBy === 'rate') data.sort((a, b) => a.rate - b.rate);
+
+  return data;
+}
+
+function rowTemplate(r) {
+  const utilization = r.available ? (r.assigned / r.available) * 100 : 0;
+  const overbooked = r.assigned > r.available;
+  return `
+    <tr class="border-t border-slate-800 ${overbooked ? 'bg-rose-500/5' : ''}">
+      <td class="px-3 py-2">
+        <p class="font-medium">${r.name}</p>
+        <p class="text-xs text-slate-400">${r.role}</p>
+      </td>
+      <td class="px-3 py-2">${r.team}</td>
+      <td class="px-3 py-2">${euro(r.rate)}</td>
+      <td class="px-3 py-2">${r.available}h</td>
+      <td class="px-3 py-2">
+        <label class="sr-only" for="assign-${r.id}">Assigned hours for ${r.name}</label>
+        <input id="assign-${r.id}" data-id="${r.id}" type="number" min="0" max="500" value="${r.assigned}" class="assign-input w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm" />
+      </td>
+      <td class="px-3 py-2">
+        <span class="text-xs rounded-full border px-2 py-1 ${overbooked ? 'border-rose-400/40 bg-rose-500/10 text-rose-200' : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'}">${toPercent(utilization)}</span>
+      </td>
+    </tr>
+  `;
+}
+
+function renderTable() {
+  const rows = filteredResources();
+  resourceTable.innerHTML = rows.length ? rows.map(rowTemplate).join('') : '<tr><td colspan="6" class="px-3 py-4 text-sm text-slate-400">No matching resources</td></tr>';
+  tableMeta.textContent = `${rows.length} resource${rows.length === 1 ? '' : 's'} shown`;
+
+  document.querySelectorAll('.assign-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const id = input.dataset.id;
+      const row = resources.find(r => r.id === id);
+      if (!row) return;
+      row.assigned = Math.max(0, Number(input.value || 0));
+      logAudit(`Allocation updated: ${row.name} now assigned ${row.assigned}h`);
+      runValidation(false);
+      render();
+    });
+  });
+}
+
+function validateScenarioForm() {
+  const valid =
+    scenarioName.value.trim().length >= 4 &&
+    Number(horizonWeeks.value) >= 1 &&
+    Number(budgetCap.value) >= 10000 &&
+    businessGoal.value.trim().length >= 20;
+
+  scenarioError.classList.toggle('hidden', valid);
+  return valid;
+}
+
+function runValidation(logEvents = true) {
+  const issues = [];
+  const totals = getTotals();
+
+  if (!validateScenarioForm()) {
+    issues.push({ level: 'error', text: 'Scenario intake form is incomplete.' });
+  }
+
+  const overbooked = resources.filter(r => r.assigned > r.available);
+  if (overbooked.length) {
+    issues.push({
+      level: 'error',
+      text: `Overbooked resources: ${overbooked.map(r => `${r.name} (${r.assigned}/${r.available}h)`).join(', ')}`
+    });
+  }
+
+  if (totals.totalCost > Number(budgetCap.value)) {
+    issues.push({ level: 'error', text: `Budget cap exceeded by ${euro(totals.totalCost - Number(budgetCap.value))}.` });
+  }
+
+  if (totals.avgUtil < Number(minUtilization.value)) {
+    issues.push({ level: 'warn', text: `Average utilization ${toPercent(totals.avgUtil)} is below target ${minUtilization.value}%.` });
+  }
+
+  const hasArchitect = resources.some(r => r.role === 'Solution Architect' && r.assigned > 0);
+  const hasQa = resources.some(r => r.role === 'QA Lead' && r.assigned > 0);
+  if (!hasArchitect || !hasQa) {
+    issues.push({ level: 'error', text: 'Critical roles missing: at least one Solution Architect and one QA Lead must be assigned.' });
+  }
+
+  if (!issues.length) {
+    issues.push({ level: 'ok', text: 'All mandatory policies passed. Scenario is ready for approval.' });
+  }
+
+  lastValidation = {
+    ok: issues.every(i => i.level !== 'error'),
+    issues
+  };
+
+  scenario.state = lastValidation.ok ? (scenario.approvalRequested ? 'requested' : 'ready') : 'failed';
+
+  if (logEvents) {
+    logAudit(lastValidation.ok ? 'Policy validation passed' : 'Policy validation found blocking issues');
+    actionMsg.textContent = lastValidation.ok ? 'Validation passed. You can request approval.' : 'Validation failed. Resolve blocking issues first.';
+  }
+}
+
+function renderPolicyList() {
+  policyList.innerHTML = lastValidation.issues.map(issue => {
+    const klass = issue.level === 'error'
+      ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
+      : issue.level === 'warn'
+        ? 'border-amber-400/40 bg-amber-500/10 text-amber-200'
+        : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
+    return `<li class="rounded-lg border px-3 py-2 ${klass}">${issue.text}</li>`;
+  }).join('');
+}
+
+function updateRolePermissions() {
+  const role = roleSelect.value;
+  const canApprove = role !== 'Planner';
+  approveBtn.disabled = !canApprove || !scenario.approvalRequested;
+  approveBtn.classList.toggle('opacity-40', approveBtn.disabled);
+  approveBtn.classList.toggle('cursor-not-allowed', approveBtn.disabled);
+
+  if (role === 'Planner') {
+    roleHint.textContent = 'Planner can build and validate scenarios, but final approval requires PMO Lead or Finance Controller.';
+  } else if (role === 'PMO Lead') {
+    roleHint.textContent = 'PMO Lead can approve validated scenarios and lock staffing plan.';
+  } else {
+    roleHint.textContent = 'Finance Controller can approve only after budget and policy checks pass.';
+  }
+}
+
+function renderSummary() {
+  const totals = getTotals();
+  const rows = [
+    ['Scenario', scenarioName.value.trim() || '-'],
+    ['Start date', startDate.value || '-'],
+    ['Horizon', `${horizonWeeks.value || 0} weeks`],
+    ['Priority', prioritySelect.value],
+    ['Budget cap', euro(Number(budgetCap.value || 0))],
+    ['Projected cost', euro(totals.totalCost)],
+    ['Average utilization', toPercent(totals.avgUtil)],
+    ['Approval state', stateLabels[scenario.state] || 'Draft'],
+    ['Approved by', scenario.approvedBy || 'Pending']
+  ];
+
+  summaryList.innerHTML = rows.map(([label, value]) => `
+    <div class="rounded border border-slate-800 px-3 py-2">
+      <dt class="text-xs uppercase tracking-wide text-slate-400">${label}</dt>
+      <dd class="mt-0.5">${value}</dd>
+    </div>
+  `).join('');
+
+  auditList.innerHTML = auditTrail.map(item => `<li class="rounded border border-slate-800 bg-slate-900 px-2 py-1">${item}</li>`).join('');
+}
+
+function setStep(step) {
+  currentStep = Math.min(4, Math.max(1, step));
+
+  stepButtons.forEach(btn => {
+    const active = Number(btn.dataset.step) === currentStep;
+    btn.className = 'step-btn rounded border px-3 py-2 text-left text-sm font-medium';
+    if (active) btn.classList.add('border-emerald-400/50', 'bg-emerald-500/10');
+    else btn.classList.add('border-slate-700', 'bg-slate-950');
+  });
+
+  Object.entries(panels).forEach(([idx, panel]) => {
+    panel.classList.toggle('hidden', Number(idx) !== currentStep);
+  });
+
+  prevStepBtn.disabled = currentStep === 1;
+  prevStepBtn.classList.toggle('opacity-40', prevStepBtn.disabled);
+  prevStepBtn.classList.toggle('cursor-not-allowed', prevStepBtn.disabled);
+  nextStepBtn.textContent = currentStep === 4 ? 'Finish Review' : 'Next';
+}
+
+function csvDownload(filename, rows) {
+  const csv = rows.map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function exportAssignments() {
+  const rows = [['id','name','role','team','available_hours','assigned_hours','rate_eur_h','projected_cost_eur']];
+  resources.forEach(r => rows.push([r.id, r.name, r.role, r.team, r.available, r.assigned, r.rate, r.assigned * r.rate]));
+  csvDownload('resource-allocation-assignments.csv', rows);
+  logAudit('Assignments CSV exported');
+  renderSummary();
+}
+
+function exportAudit() {
+  const rows = [['audit_entry']];
+  auditTrail.forEach(item => rows.push([item]));
+  csvDownload('resource-allocation-audit.csv', rows);
+  logAudit('Audit CSV exported');
+  renderSummary();
+}
+
+function requestApproval() {
+  if (!lastValidation.ok) {
+    actionMsg.textContent = 'Cannot request approval: run validation and resolve blocking issues first.';
+    return;
+  }
+  scenario.approvalRequested = true;
+  scenario.state = 'requested';
+  logAudit(`${roleSelect.value} requested approval`);
+  actionMsg.textContent = 'Approval requested and routed to PMO/Finance.';
+  render();
+}
+
+function approveScenario() {
+  if (roleSelect.value === 'Planner') {
+    actionMsg.textContent = 'Planner role cannot approve this scenario.';
+    return;
+  }
+  if (!scenario.approvalRequested || !lastValidation.ok) {
+    actionMsg.textContent = 'Approval requires a requested and policy-compliant scenario.';
+    return;
+  }
+
+  scenario.state = 'approved';
+  scenario.approvedBy = roleSelect.value;
+  logAudit(`Scenario approved by ${roleSelect.value}`);
+  actionMsg.textContent = `Scenario approved by ${roleSelect.value}.`;
+  render();
+}
+
+function syncScenarioObject() {
+  scenario.name = scenarioName.value.trim();
+  scenario.startDate = startDate.value;
+  scenario.horizonWeeks = Number(horizonWeeks.value || 0);
+  scenario.priority = prioritySelect.value;
+  scenario.budgetCap = Number(budgetCap.value || 0);
+  scenario.minUtilization = Number(minUtilization.value || 0);
+  scenario.businessGoal = businessGoal.value.trim();
+}
+
+function render() {
+  syncScenarioObject();
+  renderTable();
+  renderPolicyList();
+  updateRolePermissions();
+  updateMetrics();
+  renderSummary();
+}
+
+[searchInput, teamFilter, roleFilter, sortSelect].forEach(el => {
+  const evt = el.tagName === 'INPUT' ? 'input' : 'change';
+  el.addEventListener(evt, renderTable);
+});
+
+[scenarioName, startDate, horizonWeeks, prioritySelect, budgetCap, minUtilization, businessGoal].forEach(el => {
+  el.addEventListener('change', () => {
+    scenario.approvalRequested = false;
+    if (scenario.state === 'approved') scenario.state = 'draft';
+    runValidation(false);
+    render();
+  });
+});
+
+stepButtons.forEach(btn => {
+  btn.addEventListener('click', () => setStep(Number(btn.dataset.step)));
+});
+
+prevStepBtn.addEventListener('click', () => setStep(currentStep - 1));
+nextStepBtn.addEventListener('click', () => setStep(currentStep === 4 ? 4 : currentStep + 1));
+
+validateBtn.addEventListener('click', () => {
+  runValidation(true);
+  render();
+});
+
+requestBtn.addEventListener('click', requestApproval);
+approveBtn.addEventListener('click', approveScenario);
+
+roleSelect.addEventListener('change', () => {
+  actionMsg.textContent = '';
+  render();
+});
+
+exportAssignmentsBtn.addEventListener('click', exportAssignments);
+exportAuditBtn.addEventListener('click', exportAudit);
+
+runValidation(false);
+setStep(1);
+render();
+</script>
+</body>
+</html>
