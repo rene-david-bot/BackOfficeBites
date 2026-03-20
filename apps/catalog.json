@@ -1050,5 +1050,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-20",
+    "day": 49,
+    "slug": "2026-03-20-cycle-count-variance-grid",
+    "name": "Cycle Count Variance Grid",
+    "description": "Data-grid workspace for cycle-count variances with role-based approvals, audit trail, and CSV handoff.",
+    "category": "Supply Chain",
+    "pattern": "Data Grid",
+    "tags": [
+      "cycle count",
+      "supply chain",
+      "data grid",
+      "approval workflow",
+      "audit trail",
+      "csv export",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cycle Count Variance Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#020617'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.2em] text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Cycle Count Variance Grid</h1>
+        <p class="text-slate-400 mt-1">Data-grid workflow for warehouse variances, approvals, and audit-safe export.</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm">
+        <p class="text-slate-400">Role-based view</p>
+        <label for="roleSelect" class="sr-only">Role</label>
+        <select id="roleSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+          <option value="counter">Counter</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="auditor">Auditor</option>
+        </select>
+      </div>
+    </div>
+
+    <section id="kpis" class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4"></section>
+
+    <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid gap-3 md:grid-cols-12">
+        <div class="md:col-span-4">
+          <label for="searchInput" class="text-xs uppercase tracking-wider text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="SKU, item, owner, zone..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+        </div>
+        <div class="md:col-span-2">
+          <label for="warehouseFilter" class="text-xs uppercase tracking-wider text-slate-400">Warehouse</label>
+          <select id="warehouseFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="statusFilter" class="text-xs uppercase tracking-wider text-slate-400">Status</label>
+          <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="needs_review">Needs review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="priorityFilter" class="text-xs uppercase tracking-wider text-slate-400">Priority</label>
+          <select id="priorityFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="all">All</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="sortSelect" class="text-xs uppercase tracking-wider text-slate-400">Sort</label>
+          <select id="sortSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="impact">Value impact ↓</option>
+            <option value="variance">Abs variance ↓</option>
+            <option value="due">Due date ↑</option>
+            <option value="sku">SKU A→Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button id="exportBtn" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300">Export CSV</button>
+        <button id="resetBtn" class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500">Reset Filters</button>
+        <span id="statusMessage" class="text-sm text-slate-400" aria-live="polite"></span>
+      </div>
+
+      <div class="mt-4 overflow-hidden rounded-xl border border-slate-800">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[980px] text-sm" aria-label="Cycle count variances">
+            <thead class="bg-slate-900 text-slate-300">
+              <tr class="text-left">
+                <th class="px-3 py-3 font-medium">Case</th>
+                <th class="px-3 py-3 font-medium">Item</th>
+                <th class="px-3 py-3 font-medium">Location</th>
+                <th class="px-3 py-3 font-medium text-right">Expected</th>
+                <th class="px-3 py-3 font-medium text-right">Counted</th>
+                <th class="px-3 py-3 font-medium text-right">Variance</th>
+                <th class="px-3 py-3 font-medium text-right">Impact</th>
+                <th class="px-3 py-3 font-medium">Priority</th>
+                <th class="px-3 py-3 font-medium">Status</th>
+                <th class="px-3 py-3 font-medium">Owner</th>
+                <th class="px-3 py-3 font-medium">Due</th>
+                <th class="px-3 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-800 bg-slate-950"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Audit Trail</h2>
+      <ul id="auditList" class="mt-3 space-y-2 text-sm text-slate-300"></ul>
+    </section>
+  </main>
+
+  <dialog id="reviewDialog" class="w-[min(640px,95vw)] rounded-2xl border border-slate-700 bg-slate-900 p-0 text-slate-100 backdrop:bg-black/70">
+    <form id="reviewForm" method="dialog" class="p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold">Submit Variance Review</h2>
+          <p id="dialogSubtitle" class="mt-1 text-sm text-slate-400"></p>
+        </div>
+        <button type="button" id="closeDialog" class="rounded-md border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800">Esc</button>
+      </div>
+
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="countedInput" class="text-sm text-slate-300">Recounted quantity</label>
+          <input id="countedInput" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" required />
+        </div>
+        <div>
+          <label for="ticketInput" class="text-sm text-slate-300">Reference ticket</label>
+          <input id="ticketInput" type="text" placeholder="e.g. WMS-3842" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" required />
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label for="reasonInput" class="text-sm text-slate-300">Reason and corrective action</label>
+        <textarea id="reasonInput" rows="4" minlength="8" placeholder="Explain root cause and what changed in the bin..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" required></textarea>
+      </div>
+
+      <p id="formError" class="mt-3 text-sm text-rose-400"></p>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" id="cancelReview" class="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800">Cancel</button>
+        <button type="submit" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">Submit for Approval</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const numberFmt = new Intl.NumberFormat('en-US');
+
+    const state = {
+      role: 'counter',
+      search: '',
+      warehouse: 'all',
+      status: 'all',
+      priority: 'all',
+      sort: 'impact',
+      activeCaseId: null,
+      records: [
+        { id: 'CC-2401', sku: 'WHS-8891', item: 'Hydraulic Seal Kit', warehouse: 'Berlin DC', zone: 'A-04', expected: 340, counted: 298, unitCost: 12, priority: 'Critical', status: 'open', owner: 'Lena', due: '2026-03-20', updatedAt: '2026-03-19T09:10:00Z' },
+        { id: 'CC-2402', sku: 'ELC-1109', item: 'RF Scanner Battery', warehouse: 'Berlin DC', zone: 'E-12', expected: 120, counted: 126, unitCost: 34, priority: 'High', status: 'needs_review', owner: 'Nikhil', due: '2026-03-20', updatedAt: '2026-03-20T06:55:00Z' },
+        { id: 'CC-2403', sku: 'PKG-4472', item: 'Poly Mailer XL', warehouse: 'Dresden Hub', zone: 'C-21', expected: 5400, counted: 5180, unitCost: 1, priority: 'Medium', status: 'open', owner: 'Mia', due: '2026-03-21', updatedAt: '2026-03-19T10:35:00Z' },
+        { id: 'CC-2404', sku: 'ELC-0094', item: 'Router Bracket', warehouse: 'Leipzig Node', zone: 'B-09', expected: 92, counted: 74, unitCost: 46, priority: 'High', status: 'open', owner: 'Sven', due: '2026-03-21', updatedAt: '2026-03-20T04:12:00Z' },
+        { id: 'CC-2405', sku: 'MRO-7221', item: 'Conveyor Belt Sensor', warehouse: 'Dresden Hub', zone: 'M-02', expected: 33, counted: 33, unitCost: 89, priority: 'Low', status: 'approved', owner: 'Lena', due: '2026-03-18', updatedAt: '2026-03-19T07:40:00Z' },
+        { id: 'CC-2406', sku: 'KIT-8033', item: 'Return Label Bundle', warehouse: 'Berlin DC', zone: 'R-03', expected: 800, counted: 722, unitCost: 4, priority: 'Medium', status: 'rejected', owner: 'Mia', due: '2026-03-19', updatedAt: '2026-03-20T07:22:00Z' },
+        { id: 'CC-2407', sku: 'PRT-1302', item: 'Barcode Printer Head', warehouse: 'Leipzig Node', zone: 'T-07', expected: 51, counted: 45, unitCost: 135, priority: 'Critical', status: 'needs_review', owner: 'Nikhil', due: '2026-03-20', updatedAt: '2026-03-20T08:02:00Z' },
+        { id: 'CC-2408', sku: 'PKG-5011', item: 'Corner Protectors', warehouse: 'Dresden Hub', zone: 'C-05', expected: 1260, counted: 1308, unitCost: 2, priority: 'Low', status: 'open', owner: 'Sven', due: '2026-03-22', updatedAt: '2026-03-18T16:00:00Z' }
+      ],
+      audit: [
+        { at: '2026-03-20 08:05 UTC', actor: 'Nikhil (Counter)', action: 'Submitted CC-2407 for supervisor approval.' },
+        { at: '2026-03-20 07:22 UTC', actor: 'Amira (Supervisor)', action: 'Rejected CC-2406. Missing recount proof photo.' },
+        { at: '2026-03-19 07:40 UTC', actor: 'Amira (Supervisor)', action: 'Approved CC-2405 after recount matched ERP.' }
+      ]
+    };
+
+    const roleLabel = { counter: 'Counter', supervisor: 'Supervisor', auditor: 'Auditor' };
+
+    const refs = {
+      roleSelect: document.getElementById('roleSelect'),
+      searchInput: document.getElementById('searchInput'),
+      warehouseFilter: document.getElementById('warehouseFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      priorityFilter: document.getElementById('priorityFilter'),
+      sortSelect: document.getElementById('sortSelect'),
+      tableBody: document.getElementById('tableBody'),
+      kpis: document.getElementById('kpis'),
+      auditList: document.getElementById('auditList'),
+      statusMessage: document.getElementById('statusMessage'),
+      exportBtn: document.getElementById('exportBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      dialog: document.getElementById('reviewDialog'),
+      form: document.getElementById('reviewForm'),
+      dialogSubtitle: document.getElementById('dialogSubtitle'),
+      countedInput: document.getElementById('countedInput'),
+      ticketInput: document.getElementById('ticketInput'),
+      reasonInput: document.getElementById('reasonInput'),
+      formError: document.getElementById('formError'),
+      cancelReview: document.getElementById('cancelReview'),
+      closeDialog: document.getElementById('closeDialog')
+    };
+
+    function variance(row) {
+      return row.counted - row.expected;
+    }
+
+    function impact(row) {
+      return variance(row) * row.unitCost;
+    }
+
+    function statusBadge(status) {
+      const styles = {
+        open: 'bg-slate-700/60 text-slate-200 border-slate-600',
+        needs_review: 'bg-amber-500/20 text-amber-200 border-amber-500/30',
+        approved: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30',
+        rejected: 'bg-rose-500/20 text-rose-200 border-rose-500/30'
+      };
+      const labels = {
+        open: 'Open',
+        needs_review: 'Needs review',
+        approved: 'Approved',
+        rejected: 'Rejected'
+      };
+      return `<span class="inline-flex rounded-full border px-2 py-0.5 text-xs ${styles[status]}">${labels[status]}</span>`;
+    }
+
+    function canApprove(role) {
+      return role === 'supervisor' || role === 'auditor';
+    }
+
+    function visibleRows() {
+      const q = state.search.trim().toLowerCase();
+      const rows = state.records.filter((row) => {
+        const matchesSearch = !q || [row.id, row.sku, row.item, row.owner, row.warehouse, row.zone].join(' ').toLowerCase().includes(q);
+        const matchesWarehouse = state.warehouse === 'all' || row.warehouse === state.warehouse;
+        const matchesStatus = state.status === 'all' || row.status === state.status;
+        const matchesPriority = state.priority === 'all' || row.priority === state.priority;
+        return matchesSearch && matchesWarehouse && matchesStatus && matchesPriority;
+      });
+
+      const sorted = rows.sort((a, b) => {
+        if (state.sort === 'impact') return Math.abs(impact(b)) - Math.abs(impact(a));
+        if (state.sort === 'variance') return Math.abs(variance(b)) - Math.abs(variance(a));
+        if (state.sort === 'due') return new Date(a.due) - new Date(b.due);
+        return a.sku.localeCompare(b.sku);
+      });
+
+      return sorted;
+    }
+
+    function renderKPIs(rows) {
+      const open = rows.filter((r) => r.status === 'open').length;
+      const pending = rows.filter((r) => r.status === 'needs_review').length;
+      const approved = rows.filter((r) => r.status === 'approved').length;
+      const exposure = rows.reduce((sum, row) => sum + Math.abs(impact(row)), 0);
+
+      refs.kpis.innerHTML = [
+        { label: 'Visible Cases', value: numberFmt.format(rows.length), hint: `Role: ${roleLabel[state.role]}` },
+        { label: 'Open Variances', value: numberFmt.format(open), hint: `${pending} pending approvals` },
+        { label: 'Approved', value: numberFmt.format(approved), hint: 'Audit-locked records' },
+        { label: 'Value Exposure', value: currencyFmt.format(exposure), hint: 'Absolute impact' }
+      ].map((kpi) => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-400">${kpi.label}</p>
+          <p class="mt-1 text-2xl font-semibold">${kpi.value}</p>
+          <p class="mt-1 text-xs text-slate-500">${kpi.hint}</p>
+        </article>
+      `).join('');
+    }
+
+    function actionButtons(row) {
+      const actions = [];
+      actions.push(`<button data-action="review" data-id="${row.id}" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Review</button>`);
+
+      if (canApprove(state.role) && (row.status === 'needs_review' || row.status === 'open')) {
+        actions.push(`<button data-action="approve" data-id="${row.id}" class="rounded border border-emerald-500/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-400">Approve</button>`);
+        actions.push(`<button data-action="reject" data-id="${row.id}" class="rounded border border-rose-500/40 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/20 focus:outline-none focus:ring-2 focus:ring-rose-400">Reject</button>`);
+      }
+
+      if (state.role === 'auditor' && row.status !== 'open') {
+        actions.push(`<button data-action="reopen" data-id="${row.id}" class="rounded border border-amber-500/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-400">Reopen</button>`);
+      }
+
+      return actions.join(' ');
+    }
+
+    function renderTable(rows) {
+      refs.tableBody.innerHTML = rows.map((row) => {
+        const v = variance(row);
+        const i = impact(row);
+        const varianceClass = v < 0 ? 'text-rose-300' : v > 0 ? 'text-amber-300' : 'text-emerald-300';
+        return `
+          <tr tabindex="0" class="hover:bg-slate-900/80 focus-within:bg-slate-900/80">
+            <td class="px-3 py-3 align-top">
+              <p class="font-medium">${row.id}</p>
+              <p class="text-xs text-slate-500">${row.sku}</p>
+            </td>
+            <td class="px-3 py-3 align-top">
+              <p>${row.item}</p>
+            </td>
+            <td class="px-3 py-3 align-top text-slate-300">
+              <p>${row.warehouse}</p>
+              <p class="text-xs text-slate-500">Zone ${row.zone}</p>
+            </td>
+            <td class="px-3 py-3 text-right align-top">${numberFmt.format(row.expected)}</td>
+            <td class="px-3 py-3 text-right align-top">${numberFmt.format(row.counted)}</td>
+            <td class="px-3 py-3 text-right align-top ${varianceClass}">${v > 0 ? '+' : ''}${numberFmt.format(v)}</td>
+            <td class="px-3 py-3 text-right align-top ${i < 0 ? 'text-rose-300' : 'text-amber-300'}">${currencyFmt.format(i)}</td>
+            <td class="px-3 py-3 align-top">${row.priority}</td>
+            <td class="px-3 py-3 align-top">${statusBadge(row.status)}</td>
+            <td class="px-3 py-3 align-top">${row.owner}</td>
+            <td class="px-3 py-3 align-top text-slate-300">${row.due}</td>
+            <td class="px-3 py-3 align-top"><div class="flex flex-wrap gap-1">${actionButtons(row)}</div></td>
+          </tr>
+        `;
+      }).join('');
+
+      if (!rows.length) {
+        refs.tableBody.innerHTML = `
+          <tr>
+            <td colspan="12" class="px-4 py-10 text-center text-slate-400">No cases match the active filters.</td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderAudit() {
+      refs.auditList.innerHTML = state.audit.slice(0, 8).map((entry) => `
+        <li class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+          <p class="text-xs uppercase tracking-wider text-slate-500">${entry.at}</p>
+          <p class="mt-1"><span class="font-medium">${entry.actor}</span> — ${entry.action}</p>
+        </li>
+      `).join('');
+    }
+
+    function refresh() {
+      const rows = visibleRows();
+      renderKPIs(rows);
+      renderTable(rows);
+      renderAudit();
+      refs.statusMessage.textContent = `${rows.length} records shown.`;
+    }
+
+    function logAudit(action) {
+      const now = new Date();
+      const stamp = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC`;
+      state.audit.unshift({ at: stamp, actor: `${roleLabel[state.role]} user`, action });
+    }
+
+    function openReviewDialog(caseId) {
+      const row = state.records.find((r) => r.id === caseId);
+      if (!row) return;
+      state.activeCaseId = caseId;
+      refs.dialogSubtitle.textContent = `${row.id} • ${row.item} (${row.warehouse}, Zone ${row.zone})`;
+      refs.countedInput.value = row.counted;
+      refs.ticketInput.value = '';
+      refs.reasonInput.value = '';
+      refs.formError.textContent = '';
+      refs.dialog.showModal();
+      refs.countedInput.focus();
+    }
+
+    function closeDialog() {
+      state.activeCaseId = null;
+      refs.dialog.close();
+      refs.formError.textContent = '';
+    }
+
+    function updateCaseStatus(caseId, nextStatus, note) {
+      const row = state.records.find((r) => r.id === caseId);
+      if (!row) return;
+      row.status = nextStatus;
+      row.updatedAt = new Date().toISOString();
+      logAudit(`${nextStatus === 'approved' ? 'Approved' : nextStatus === 'rejected' ? 'Rejected' : 'Reopened'} ${row.id}. ${note}`);
+      refresh();
+    }
+
+    function exportCsv(rows) {
+      const headers = ['case_id', 'sku', 'item', 'warehouse', 'zone', 'expected', 'counted', 'variance', 'value_impact_eur', 'priority', 'status', 'owner', 'due'];
+      const body = rows.map((r) => [
+        r.id,
+        r.sku,
+        r.item,
+        r.warehouse,
+        r.zone,
+        r.expected,
+        r.counted,
+        variance(r),
+        impact(r),
+        r.priority,
+        r.status,
+        r.owner,
+        r.due
+      ]);
+      const csv = [headers, ...body]
+        .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cycle-count-variance-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      refs.statusMessage.textContent = `Exported ${rows.length} rows to CSV.`;
+    }
+
+    function populateWarehouseFilter() {
+      const warehouses = [...new Set(state.records.map((r) => r.warehouse))].sort();
+      warehouses.forEach((warehouse) => {
+        const option = document.createElement('option');
+        option.value = warehouse;
+        option.textContent = warehouse;
+        refs.warehouseFilter.appendChild(option);
+      });
+    }
+
+    function bindEvents() {
+      refs.roleSelect.addEventListener('change', (event) => {
+        state.role = event.target.value;
+        refresh();
+      });
+
+      refs.searchInput.addEventListener('input', (event) => {
+        state.search = event.target.value;
+        refresh();
+      });
+
+      refs.warehouseFilter.addEventListener('change', (event) => {
+        state.warehouse = event.target.value;
+        refresh();
+      });
+
+      refs.statusFilter.addEventListener('change', (event) => {
+        state.status = event.target.value;
+        refresh();
+      });
+
+      refs.priorityFilter.addEventListener('change', (event) => {
+        state.priority = event.target.value;
+        refresh();
+      });
+
+      refs.sortSelect.addEventListener('change', (event) => {
+        state.sort = event.target.value;
+        refresh();
+      });
+
+      refs.exportBtn.addEventListener('click', () => exportCsv(visibleRows()));
+
+      refs.resetBtn.addEventListener('click', () => {
+        state.search = '';
+        state.warehouse = 'all';
+        state.status = 'all';
+        state.priority = 'all';
+        state.sort = 'impact';
+        refs.searchInput.value = '';
+        refs.warehouseFilter.value = 'all';
+        refs.statusFilter.value = 'all';
+        refs.priorityFilter.value = 'all';
+        refs.sortSelect.value = 'impact';
+        refresh();
+      });
+
+      refs.tableBody.addEventListener('click', (event) => {
+        const target = event.target.closest('button[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const caseId = target.dataset.id;
+
+        if (action === 'review') {
+          openReviewDialog(caseId);
+          return;
+        }
+
+        if (!canApprove(state.role) && action !== 'reopen') {
+          refs.statusMessage.textContent = 'Only supervisors and auditors can approve or reject.';
+          return;
+        }
+
+        if (action === 'approve') {
+          updateCaseStatus(caseId, 'approved', 'Approved from grid action.');
+          return;
+        }
+
+        if (action === 'reject') {
+          updateCaseStatus(caseId, 'rejected', 'Rejected from grid action.');
+          return;
+        }
+
+        if (action === 'reopen' && state.role === 'auditor') {
+          updateCaseStatus(caseId, 'open', 'Reopened by auditor for recount.');
+        }
+      });
+
+      refs.form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const row = state.records.find((r) => r.id === state.activeCaseId);
+        if (!row) return;
+
+        const counted = Number(refs.countedInput.value);
+        const ticket = refs.ticketInput.value.trim();
+        const reason = refs.reasonInput.value.trim();
+
+        if (!Number.isInteger(counted) || counted < 0) {
+          refs.formError.textContent = 'Counted quantity must be a whole number of 0 or higher.';
+          return;
+        }
+
+        if (ticket.length < 4) {
+          refs.formError.textContent = 'Reference ticket is required (min 4 chars).';
+          return;
+        }
+
+        if (reason.length < 8) {
+          refs.formError.textContent = 'Please add at least 8 characters for root-cause notes.';
+          return;
+        }
+
+        row.counted = counted;
+        row.status = 'needs_review';
+        row.updatedAt = new Date().toISOString();
+        logAudit(`Submitted ${row.id} for approval (${ticket}). Reason: ${reason}`);
+        closeDialog();
+        refresh();
+        refs.statusMessage.textContent = `${row.id} submitted for supervisor approval.`;
+      });
+
+      refs.cancelReview.addEventListener('click', closeDialog);
+      refs.closeDialog.addEventListener('click', closeDialog);
+      refs.dialog.addEventListener('click', (event) => {
+        const rect = refs.dialog.getBoundingClientRect();
+        const clickedOutside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+        if (clickedOutside) closeDialog();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && refs.dialog.open) closeDialog();
+      });
+    }
+
+    populateWarehouseFilter();
+    bindEvents();
+    refresh();
+  </script>
+</body>
+</html>
