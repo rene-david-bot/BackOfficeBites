@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>License Renewal Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    };
+  </script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.2em] text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold md:text-3xl">License Renewal Calendar</h1>
+        <p class="mt-1 text-slate-400">IT Ops calendar for SaaS renewals with policy validation, approvals, and audit-ready actions.</p>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm">
+        <label for="roleSelect" class="text-xs uppercase tracking-wider text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:border-emerald-500 focus:outline-none">
+          <option value="coordinator">Renewal Coordinator</option>
+          <option value="it_manager">IT Manager</option>
+          <option value="security">Security Reviewer</option>
+          <option value="finance">Finance Controller</option>
+        </select>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4"></section>
+
+    <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid gap-3 md:grid-cols-12">
+        <div class="md:col-span-4">
+          <label for="searchInput" class="text-xs uppercase tracking-wider text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="Vendor, product, owner..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+        </div>
+        <div class="md:col-span-2">
+          <label for="teamFilter" class="text-xs uppercase tracking-wider text-slate-400">Team</label>
+          <select id="teamFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="statusFilter" class="text-xs uppercase tracking-wider text-slate-400">Status</label>
+          <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="all">All</option>
+            <option value="draft">Draft</option>
+            <option value="pending_approval">Pending approval</option>
+            <option value="approved">Approved</option>
+            <option value="escalated">Escalated</option>
+            <option value="blocked">Blocked</option>
+            <option value="renewed">Renewed</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="monthSelect" class="text-xs uppercase tracking-wider text-slate-400">Month</label>
+          <select id="monthSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"></select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="sortSelect" class="text-xs uppercase tracking-wider text-slate-400">Sort</label>
+          <select id="sortSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="date">Renewal date ↑</option>
+            <option value="cost">Annual cost ↓</option>
+            <option value="risk">Risk score ↓</option>
+            <option value="vendor">Vendor A→Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button id="exportBtn" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">Export CSV</button>
+        <button id="resetBtn" class="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800">Reset</button>
+        <span id="statusMessage" class="text-sm text-slate-400" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="mt-5 grid gap-5 lg:grid-cols-5">
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Renewal Calendar</h2>
+        <div id="calendarHeader" class="mt-3 text-lg font-semibold"></div>
+        <div class="mt-3 grid grid-cols-7 gap-2 text-center text-xs uppercase tracking-wider text-slate-500">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div id="calendarGrid" class="mt-2 grid grid-cols-7 gap-2"></div>
+      </article>
+
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-2">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Selected Day</h2>
+        <p id="selectedDayLabel" class="mt-2 text-sm text-slate-400">Pick a date to inspect renewals.</p>
+        <ul id="dayList" class="mt-3 space-y-2"></ul>
+      </article>
+    </section>
+
+    <section class="mt-5 grid gap-5 lg:grid-cols-5">
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Renewal Workbench</h2>
+        <p id="workbenchHint" class="mt-2 text-sm text-slate-400">Select a renewal from the day list to review and act.</p>
+
+        <form id="renewalForm" class="mt-4 grid gap-3 md:grid-cols-2">
+          <input type="hidden" id="renewalId" />
+          <div>
+            <label for="ownerInput" class="text-sm text-slate-300">Owner</label>
+            <input id="ownerInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" disabled />
+          </div>
+          <div>
+            <label for="seatsInput" class="text-sm text-slate-300">Seats</label>
+            <input id="seatsInput" type="number" min="1" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div class="md:col-span-2">
+            <label for="justificationInput" class="text-sm text-slate-300">Business justification</label>
+            <textarea id="justificationInput" rows="3" minlength="10" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Why renew this license this cycle?"></textarea>
+          </div>
+          <div>
+            <label for="soc2Input" class="text-sm text-slate-300">Vendor SOC2 attestation</label>
+            <select id="soc2Input" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+              <option value="yes">Available</option>
+              <option value="no">Missing</option>
+            </select>
+          </div>
+          <div>
+            <label for="autoRenewInput" class="text-sm text-slate-300">Auto renew</label>
+            <select id="autoRenewInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <p id="formError" class="md:col-span-2 text-sm text-rose-400"></p>
+          <div class="md:col-span-2 flex flex-wrap gap-2">
+            <button type="submit" id="submitBtn" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">Save & Submit</button>
+            <button type="button" id="approveBtn" class="rounded-lg border border-emerald-500/40 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-500/20">Approve</button>
+            <button type="button" id="escalateBtn" class="rounded-lg border border-amber-500/40 px-3 py-2 text-sm text-amber-300 hover:bg-amber-500/20">Escalate</button>
+            <button type="button" id="renewBtn" class="rounded-lg border border-cyan-500/40 px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-500/20">Mark Renewed</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-2">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Audit Trail</h2>
+        <ul id="auditList" class="mt-3 space-y-2 text-sm"></ul>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const numberFmt = new Intl.NumberFormat('en-US');
+
+    const roleLabels = {
+      coordinator: 'Renewal Coordinator',
+      it_manager: 'IT Manager',
+      security: 'Security Reviewer',
+      finance: 'Finance Controller'
+    };
+
+    const state = {
+      role: 'coordinator',
+      search: '',
+      team: 'all',
+      status: 'all',
+      month: '2026-03',
+      sort: 'date',
+      selectedDate: null,
+      activeId: null,
+      renewals: [
+        { id: 'LIC-3101', vendor: 'Atlassian', product: 'Jira Enterprise', team: 'Engineering', owner: 'Mara', renewalDate: '2026-03-22', annualCost: 62000, seats: 420, risk: 35, status: 'pending_approval', soc2: true, autoRenew: false, justification: 'Core issue tracking across all delivery teams.' },
+        { id: 'LIC-3102', vendor: 'Okta', product: 'Workforce Identity', team: 'IT Ops', owner: 'Sven', renewalDate: '2026-03-24', annualCost: 41000, seats: 620, risk: 48, status: 'approved', soc2: true, autoRenew: true, justification: 'Identity provider for SSO and MFA baseline controls.' },
+        { id: 'LIC-3103', vendor: 'Miro', product: 'Miro Business', team: 'Product', owner: 'Lena', renewalDate: '2026-03-24', annualCost: 18000, seats: 210, risk: 28, status: 'draft', soc2: true, autoRenew: false, justification: 'Planning and workshop workflows for delivery squads.' },
+        { id: 'LIC-3104', vendor: 'Datadog', product: 'Infrastructure Monitoring', team: 'Platform', owner: 'Nikhil', renewalDate: '2026-03-25', annualCost: 53000, seats: 90, risk: 58, status: 'pending_approval', soc2: true, autoRenew: false, justification: 'Operational telemetry and incident triage for production services.' },
+        { id: 'LIC-3105', vendor: 'Figma', product: 'Figma Organization', team: 'Design', owner: 'Mia', renewalDate: '2026-03-26', annualCost: 14500, seats: 165, risk: 22, status: 'renewed', soc2: true, autoRenew: true, justification: 'Design system governance and collaboration hub.' },
+        { id: 'LIC-3106', vendor: 'Notion', product: 'Notion Enterprise', team: 'Operations', owner: 'Amir', renewalDate: '2026-03-26', annualCost: 22000, seats: 300, risk: 40, status: 'escalated', soc2: false, autoRenew: false, justification: 'Knowledge base and policy documentation workspace.' },
+        { id: 'LIC-3107', vendor: 'Snowflake', product: 'Data Cloud', team: 'Data', owner: 'Yara', renewalDate: '2026-03-28', annualCost: 97000, seats: 55, risk: 66, status: 'pending_approval', soc2: true, autoRenew: false, justification: 'Analytics and AI data product workloads.' },
+        { id: 'LIC-3108', vendor: 'GitHub', product: 'GitHub Enterprise', team: 'Engineering', owner: 'Noah', renewalDate: '2026-03-29', annualCost: 45000, seats: 510, risk: 32, status: 'approved', soc2: true, autoRenew: true, justification: 'Source control and CI workflows for all software teams.' },
+        { id: 'LIC-3109', vendor: 'PagerDuty', product: 'Operations Cloud', team: 'IT Ops', owner: 'Iris', renewalDate: '2026-04-02', annualCost: 26500, seats: 125, risk: 51, status: 'draft', soc2: true, autoRenew: false, justification: 'On-call scheduling and incident escalation engine.' },
+        { id: 'LIC-3110', vendor: 'Zapier', product: 'Company Plan', team: 'Operations', owner: 'Jules', renewalDate: '2026-04-04', annualCost: 9800, seats: 70, risk: 44, status: 'blocked', soc2: false, autoRenew: false, justification: 'Workflow automation layer between internal SaaS tools.' },
+        { id: 'LIC-3111', vendor: 'HubSpot', product: 'Sales Hub Enterprise', team: 'Sales', owner: 'Reza', renewalDate: '2026-04-09', annualCost: 39000, seats: 140, risk: 38, status: 'pending_approval', soc2: true, autoRenew: true, justification: 'Revenue operations and enterprise pipeline process.' },
+        { id: 'LIC-3112', vendor: 'Confluent', product: 'Cloud Standard', team: 'Platform', owner: 'Tara', renewalDate: '2026-04-13', annualCost: 56000, seats: 45, risk: 72, status: 'escalated', soc2: true, autoRenew: false, justification: 'Streaming backbone for event-driven platform services.' }
+      ],
+      audit: [
+        { at: '2026-03-21 07:15 UTC', actor: 'IT Manager', action: 'Approved LIC-3102 with 12-month term.' },
+        { at: '2026-03-21 07:04 UTC', actor: 'Security Reviewer', action: 'Escalated LIC-3106 due to missing SOC2 evidence.' },
+        { at: '2026-03-21 06:49 UTC', actor: 'Finance Controller', action: 'Marked LIC-3105 as renewed after PO posting.' }
+      ]
+    };
+
+    const refs = {
+      roleSelect: document.getElementById('roleSelect'),
+      searchInput: document.getElementById('searchInput'),
+      teamFilter: document.getElementById('teamFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      monthSelect: document.getElementById('monthSelect'),
+      sortSelect: document.getElementById('sortSelect'),
+      exportBtn: document.getElementById('exportBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      statusMessage: document.getElementById('statusMessage'),
+      kpiGrid: document.getElementById('kpiGrid'),
+      calendarHeader: document.getElementById('calendarHeader'),
+      calendarGrid: document.getElementById('calendarGrid'),
+      selectedDayLabel: document.getElementById('selectedDayLabel'),
+      dayList: document.getElementById('dayList'),
+      workbenchHint: document.getElementById('workbenchHint'),
+      renewalForm: document.getElementById('renewalForm'),
+      renewalId: document.getElementById('renewalId'),
+      ownerInput: document.getElementById('ownerInput'),
+      seatsInput: document.getElementById('seatsInput'),
+      justificationInput: document.getElementById('justificationInput'),
+      soc2Input: document.getElementById('soc2Input'),
+      autoRenewInput: document.getElementById('autoRenewInput'),
+      formError: document.getElementById('formError'),
+      submitBtn: document.getElementById('submitBtn'),
+      approveBtn: document.getElementById('approveBtn'),
+      escalateBtn: document.getElementById('escalateBtn'),
+      renewBtn: document.getElementById('renewBtn'),
+      auditList: document.getElementById('auditList')
+    };
+
+    function monthKey(date) {
+      return date.slice(0, 7);
+    }
+
+    function statusLabel(status) {
+      return status.replaceAll('_', ' ').replace(/\b\w/g, (s) => s.toUpperCase());
+    }
+
+    function statusClass(status) {
+      const map = {
+        draft: 'border-slate-600 bg-slate-700/40 text-slate-200',
+        pending_approval: 'border-amber-500/30 bg-amber-500/20 text-amber-100',
+        approved: 'border-emerald-500/30 bg-emerald-500/20 text-emerald-100',
+        escalated: 'border-orange-500/30 bg-orange-500/20 text-orange-100',
+        blocked: 'border-rose-500/30 bg-rose-500/20 text-rose-100',
+        renewed: 'border-cyan-500/30 bg-cyan-500/20 text-cyan-100'
+      };
+      return map[status] || map.draft;
+    }
+
+    function filteredRenewals() {
+      const q = state.search.trim().toLowerCase();
+      const rows = state.renewals.filter((item) => {
+        const inSearch = !q || [item.id, item.vendor, item.product, item.team, item.owner].join(' ').toLowerCase().includes(q);
+        const inTeam = state.team === 'all' || item.team === state.team;
+        const inStatus = state.status === 'all' || item.status === state.status;
+        const inMonth = monthKey(item.renewalDate) === state.month;
+        return inSearch && inTeam && inStatus && inMonth;
+      });
+
+      rows.sort((a, b) => {
+        if (state.sort === 'date') return new Date(a.renewalDate) - new Date(b.renewalDate);
+        if (state.sort === 'cost') return b.annualCost - a.annualCost;
+        if (state.sort === 'risk') return b.risk - a.risk;
+        return a.vendor.localeCompare(b.vendor);
+      });
+
+      return rows;
+    }
+
+    function renderKPIs(rows) {
+      const dueSoon = rows.filter((item) => {
+        const days = Math.ceil((new Date(item.renewalDate) - new Date('2026-03-21T00:00:00Z')) / 86400000);
+        return days <= 10;
+      }).length;
+      const highRisk = rows.filter((item) => item.risk >= 60 || item.status === 'blocked').length;
+      const autoRenew = rows.filter((item) => item.autoRenew).length;
+      const spend = rows.reduce((sum, item) => sum + item.annualCost, 0);
+
+      const cards = [
+        { label: 'Visible Renewals', value: numberFmt.format(rows.length), hint: `Role: ${roleLabels[state.role]}` },
+        { label: 'Due in 10 Days', value: numberFmt.format(dueSoon), hint: 'Priority attention window' },
+        { label: 'At-Risk Items', value: numberFmt.format(highRisk), hint: 'Risk ≥ 60 or blocked' },
+        { label: 'Annual Spend', value: currency.format(spend), hint: `${autoRenew} auto-renew enabled` }
+      ];
+
+      refs.kpiGrid.innerHTML = cards.map((card) => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-400">${card.label}</p>
+          <p class="mt-1 text-2xl font-semibold">${card.value}</p>
+          <p class="mt-1 text-xs text-slate-500">${card.hint}</p>
+        </article>
+      `).join('');
+    }
+
+    function monthBounds(month) {
+      const [y, m] = month.split('-').map(Number);
+      const first = new Date(Date.UTC(y, m - 1, 1));
+      const last = new Date(Date.UTC(y, m, 0));
+      const offset = (first.getUTCDay() + 6) % 7;
+      const start = new Date(first);
+      start.setUTCDate(first.getUTCDate() - offset);
+      return { first, last, start };
+    }
+
+    function dayCount(dateStr, rows) {
+      return rows.filter((item) => item.renewalDate === dateStr).length;
+    }
+
+    function renderCalendar(rows) {
+      const { first, last, start } = monthBounds(state.month);
+      const monthTitle = first.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      refs.calendarHeader.textContent = monthTitle;
+      refs.calendarGrid.innerHTML = '';
+
+      for (let i = 0; i < 42; i += 1) {
+        const d = new Date(start);
+        d.setUTCDate(start.getUTCDate() + i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const inMonth = d >= first && d <= last;
+        const count = dayCount(dateStr, rows);
+        const isSelected = state.selectedDate === dateStr;
+        const isToday = dateStr === '2026-03-21';
+
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.dataset.date = dateStr;
+        cell.className = [
+          'min-h-20 rounded-lg border p-2 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-400',
+          inMonth ? 'border-slate-700 bg-slate-950 hover:bg-slate-900' : 'border-slate-800 bg-slate-950/40 text-slate-600',
+          isSelected ? 'ring-2 ring-emerald-500' : '',
+          isToday ? 'border-emerald-500/50' : ''
+        ].join(' ');
+        cell.innerHTML = `
+          <div class="flex items-start justify-between">
+            <span class="text-xs ${inMonth ? 'text-slate-300' : 'text-slate-600'}">${d.getUTCDate()}</span>
+            ${count ? `<span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-200">${count}</span>` : ''}
+          </div>
+          <div class="mt-2 space-y-1">
+            ${rows.filter((item) => item.renewalDate === dateStr).slice(0, 2).map((item) => `<p class="truncate text-xs text-slate-300">${item.vendor}</p>`).join('')}
+          </div>
+        `;
+        refs.calendarGrid.appendChild(cell);
+      }
+    }
+
+    function selectDate(dateStr) {
+      state.selectedDate = dateStr;
+      const rows = filteredRenewals().filter((item) => item.renewalDate === dateStr);
+      refs.selectedDayLabel.textContent = new Date(dateStr + 'T00:00:00Z').toLocaleDateString('en-GB', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
+      });
+
+      if (!rows.length) {
+        refs.dayList.innerHTML = '<li class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">No renewals for selected day.</li>';
+        clearWorkbench();
+        return;
+      }
+
+      refs.dayList.innerHTML = rows.map((item) => `
+        <li>
+          <button type="button" data-id="${item.id}" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-left hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium">${item.vendor} • ${item.product}</p>
+              <span class="inline-flex rounded-full border px-2 py-0.5 text-xs ${statusClass(item.status)}">${statusLabel(item.status)}</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-400">${item.id} • ${item.team} • ${currency.format(item.annualCost)} • Risk ${item.risk}</p>
+          </button>
+        </li>
+      `).join('');
+
+      if (!state.activeId || !rows.some((item) => item.id === state.activeId)) {
+        openWorkbench(rows[0].id);
+      }
+    }
+
+    function openWorkbench(id) {
+      const item = state.renewals.find((r) => r.id === id);
+      if (!item) return;
+      state.activeId = id;
+      refs.renewalId.value = item.id;
+      refs.ownerInput.value = item.owner;
+      refs.seatsInput.value = item.seats;
+      refs.justificationInput.value = item.justification;
+      refs.soc2Input.value = item.soc2 ? 'yes' : 'no';
+      refs.autoRenewInput.value = String(item.autoRenew);
+      refs.formError.textContent = '';
+      refs.workbenchHint.textContent = `${item.id} • ${item.vendor} ${item.product} • status: ${statusLabel(item.status)}.`;
+      updateActionAvailability(item);
+    }
+
+    function clearWorkbench() {
+      state.activeId = null;
+      refs.renewalId.value = '';
+      refs.ownerInput.value = '';
+      refs.seatsInput.value = '';
+      refs.justificationInput.value = '';
+      refs.formError.textContent = '';
+      refs.workbenchHint.textContent = 'Select a renewal from the day list to review and act.';
+      refs.submitBtn.disabled = true;
+      refs.approveBtn.disabled = true;
+      refs.escalateBtn.disabled = true;
+      refs.renewBtn.disabled = true;
+    }
+
+    function updateActionAvailability(item) {
+      if (!item) return;
+      refs.submitBtn.disabled = !(state.role === 'coordinator' || state.role === 'it_manager');
+      refs.approveBtn.disabled = !(state.role === 'it_manager' || state.role === 'finance');
+      refs.escalateBtn.disabled = !(state.role === 'security' || state.role === 'it_manager');
+      refs.renewBtn.disabled = !(state.role === 'finance');
+    }
+
+    function logAudit(action) {
+      const now = new Date();
+      const stamp = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC`;
+      state.audit.unshift({ at: stamp, actor: roleLabels[state.role], action });
+    }
+
+    function renderAudit() {
+      refs.auditList.innerHTML = state.audit.slice(0, 8).map((entry) => `
+        <li class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+          <p class="text-xs uppercase tracking-wider text-slate-500">${entry.at}</p>
+          <p class="mt-1 text-slate-200">${entry.actor} — ${entry.action}</p>
+        </li>
+      `).join('');
+    }
+
+    function refresh() {
+      const rows = filteredRenewals();
+      renderKPIs(rows);
+      renderCalendar(rows);
+      renderAudit();
+      if (!state.selectedDate || !rows.some((r) => r.renewalDate === state.selectedDate)) {
+        state.selectedDate = rows[0]?.renewalDate || `${state.month}-01`;
+      }
+      selectDate(state.selectedDate);
+      refs.statusMessage.textContent = `${rows.length} renewals shown for ${state.month}.`;
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'vendor', 'product', 'team', 'owner', 'renewal_date', 'annual_cost_eur', 'seats', 'risk', 'status', 'soc2', 'auto_renew'];
+      const body = rows.map((item) => [
+        item.id, item.vendor, item.product, item.team, item.owner, item.renewalDate,
+        item.annualCost, item.seats, item.risk, item.status, item.soc2 ? 'yes' : 'no', item.autoRenew ? 'true' : 'false'
+      ]);
+      const csv = [headers, ...body].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `license-renewals-${state.month}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      refs.statusMessage.textContent = `CSV exported for ${rows.length} renewals.`;
+    }
+
+    function policyCheck(item) {
+      if (!item.soc2 && item.risk >= 50) {
+        return 'Policy block: high-risk vendor missing SOC2 attestation.';
+      }
+      if (item.annualCost > 80000 && state.role !== 'finance') {
+        return 'Policy block: contracts above €80k need finance approval.';
+      }
+      return '';
+    }
+
+    function bindEvents() {
+      refs.roleSelect.addEventListener('change', (e) => {
+        state.role = e.target.value;
+        const active = state.renewals.find((item) => item.id === state.activeId);
+        updateActionAvailability(active);
+        refs.statusMessage.textContent = `Role switched to ${roleLabels[state.role]}.`;
+      });
+
+      refs.searchInput.addEventListener('input', (e) => {
+        state.search = e.target.value;
+        refresh();
+      });
+
+      refs.teamFilter.addEventListener('change', (e) => {
+        state.team = e.target.value;
+        refresh();
+      });
+
+      refs.statusFilter.addEventListener('change', (e) => {
+        state.status = e.target.value;
+        refresh();
+      });
+
+      refs.monthSelect.addEventListener('change', (e) => {
+        state.month = e.target.value;
+        state.selectedDate = null;
+        refresh();
+      });
+
+      refs.sortSelect.addEventListener('change', (e) => {
+        state.sort = e.target.value;
+        refresh();
+      });
+
+      refs.calendarGrid.addEventListener('click', (e) => {
+        const target = e.target.closest('button[data-date]');
+        if (!target) return;
+        selectDate(target.dataset.date);
+        renderCalendar(filteredRenewals());
+      });
+
+      refs.dayList.addEventListener('click', (e) => {
+        const target = e.target.closest('button[data-id]');
+        if (!target) return;
+        openWorkbench(target.dataset.id);
+      });
+
+      refs.renewalForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const item = state.renewals.find((r) => r.id === state.activeId);
+        if (!item) return;
+
+        const seats = Number(refs.seatsInput.value);
+        const justification = refs.justificationInput.value.trim();
+        const soc2 = refs.soc2Input.value === 'yes';
+        const autoRenew = refs.autoRenewInput.value === 'true';
+
+        if (!Number.isInteger(seats) || seats < 1) {
+          refs.formError.textContent = 'Seats must be a whole number greater than 0.';
+          return;
+        }
+        if (justification.length < 10) {
+          refs.formError.textContent = 'Justification must be at least 10 characters.';
+          return;
+        }
+
+        item.seats = seats;
+        item.justification = justification;
+        item.soc2 = soc2;
+        item.autoRenew = autoRenew;
+        item.status = 'pending_approval';
+        logAudit(`Submitted ${item.id} for approval after scope update (${seats} seats).`);
+        refs.formError.textContent = '';
+        refs.statusMessage.textContent = `${item.id} submitted for approval.`;
+        refresh();
+      });
+
+      refs.approveBtn.addEventListener('click', () => {
+        const item = state.renewals.find((r) => r.id === state.activeId);
+        if (!item) return;
+        const block = policyCheck(item);
+        if (block) {
+          refs.formError.textContent = block;
+          refs.statusMessage.textContent = block;
+          return;
+        }
+        item.status = 'approved';
+        logAudit(`Approved ${item.id} (${item.vendor}) for renewal.`);
+        refs.formError.textContent = '';
+        refs.statusMessage.textContent = `${item.id} approved.`;
+        refresh();
+      });
+
+      refs.escalateBtn.addEventListener('click', () => {
+        const item = state.renewals.find((r) => r.id === state.activeId);
+        if (!item) return;
+        item.status = 'escalated';
+        logAudit(`Escalated ${item.id} to vendor-risk board.`);
+        refs.formError.textContent = '';
+        refs.statusMessage.textContent = `${item.id} escalated.`;
+        refresh();
+      });
+
+      refs.renewBtn.addEventListener('click', () => {
+        const item = state.renewals.find((r) => r.id === state.activeId);
+        if (!item) return;
+        if (item.status !== 'approved') {
+          refs.formError.textContent = 'Only approved renewals can be marked as renewed.';
+          return;
+        }
+        item.status = 'renewed';
+        logAudit(`Marked ${item.id} as renewed and synced to ERP procurement.`);
+        refs.formError.textContent = '';
+        refs.statusMessage.textContent = `${item.id} marked as renewed.`;
+        refresh();
+      });
+
+      refs.exportBtn.addEventListener('click', () => exportCsv(filteredRenewals()));
+
+      refs.resetBtn.addEventListener('click', () => {
+        state.search = '';
+        state.team = 'all';
+        state.status = 'all';
+        state.month = '2026-03';
+        state.sort = 'date';
+        refs.searchInput.value = '';
+        refs.teamFilter.value = 'all';
+        refs.statusFilter.value = 'all';
+        refs.monthSelect.value = '2026-03';
+        refs.sortSelect.value = 'date';
+        refresh();
+      });
+    }
+
+    function initFilters() {
+      const teams = [...new Set(state.renewals.map((item) => item.team))].sort();
+      teams.forEach((team) => {
+        const option = document.createElement('option');
+        option.value = team;
+        option.textContent = team;
+        refs.teamFilter.appendChild(option);
+      });
+
+      const months = [...new Set(state.renewals.map((item) => monthKey(item.renewalDate)))].sort();
+      months.forEach((month) => {
+        const option = document.createElement('option');
+        option.value = month;
+        const [year, monthNo] = month.split('-').map(Number);
+        option.textContent = new Date(Date.UTC(year, monthNo - 1, 1)).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+        refs.monthSelect.appendChild(option);
+      });
+      refs.monthSelect.value = state.month;
+    }
+
+    initFilters();
+    bindEvents();
+    refresh();
+  </script>
+</body>
+</html>

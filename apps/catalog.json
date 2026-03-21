@@ -1073,5 +1073,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-21",
+    "day": 50,
+    "slug": "2026-03-21-license-renewal-calendar",
+    "name": "License Renewal Calendar",
+    "description": "Calendar-first IT Ops workspace for SaaS renewals with policy-gated approvals, escalation flow, and audit-ready exports.",
+    "category": "IT Ops",
+    "pattern": "Calendar",
+    "tags": [
+      "license manager",
+      "it ops",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
