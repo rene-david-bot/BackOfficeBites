@@ -1097,5 +1097,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-22",
+    "day": 51,
+    "slug": "2026-03-22-travel-reimbursement-review-desk",
+    "name": "Travel Reimbursement Review Desk",
+    "description": "Master-detail Finance workspace for policy-aware travel reimbursement approvals, audit trail actions, and CSV-ready handoff.",
+    "category": "Finance",
+    "pattern": "Master-Detail",
+    "tags": [
+      "travel reimbursement",
+      "finance",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

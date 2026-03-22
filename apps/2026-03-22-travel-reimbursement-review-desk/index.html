@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Reimbursement Review Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Travel Reimbursement Review Desk</h1>
+    <p class="mt-2 text-slate-300 max-w-3xl">Finance + manager workspace to validate policy compliance, route approvals, and maintain an audit-ready reimbursement trail.</p>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6" id="kpiCards"></section>
+
+    <section class="mt-6 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+        <label class="text-sm">
+          <span class="block text-slate-300 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Employee, trip, cost center" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        </label>
+
+        <label class="text-sm">
+          <span class="block text-slate-300 mb-1">Status</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Needs Info">Needs Info</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Paid">Paid</option>
+          </select>
+        </label>
+
+        <label class="text-sm">
+          <span class="block text-slate-300 mb-1">Policy risk</span>
+          <select id="riskFilter" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </label>
+
+        <label class="text-sm">
+          <span class="block text-slate-300 mb-1">Sort</span>
+          <select id="sortBy" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="submittedDesc">Newest first</option>
+            <option value="amountDesc">Highest amount</option>
+            <option value="amountAsc">Lowest amount</option>
+            <option value="riskDesc">Highest risk</option>
+          </select>
+        </label>
+
+        <label class="text-sm">
+          <span class="block text-slate-300 mb-1">Role view</span>
+          <select id="roleView" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="Manager">Manager</option>
+            <option value="Finance">Finance</option>
+            <option value="Auditor">Auditor</option>
+          </select>
+        </label>
+
+        <div class="flex items-end">
+          <button id="exportBtn" class="w-full rounded-lg bg-amber-400 text-slate-950 font-semibold px-3 py-2 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-6">
+      <div class="lg:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-800 text-sm text-slate-300">Requests</div>
+        <div id="requestList" class="divide-y divide-slate-800"></div>
+      </div>
+
+      <aside class="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-xl p-4" id="detailPane">
+        <p class="text-slate-400 text-sm">Select a request to review details.</p>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const riskRank = { High: 3, Medium: 2, Low: 1 };
+    const statusBadge = {
+      Submitted: "bg-sky-500/20 text-sky-200 border border-sky-500/30",
+      "Needs Info": "bg-amber-500/20 text-amber-200 border border-amber-500/30",
+      Approved: "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30",
+      Rejected: "bg-rose-500/20 text-rose-200 border border-rose-500/30",
+      Paid: "bg-violet-500/20 text-violet-200 border border-violet-500/30"
+    };
+
+    const requests = [
+      {
+        id: "TR-1049",
+        employee: "Mira Hoffmann",
+        department: "Sales",
+        trip: "Client summit — Amsterdam",
+        costCenter: "CC-2104",
+        submittedAt: "2026-03-21T14:12:00Z",
+        amount: 1284.50,
+        status: "Submitted",
+        risk: "Medium",
+        policyFlags: ["Hotel above €180/night"],
+        approver: "T. Berger",
+        reimbursementMethod: "Payroll",
+        receipts: "8/8",
+        audit: [
+          { time: "2026-03-21 14:12", actor: "Mira Hoffmann", action: "Submitted reimbursement" },
+          { time: "2026-03-21 14:16", actor: "System", action: "Policy flag: hotel cap exceeded" }
+        ]
+      },
+      {
+        id: "TR-1050",
+        employee: "Jan Weber",
+        department: "IT Ops",
+        trip: "Vendor audit — Munich",
+        costCenter: "CC-4020",
+        submittedAt: "2026-03-22T06:20:00Z",
+        amount: 642.00,
+        status: "Needs Info",
+        risk: "Low",
+        policyFlags: ["Missing taxi receipt (1)"],
+        approver: "K. Albrecht",
+        reimbursementMethod: "Bank Transfer",
+        receipts: "5/6",
+        audit: [
+          { time: "2026-03-22 06:20", actor: "Jan Weber", action: "Submitted reimbursement" },
+          { time: "2026-03-22 06:28", actor: "Finance Bot", action: "Flagged missing receipt" }
+        ]
+      },
+      {
+        id: "TR-1051",
+        employee: "Elena Fischer",
+        department: "Finance",
+        trip: "Tax workshop — Berlin",
+        costCenter: "CC-1190",
+        submittedAt: "2026-03-20T17:45:00Z",
+        amount: 311.20,
+        status: "Approved",
+        risk: "Low",
+        policyFlags: [],
+        approver: "S. Richter",
+        reimbursementMethod: "Payroll",
+        receipts: "4/4",
+        audit: [
+          { time: "2026-03-20 17:45", actor: "Elena Fischer", action: "Submitted reimbursement" },
+          { time: "2026-03-21 09:10", actor: "S. Richter", action: "Approved" }
+        ]
+      },
+      {
+        id: "TR-1052",
+        employee: "Paul Krüger",
+        department: "Legal",
+        trip: "Contract negotiation — Paris",
+        costCenter: "CC-3301",
+        submittedAt: "2026-03-19T11:03:00Z",
+        amount: 2340.10,
+        status: "Submitted",
+        risk: "High",
+        policyFlags: ["Business class without pre-approval", "Per diem over limit"],
+        approver: "N. Baum",
+        reimbursementMethod: "Bank Transfer",
+        receipts: "7/7",
+        audit: [
+          { time: "2026-03-19 11:03", actor: "Paul Krüger", action: "Submitted reimbursement" },
+          { time: "2026-03-19 11:04", actor: "System", action: "Policy flags generated (2)" }
+        ]
+      },
+      {
+        id: "TR-1053",
+        employee: "Sofia Lenz",
+        department: "HR",
+        trip: "Hiring fair — Hamburg",
+        costCenter: "CC-5088",
+        submittedAt: "2026-03-18T08:31:00Z",
+        amount: 488.90,
+        status: "Paid",
+        risk: "Low",
+        policyFlags: [],
+        approver: "M. Otto",
+        reimbursementMethod: "Payroll",
+        receipts: "6/6",
+        audit: [
+          { time: "2026-03-18 08:31", actor: "Sofia Lenz", action: "Submitted reimbursement" },
+          { time: "2026-03-18 13:21", actor: "M. Otto", action: "Approved" },
+          { time: "2026-03-19 07:05", actor: "Finance", action: "Marked as paid" }
+        ]
+      },
+      {
+        id: "TR-1054",
+        employee: "Nils Braun",
+        department: "Planning",
+        trip: "Strategy offsite — Vienna",
+        costCenter: "CC-8801",
+        submittedAt: "2026-03-22T05:12:00Z",
+        amount: 1739.70,
+        status: "Submitted",
+        risk: "High",
+        policyFlags: ["Submitted after 45-day limit"],
+        approver: "A. Vogel",
+        reimbursementMethod: "Bank Transfer",
+        receipts: "9/9",
+        audit: [
+          { time: "2026-03-22 05:12", actor: "Nils Braun", action: "Submitted reimbursement" },
+          { time: "2026-03-22 05:13", actor: "System", action: "Late-submission policy flag" }
+        ]
+      }
+    ];
+
+    const state = {
+      search: "",
+      status: "all",
+      risk: "all",
+      sort: "submittedDesc",
+      role: "Manager",
+      selectedId: requests[0].id
+    };
+
+    const els = {
+      list: document.getElementById("requestList"),
+      detail: document.getElementById("detailPane"),
+      kpis: document.getElementById("kpiCards"),
+      searchInput: document.getElementById("searchInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      riskFilter: document.getElementById("riskFilter"),
+      sortBy: document.getElementById("sortBy"),
+      roleView: document.getElementById("roleView"),
+      exportBtn: document.getElementById("exportBtn")
+    };
+
+    function money(n) {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
+    }
+
+    function when(iso) {
+      return new Date(iso).toLocaleString("en-GB", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function filteredRequests() {
+      const q = state.search.trim().toLowerCase();
+      let rows = requests.filter((r) => {
+        const matchSearch = q === "" || [r.id, r.employee, r.trip, r.costCenter].join(" ").toLowerCase().includes(q);
+        const matchStatus = state.status === "all" || r.status === state.status;
+        const matchRisk = state.risk === "all" || r.risk === state.risk;
+        return matchSearch && matchStatus && matchRisk;
+      });
+
+      rows.sort((a, b) => {
+        if (state.sort === "submittedDesc") return new Date(b.submittedAt) - new Date(a.submittedAt);
+        if (state.sort === "amountDesc") return b.amount - a.amount;
+        if (state.sort === "amountAsc") return a.amount - b.amount;
+        if (state.sort === "riskDesc") return riskRank[b.risk] - riskRank[a.risk];
+        return 0;
+      });
+
+      return rows;
+    }
+
+    function kpiData(rows) {
+      const total = rows.reduce((sum, r) => sum + r.amount, 0);
+      const pending = rows.filter((r) => ["Submitted", "Needs Info"].includes(r.status)).length;
+      const highRisk = rows.filter((r) => r.risk === "High").length;
+      const approvedToday = rows.filter((r) => {
+        const latest = r.audit[r.audit.length - 1];
+        return latest && latest.action.toLowerCase().includes("approved") && latest.time.includes("2026-03-22");
+      }).length;
+      return [
+        { label: "Visible Requests", value: rows.length },
+        { label: "Pending Decisions", value: pending },
+        { label: "High Risk", value: highRisk },
+        { label: "Visible Amount", value: money(total), emphasize: true },
+        { label: "Approved Today", value: approvedToday }
+      ];
+    }
+
+    function renderKpis(rows) {
+      const cards = kpiData(rows);
+      els.kpis.innerHTML = cards.map((card) => `
+        <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${card.label}</p>
+          <p class="mt-2 text-2xl font-semibold ${card.emphasize ? "text-amber-300" : "text-slate-100"}">${card.value}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderList() {
+      const rows = filteredRequests();
+      if (!rows.find((r) => r.id === state.selectedId)) {
+        state.selectedId = rows[0]?.id || null;
+      }
+
+      if (!rows.length) {
+        els.list.innerHTML = '<p class="p-4 text-slate-400">No matches for this filter set.</p>';
+        els.detail.innerHTML = '<p class="text-slate-400 text-sm">No request selected.</p>';
+        renderKpis(rows);
+        return;
+      }
+
+      els.list.innerHTML = rows.map((r) => {
+        const selected = r.id === state.selectedId;
+        return `
+          <button type="button" data-id="${r.id}" class="w-full text-left p-4 transition ${selected ? "bg-slate-800/80" : "hover:bg-slate-800/40"} focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold">${r.employee} <span class="text-slate-400 font-normal">(${r.id})</span></p>
+                <p class="text-sm text-slate-300 mt-1">${r.trip}</p>
+                <p class="text-xs text-slate-400 mt-1">${r.department} · ${r.costCenter} · ${when(r.submittedAt)}</p>
+              </div>
+              <div class="text-right">
+                <p class="font-semibold text-amber-300">${money(r.amount)}</p>
+                <span class="mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${statusBadge[r.status] || "bg-slate-700 text-slate-200"}">${r.status}</span>
+                <p class="text-xs mt-1 ${r.risk === "High" ? "text-rose-300" : r.risk === "Medium" ? "text-amber-300" : "text-emerald-300"}">${r.risk} risk</p>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-id]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+
+      renderKpis(rows);
+      renderDetail();
+    }
+
+    function addAudit(item, action) {
+      const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      item.audit.push({ time: stamp, actor: state.role, action });
+    }
+
+    function actOnSelected(action) {
+      const item = requests.find((r) => r.id === state.selectedId);
+      if (!item) return;
+
+      if (action === "approve") {
+        item.status = "Approved";
+        addAudit(item, "Approved reimbursement");
+      }
+      if (action === "needInfo") {
+        item.status = "Needs Info";
+        addAudit(item, "Requested missing documents");
+      }
+      if (action === "reject") {
+        item.status = "Rejected";
+        addAudit(item, "Rejected due to policy violation");
+      }
+      if (action === "markPaid") {
+        item.status = "Paid";
+        addAudit(item, "Marked as paid in payroll run");
+      }
+
+      render();
+    }
+
+    function renderDetail() {
+      const item = requests.find((r) => r.id === state.selectedId);
+      if (!item) {
+        els.detail.innerHTML = '<p class="text-slate-400 text-sm">No request selected.</p>';
+        return;
+      }
+
+      const managerActions = `
+        <button data-action="approve" class="px-3 py-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 font-semibold">Approve</button>
+        <button data-action="needInfo" class="px-3 py-2 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-semibold">Need Info</button>
+        <button data-action="reject" class="px-3 py-2 rounded-lg bg-rose-500/90 hover:bg-rose-400 text-slate-950 font-semibold">Reject</button>
+      `;
+
+      const financeActions = `
+        <button data-action="needInfo" class="px-3 py-2 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-semibold">Need Info</button>
+        <button data-action="markPaid" ${item.status !== "Approved" ? "disabled" : ""} class="px-3 py-2 rounded-lg bg-violet-500/90 hover:bg-violet-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-semibold">Mark Paid</button>
+      `;
+
+      const actionBar = state.role === "Auditor"
+        ? '<p class="text-sm text-slate-400">Auditor view is read-only.</p>'
+        : `<div class="flex flex-wrap gap-2">${state.role === "Manager" ? managerActions : financeActions}</div>`;
+
+      const flags = item.policyFlags.length
+        ? item.policyFlags.map((f) => `<li class="text-sm text-amber-200">• ${f}</li>`).join("")
+        : '<li class="text-sm text-emerald-200">• No active policy flags</li>';
+
+      els.detail.innerHTML = `
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-slate-400">${item.id}</p>
+            <h2 class="text-xl font-semibold mt-1">${item.employee}</h2>
+            <p class="text-slate-300 text-sm mt-1">${item.trip}</p>
+          </div>
+
+          <dl class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-slate-400">Amount</dt>
+              <dd class="font-semibold text-amber-300">${money(item.amount)}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-400">Status</dt>
+              <dd>${item.status}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-400">Risk</dt>
+              <dd>${item.risk}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-400">Receipts</dt>
+              <dd>${item.receipts}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-400">Approver</dt>
+              <dd>${item.approver}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-400">Reimbursement</dt>
+              <dd>${item.reimbursementMethod}</dd>
+            </div>
+          </dl>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+            <p class="text-sm font-semibold mb-2">Policy validation</p>
+            <ul class="space-y-1">${flags}</ul>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+            <p class="text-sm font-semibold mb-2">Actions (${state.role} view)</p>
+            ${actionBar}
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+            <p class="text-sm font-semibold mb-2">Audit trail</p>
+            <ol class="space-y-2 max-h-52 overflow-auto pr-2">
+              ${item.audit.slice().reverse().map((a) => `
+                <li class="text-sm">
+                  <span class="text-slate-400">${a.time}</span>
+                  <span class="text-slate-200"> · ${a.actor}</span>
+                  <span class="text-slate-300"> — ${a.action}</span>
+                </li>
+              `).join("")}
+            </ol>
+          </div>
+        </div>
+      `;
+
+      els.detail.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => actOnSelected(btn.dataset.action));
+      });
+    }
+
+    function csvEscape(v) {
+      const value = String(v ?? "");
+      if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+      return value;
+    }
+
+    function exportCsv() {
+      const rows = filteredRequests();
+      const cols = ["id", "employee", "department", "trip", "costCenter", "status", "risk", "amount", "submittedAt"];
+      const lines = [cols.join(",")];
+      rows.forEach((r) => {
+        lines.push(cols.map((c) => csvEscape(r[c])).join(","));
+      });
+
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `travel-reimbursements-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function attachEvents() {
+      els.searchInput.addEventListener("input", (e) => {
+        state.search = e.target.value;
+        render();
+      });
+      els.statusFilter.addEventListener("change", (e) => {
+        state.status = e.target.value;
+        render();
+      });
+      els.riskFilter.addEventListener("change", (e) => {
+        state.risk = e.target.value;
+        render();
+      });
+      els.sortBy.addEventListener("change", (e) => {
+        state.sort = e.target.value;
+        render();
+      });
+      els.roleView.addEventListener("change", (e) => {
+        state.role = e.target.value;
+        renderDetail();
+      });
+      els.exportBtn.addEventListener("click", exportCsv);
+    }
+
+    function render() {
+      renderList();
+    }
+
+    attachEvents();
+    render();
+  </script>
+</body>
+</html>

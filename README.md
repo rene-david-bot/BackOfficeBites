@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**License Renewal Calendar** — calendar-first IT Ops workspace for SaaS renewals with policy-gated approvals, escalation flow, and audit-ready exports.
+**Travel Reimbursement Review Desk** — master-detail Finance workspace for policy-aware travel reimbursement approvals, audit trail actions, and CSV-ready handoff.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
