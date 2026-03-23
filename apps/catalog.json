@@ -1121,5 +1121,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-23",
+    "day": 52,
+    "slug": "2026-03-23-purchase-requisition-calendar",
+    "name": "Purchase Requisition Approval Calendar",
+    "description": "Calendar-first finance workspace for purchase requisitions, policy checks, approvals, and payment release tracking.",
+    "category": "Finance",
+    "pattern": "Calendar",
+    "tags": [
+      "purchase requisition",
+      "finance",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

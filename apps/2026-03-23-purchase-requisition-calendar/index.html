@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Purchase Requisition Approval Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm font-semibold text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Purchase Requisition Approval Calendar</h1>
+        <p class="mt-1 text-sm text-slate-300">Finance procurement workspace for purchase requisitions, policy checks, approvals, and payment release tracking.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-slate-300">Pattern: Calendar + Detail</span>
+        <span class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-slate-300">Category: Finance</span>
+      </div>
+    </div>
+
+    <section class="mt-6 grid gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <label class="text-sm lg:col-span-2">
+        <span class="mb-1 block text-slate-300">Search</span>
+        <input id="searchInput" aria-label="Search requisitions" type="text" placeholder="Requester, PR ID, supplier" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring" />
+      </label>
+
+      <label class="text-sm">
+        <span class="mb-1 block text-slate-300">Status</span>
+        <select id="statusFilter" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring">
+          <option value="all">All</option>
+          <option>Draft</option>
+          <option>Submitted</option>
+          <option>Needs Info</option>
+          <option>Approved</option>
+          <option>Paid</option>
+        </select>
+      </label>
+
+      <label class="text-sm">
+        <span class="mb-1 block text-slate-300">Team</span>
+        <select id="teamFilter" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring">
+          <option value="all">All teams</option>
+          <option>Sales</option>
+          <option>Engineering</option>
+          <option>Consulting</option>
+          <option>Operations</option>
+        </select>
+      </label>
+
+      <label class="text-sm">
+        <span class="mb-1 block text-slate-300">Sort</span>
+        <select id="sortBy" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring">
+          <option value="dueAsc">Due date ↑</option>
+          <option value="dueDesc">Due date ↓</option>
+          <option value="amountDesc">Amount ↓</option>
+          <option value="amountAsc">Amount ↑</option>
+          <option value="employeeAsc">Requester A→Z</option>
+        </select>
+      </label>
+
+      <label class="text-sm">
+        <span class="mb-1 block text-slate-300">Role view</span>
+        <select id="roleView" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring">
+          <option>Requester</option>
+          <option>Procurement Manager</option>
+          <option selected>Finance Analyst</option>
+          <option>Finance Lead</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-sm">
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="prevMonth" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 hover:border-slate-500">← Prev</button>
+        <p id="monthLabel" class="min-w-40 text-center font-semibold"></p>
+        <button id="nextMonth" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 hover:border-slate-500">Next →</button>
+        <button id="clearDateFilter" class="hidden rounded-md border border-amber-700 bg-amber-950/40 px-3 py-1.5 text-amber-300">Clear day filter</button>
+      </div>
+      <div class="flex flex-wrap gap-2 text-xs">
+        <span class="rounded-md bg-cyan-950/50 px-2 py-1 text-cyan-300">Submitted</span>
+        <span class="rounded-md bg-amber-950/50 px-2 py-1 text-amber-300">Needs Info</span>
+        <span class="rounded-md bg-emerald-950/50 px-2 py-1 text-emerald-300">Approved/Paid</span>
+      </div>
+    </section>
+
+    <section class="mt-4 grid gap-4 lg:grid-cols-12">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3 lg:col-span-7">
+        <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+        </div>
+        <div id="calendarGrid" class="mt-2 grid grid-cols-7 gap-1"></div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3 lg:col-span-5">
+        <div class="mb-2 flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-200">Filtered requisitions</h2>
+          <button id="exportCsv" class="rounded-md border border-emerald-700 bg-emerald-950/40 px-2.5 py-1.5 text-xs font-medium text-emerald-300 hover:border-emerald-500">Export CSV</button>
+        </div>
+        <div id="claimList" role="listbox" aria-label="Filtered purchase requisitions" tabindex="0" class="max-h-[24rem] space-y-2 overflow-auto pr-1"></div>
+      </div>
+    </section>
+
+    <section class="mt-4 grid gap-4 lg:grid-cols-12">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 lg:col-span-8">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-base font-semibold" id="detailTitle">Requisition details</h2>
+          <p id="policyBanner" class="hidden rounded-md border px-2 py-1 text-xs"></p>
+        </div>
+
+        <form id="claimForm" class="grid gap-3 sm:grid-cols-2" novalidate>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Requester</span>
+            <input id="employeeField" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Supplier</span>
+            <input id="supplierField" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Amount (€)</span>
+            <input id="amountField" type="number" min="0" step="0.01" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Spend type</span>
+            <select id="typeField" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+              <option>Software</option>
+              <option>Subscription</option>
+              <option>Cloud</option>
+              <option>Office</option>
+              <option>Services</option>
+            </select>
+          </label>
+          <label class="text-sm sm:col-span-2">
+            <span class="mb-1 block text-slate-300">Business justification (min 10 chars)</span>
+            <textarea id="purposeField" rows="2" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2"></textarea>
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm sm:col-span-2">
+            <input id="receiptField" type="checkbox" class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500" />
+            <span>Vendor quote attached</span>
+          </label>
+          <p id="formError" class="hidden rounded-md border border-rose-700 bg-rose-950/40 px-2 py-1 text-xs text-rose-300 sm:col-span-2"></p>
+
+          <div class="flex flex-wrap gap-2 sm:col-span-2">
+            <button type="submit" class="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm">Save draft</button>
+            <button type="button" data-action="submit" class="action-btn rounded-md border border-cyan-700 bg-cyan-950/40 px-3 py-2 text-sm text-cyan-300">Submit</button>
+            <button type="button" data-action="needInfo" class="action-btn rounded-md border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">Need info</button>
+            <button type="button" data-action="approve" class="action-btn rounded-md border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">Approve</button>
+            <button type="button" data-action="markPaid" class="action-btn rounded-md border border-violet-700 bg-violet-950/40 px-3 py-2 text-sm text-violet-300">Mark paid</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 lg:col-span-4">
+        <h3 class="text-sm font-semibold">Audit trail</h3>
+        <ul id="auditTrail" class="mt-3 space-y-2 text-xs text-slate-300"></ul>
+      </div>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <h2 class="text-sm font-semibold">Quick add requisition</h2>
+      <form id="newClaimForm" class="mt-3 grid gap-2 sm:grid-cols-5">
+        <input required id="newEmployee" placeholder="Requester" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+        <input required id="newTeam" placeholder="Team" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+        <input required id="newSupplier" placeholder="Supplier" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+        <input required id="newAmount" type="number" min="0" step="0.01" placeholder="Amount" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+        <button class="rounded-md border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-300" type="submit">Add draft PR</button>
+      </form>
+      <p id="newClaimError" class="mt-2 hidden rounded-md border border-rose-700 bg-rose-950/40 px-2 py-1 text-xs text-rose-300"></p>
+    </section>
+  </main>
+
+  <script>
+    const claims = [
+      {
+        id: 'PR-8419', employee: 'Anna Keller', team: 'Sales', supplier: 'Messe Berlin GmbH', spendType: 'Software',
+        amount: 642.3, purpose: 'Booth collateral purchase for enterprise event in Q2', dueDate: '2026-03-24',
+        status: 'Submitted', receiptComplete: true,
+        audit: ['2026-03-18 08:21 — Anna Keller created draft', '2026-03-18 08:31 — Submitted for approval']
+      },
+      {
+        id: 'PR-8420', employee: 'Mika Braun', team: 'Engineering', supplier: 'Datadog Europe', spendType: 'Subscription',
+        amount: 189.9, purpose: 'Low-cost plugin request for internal observability stack', dueDate: '2026-03-23',
+        status: 'Needs Info', receiptComplete: false,
+        audit: ['2026-03-19 09:12 — Mika Braun submitted', '2026-03-19 11:40 — Finance requested missing receipt']
+      },
+      {
+        id: 'PR-8421', employee: 'Lea Wolf', team: 'Consulting', supplier: 'AWS EMEA', spendType: 'Cloud',
+        amount: 1548.0, purpose: 'Annual cloud support extension for delivery project', dueDate: '2026-03-26',
+        status: 'Submitted', receiptComplete: false,
+        audit: ['2026-03-20 07:43 — Lea Wolf submitted high-value requisition']
+      },
+      {
+        id: 'PR-8422', employee: 'David Shah', team: 'Operations', supplier: 'Staples Business', spendType: 'Office',
+        amount: 88.45, purpose: 'Office supplies replenishment for onboarding kits', dueDate: '2026-03-22',
+        status: 'Approved', receiptComplete: true,
+        audit: ['2026-03-18 12:17 — Claim submitted', '2026-03-19 09:00 — Approved by manager']
+      },
+      {
+        id: 'PR-8423', employee: 'Sina Weber', team: 'Sales', supplier: 'HubSpot Germany', spendType: 'Subscription',
+        amount: 420.0, purpose: 'CRM add-on renewal for outbound sequence automation', dueDate: '2026-03-28',
+        status: 'Paid', receiptComplete: true,
+        audit: ['2026-03-17 15:08 — Submitted', '2026-03-18 10:20 — Approved', '2026-03-21 16:11 — Marked as paid']
+      }
+    ];
+
+    const state = {
+      month: new Date('2026-03-01T00:00:00Z'),
+      selectedId: claims[0].id,
+      dateFilter: null,
+      search: '',
+      status: 'all',
+      team: 'all',
+      sortBy: 'dueAsc',
+      role: 'Finance Analyst'
+    };
+
+    const el = {
+      monthLabel: document.getElementById('monthLabel'),
+      calendarGrid: document.getElementById('calendarGrid'),
+      claimList: document.getElementById('claimList'),
+      detailTitle: document.getElementById('detailTitle'),
+      policyBanner: document.getElementById('policyBanner'),
+      auditTrail: document.getElementById('auditTrail'),
+      form: document.getElementById('claimForm'),
+      formError: document.getElementById('formError'),
+      clearDateFilter: document.getElementById('clearDateFilter'),
+      roleView: document.getElementById('roleView'),
+      newClaimError: document.getElementById('newClaimError')
+    };
+
+    const field = {
+      employee: document.getElementById('employeeField'),
+      supplier: document.getElementById('supplierField'),
+      amount: document.getElementById('amountField'),
+      type: document.getElementById('typeField'),
+      purpose: document.getElementById('purposeField'),
+      receipt: document.getElementById('receiptField')
+    };
+
+    const fmtEUR = n => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n);
+    const fmtDay = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const monthName = dt => dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+    function getStatusClass(status) {
+      if (status === 'Submitted') return 'text-cyan-300 bg-cyan-950/50 border-cyan-800';
+      if (status === 'Needs Info') return 'text-amber-300 bg-amber-950/50 border-amber-800';
+      if (status === 'Approved' || status === 'Paid') return 'text-emerald-300 bg-emerald-950/50 border-emerald-800';
+      return 'text-slate-300 bg-slate-800 border-slate-700';
+    }
+
+    function filteredClaims() {
+      const q = state.search.trim().toLowerCase();
+      return claims
+        .filter(c => state.status === 'all' || c.status === state.status)
+        .filter(c => state.team === 'all' || c.team === state.team)
+        .filter(c => !state.dateFilter || c.dueDate === state.dateFilter)
+        .filter(c => {
+          if (!q) return true;
+          return [c.id, c.employee, c.supplier, c.team].join(' ').toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          switch (state.sortBy) {
+            case 'dueDesc': return b.dueDate.localeCompare(a.dueDate);
+            case 'amountDesc': return b.amount - a.amount;
+            case 'amountAsc': return a.amount - b.amount;
+            case 'employeeAsc': return a.employee.localeCompare(b.employee);
+            default: return a.dueDate.localeCompare(b.dueDate);
+          }
+        });
+    }
+
+    function selectedClaim() {
+      return claims.find(c => c.id === state.selectedId) || filteredClaims()[0] || null;
+    }
+
+    function renderCalendar() {
+      const y = state.month.getUTCFullYear();
+      const m = state.month.getUTCMonth();
+      el.monthLabel.textContent = monthName(state.month);
+
+      const first = new Date(Date.UTC(y, m, 1));
+      const last = new Date(Date.UTC(y, m + 1, 0));
+      const startPad = (first.getUTCDay() + 6) % 7;
+
+      const map = claims.reduce((acc, c) => {
+        (acc[c.dueDate] ||= []).push(c);
+        return acc;
+      }, {});
+
+      el.calendarGrid.innerHTML = '';
+      for (let i = 0; i < startPad; i++) {
+        const pad = document.createElement('div');
+        pad.className = 'h-24 rounded-md border border-transparent';
+        el.calendarGrid.appendChild(pad);
+      }
+
+      for (let day = 1; day <= last.getUTCDate(); day++) {
+        const iso = new Date(Date.UTC(y, m, day)).toISOString().slice(0, 10);
+        const events = map[iso] || [];
+        const isActive = state.dateFilter === iso;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `h-24 rounded-md border p-2 text-left text-xs transition ${isActive ? 'border-emerald-500 bg-emerald-950/30' : 'border-slate-800 bg-slate-950 hover:border-slate-600'}`;
+        btn.innerHTML = `<div class="mb-1 flex items-center justify-between"><span class="font-semibold">${day}</span><span class="text-slate-500">${events.length || ''}</span></div>`;
+
+        events.slice(0, 2).forEach(ev => {
+          const p = document.createElement('p');
+          p.className = `mb-1 truncate rounded border px-1 py-0.5 ${getStatusClass(ev.status)}`;
+          p.textContent = `${ev.id} • ${ev.employee.split(' ')[0]}`;
+          btn.appendChild(p);
+        });
+
+        btn.addEventListener('click', () => {
+          state.dateFilter = state.dateFilter === iso ? null : iso;
+          renderAll();
+        });
+        el.calendarGrid.appendChild(btn);
+      }
+
+      el.clearDateFilter.classList.toggle('hidden', !state.dateFilter);
+    }
+
+    function renderList() {
+      const rows = filteredClaims();
+      if (rows.length && !rows.some(r => r.id === state.selectedId)) state.selectedId = rows[0].id;
+
+      el.claimList.innerHTML = rows.length ? '' : '<p class="rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-400">No requisitions match your filters.</p>';
+
+      rows.forEach(c => {
+        const active = c.id === state.selectedId;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.role = 'option';
+        b.ariaSelected = String(active);
+        b.className = `w-full rounded-md border px-3 py-2 text-left text-xs ${active ? 'border-emerald-500 bg-emerald-950/20' : 'border-slate-800 bg-slate-950 hover:border-slate-600'}`;
+        b.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <strong class="text-sm">${c.id}</strong>
+            <span class="rounded border px-1.5 py-0.5 ${getStatusClass(c.status)}">${c.status}</span>
+          </div>
+          <p class="mt-1 text-slate-300">${c.employee} • ${c.supplier}</p>
+          <div class="mt-1 flex items-center justify-between text-slate-400">
+            <span>${fmtDay(c.dueDate)}</span>
+            <span>${fmtEUR(c.amount)}</span>
+          </div>
+        `;
+        b.addEventListener('click', () => {
+          state.selectedId = c.id;
+          renderDetails();
+          renderList();
+        });
+        el.claimList.appendChild(b);
+      });
+    }
+
+    function can(role, action) {
+      const perms = {
+        Requester: ['submit'],
+        'Procurement Manager': ['approve', 'needInfo'],
+        'Finance Analyst': ['needInfo', 'approve'],
+        'Finance Lead': ['approve', 'needInfo', 'markPaid']
+      };
+      return (perms[role] || []).includes(action);
+    }
+
+    function setPolicy(msg, type = 'warn') {
+      if (!msg) {
+        el.policyBanner.classList.add('hidden');
+        el.policyBanner.textContent = '';
+        return;
+      }
+      el.policyBanner.className = `rounded-md border px-2 py-1 text-xs ${type === 'ok' ? 'border-emerald-700 bg-emerald-950/30 text-emerald-300' : 'border-amber-700 bg-amber-950/30 text-amber-300'}`;
+      el.policyBanner.textContent = msg;
+    }
+
+    function renderDetails() {
+      const c = selectedClaim();
+      if (!c) return;
+
+      el.detailTitle.textContent = `${c.id} — ${c.status}`;
+      field.employee.value = c.employee;
+      field.supplier.value = c.supplier;
+      field.amount.value = c.amount;
+      field.type.value = c.spendType;
+      field.purpose.value = c.purpose;
+      field.receipt.checked = c.receiptComplete;
+
+      setPolicy(c.amount > 1500 && !c.receiptComplete ? 'Policy risk: amounts above €1,500 require an attached vendor quote before approval.' : '', c.receiptComplete ? 'ok' : 'warn');
+
+      const actionButtons = document.querySelectorAll('.action-btn');
+      actionButtons.forEach(btn => {
+        const action = btn.dataset.action;
+        const allowed = can(state.role, action);
+        btn.disabled = !allowed;
+        btn.classList.toggle('opacity-40', !allowed);
+        btn.classList.toggle('cursor-not-allowed', !allowed);
+      });
+
+      el.auditTrail.innerHTML = c.audit.slice().reverse().map(item => `<li class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1">${item}</li>`).join('');
+    }
+
+    function validateForm(c) {
+      if (!field.employee.value.trim() || !field.supplier.value.trim()) return 'Requester and supplier are required.';
+      const amount = Number(field.amount.value);
+      if (!Number.isFinite(amount) || amount <= 0) return 'Amount must be greater than zero.';
+      if (field.purpose.value.trim().length < 10) return 'Purpose needs at least 10 characters.';
+      if (c.status === 'Submitted' && !field.receipt.checked && amount > 500) return 'Submitted requisitions above €500 require a vendor quote.';
+      return '';
+    }
+
+    function persistDraft() {
+      const c = selectedClaim();
+      if (!c) return;
+      const err = validateForm(c);
+      if (err) {
+        el.formError.textContent = err;
+        el.formError.classList.remove('hidden');
+        return false;
+      }
+      el.formError.classList.add('hidden');
+      c.employee = field.employee.value.trim();
+      c.supplier = field.supplier.value.trim();
+      c.amount = Number(field.amount.value);
+      c.spendType = field.type.value;
+      c.purpose = field.purpose.value.trim();
+      c.receiptComplete = field.receipt.checked;
+      c.audit.push(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} saved draft changes`);
+      return true;
+    }
+
+    function transition(action) {
+      const c = selectedClaim();
+      if (!c || !can(state.role, action)) return;
+      if (!persistDraft()) return;
+
+      if (action === 'submit') {
+        c.status = c.status === 'Needs Info' ? 'Submitted' : 'Submitted';
+        c.audit.push(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} submitted requisition`);
+      }
+      if (action === 'needInfo') {
+        c.status = 'Needs Info';
+        c.audit.push(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} requested more information`);
+      }
+      if (action === 'approve') {
+        if (c.amount > 1500 && !c.receiptComplete) {
+          setPolicy('Approval blocked: vendor quote missing for high-value requisition.', 'warn');
+          return;
+        }
+        c.status = 'Approved';
+        c.audit.push(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} approved requisition`);
+      }
+      if (action === 'markPaid') {
+        if (c.status !== 'Approved') {
+          setPolicy('Only approved requisitions can be marked as paid.', 'warn');
+          return;
+        }
+        c.status = 'Paid';
+        c.audit.push(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} marked requisition as paid`);
+      }
+
+      setPolicy('Workflow updated successfully.', 'ok');
+      renderAll();
+    }
+
+    function exportCsv() {
+      const rows = filteredClaims();
+      const header = ['id', 'employee', 'team', 'supplier', 'dueDate', 'status', 'amount'];
+      const lines = [header.join(',')];
+      rows.forEach(r => lines.push([r.id, r.employee, r.team, r.supplier, r.dueDate, r.status, r.amount.toFixed(2)].map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')));
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `purchase-requisitions-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function addClaim(e) {
+      e.preventDefault();
+      const employee = document.getElementById('newEmployee').value.trim();
+      const team = document.getElementById('newTeam').value.trim();
+      const supplier = document.getElementById('newSupplier').value.trim();
+      const amount = Number(document.getElementById('newAmount').value);
+      if (!employee || !team || !supplier || !Number.isFinite(amount) || amount <= 0) {
+        el.newClaimError.textContent = 'Fill all fields with valid values.';
+        el.newClaimError.classList.remove('hidden');
+        return;
+      }
+      el.newClaimError.classList.add('hidden');
+      const id = `TR-${Math.floor(2600 + Math.random() * 300)}`;
+      const dueDate = new Date(state.month);
+      dueDate.setUTCDate(Math.max(1, Math.min(28, new Date().getUTCDate() + 3)));
+      claims.push({
+        id,
+        employee,
+        team,
+        supplier,
+        spendType: 'Services',
+        amount,
+        purpose: 'New draft created from quick add form',
+        dueDate: dueDate.toISOString().slice(0, 10),
+        status: 'Draft',
+        receiptComplete: false,
+        audit: [`${new Date().toISOString().slice(0, 16).replace('T', ' ')} — ${state.role} created quick draft`]
+      });
+      state.selectedId = id;
+      e.target.reset();
+      renderAll();
+    }
+
+    function renderAll() {
+      renderCalendar();
+      renderList();
+      renderDetails();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', e => { state.search = e.target.value; renderAll(); });
+    document.getElementById('statusFilter').addEventListener('change', e => { state.status = e.target.value; renderAll(); });
+    document.getElementById('teamFilter').addEventListener('change', e => { state.team = e.target.value; renderAll(); });
+    document.getElementById('sortBy').addEventListener('change', e => { state.sortBy = e.target.value; renderAll(); });
+    el.roleView.addEventListener('change', e => { state.role = e.target.value; renderDetails(); });
+
+    document.getElementById('prevMonth').addEventListener('click', () => { state.month.setUTCMonth(state.month.getUTCMonth() - 1); renderAll(); });
+    document.getElementById('nextMonth').addEventListener('click', () => { state.month.setUTCMonth(state.month.getUTCMonth() + 1); renderAll(); });
+    el.clearDateFilter.addEventListener('click', () => { state.dateFilter = null; renderAll(); });
+
+    el.form.addEventListener('submit', e => {
+      e.preventDefault();
+      if (persistDraft()) {
+        setPolicy('Draft saved.', 'ok');
+        renderAll();
+      }
+    });
+
+    document.querySelectorAll('.action-btn').forEach(btn => btn.addEventListener('click', () => transition(btn.dataset.action)));
+    document.getElementById('exportCsv').addEventListener('click', exportCsv);
+    document.getElementById('newClaimForm').addEventListener('submit', addClaim);
+
+    document.getElementById('claimList').addEventListener('keydown', e => {
+      const rows = filteredClaims();
+      const idx = rows.findIndex(r => r.id === state.selectedId);
+      if (e.key === 'ArrowDown' && idx < rows.length - 1) {
+        state.selectedId = rows[idx + 1].id;
+        renderDetails();
+        renderList();
+      }
+      if (e.key === 'ArrowUp' && idx > 0) {
+        state.selectedId = rows[idx - 1].id;
+        renderDetails();
+        renderList();
+      }
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
