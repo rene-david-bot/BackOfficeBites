@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compliance Checklist Remediation Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm font-semibold text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Compliance Checklist Remediation Wizard</h1>
+        <p class="mt-1 text-sm text-slate-300">Legal workflow for compliance findings, remediation planning, policy validation, and approval-ready evidence.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-slate-300">Category: Legal</span>
+        <span class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-slate-300">Pattern: Wizard</span>
+      </div>
+    </div>
+
+    <section class="mt-5 grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:grid-cols-4">
+      <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Controls in scope</p>
+        <p id="metricScope" class="mt-1 text-xl font-semibold">0</p>
+      </div>
+      <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open findings</p>
+        <p id="metricOpen" class="mt-1 text-xl font-semibold text-amber-300">0</p>
+      </div>
+      <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Critical blockers</p>
+        <p id="metricBlockers" class="mt-1 text-xl font-semibold text-rose-300">0</p>
+      </div>
+      <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Workflow status</p>
+        <p id="metricState" class="mt-1 text-xl font-semibold text-cyan-300">Draft</p>
+      </div>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <ol id="stepper" class="flex flex-wrap gap-2 text-xs"></ol>
+        <label class="text-sm">
+          <span class="mb-1 block text-slate-300">Role view</span>
+          <select id="roleView" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500/50 focus:ring">
+            <option>Compliance Analyst</option>
+            <option>Control Owner</option>
+            <option selected>Legal Counsel</option>
+            <option>CISO</option>
+          </select>
+        </label>
+      </div>
+
+      <p id="policyBanner" class="mt-3 hidden rounded-md border px-3 py-2 text-xs"></p>
+
+      <div class="mt-4 space-y-4">
+        <section data-step="1" class="wizard-step grid gap-3 sm:grid-cols-2">
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Framework</span>
+            <select id="framework" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+              <option value="">Select framework…</option>
+              <option>SOC 2</option>
+              <option>ISO 27001</option>
+              <option>NIS2</option>
+              <option>GDPR</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Business unit</span>
+            <input id="businessUnit" type="text" placeholder="e.g. Managed Services DACH" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Audit window start</span>
+            <input id="windowStart" type="date" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block text-slate-300">Audit window end</span>
+            <input id="windowEnd" type="date" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+          </label>
+          <label class="text-sm sm:col-span-2">
+            <span class="mb-1 block text-slate-300">Primary approver</span>
+            <select id="primaryApprover" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+              <option value="">Select approver…</option>
+              <option>Legal Counsel</option>
+              <option>Head of Compliance</option>
+              <option>CISO</option>
+            </select>
+          </label>
+          <label class="text-sm sm:col-span-2">
+            <span class="mb-1 block text-slate-300">Scope notes</span>
+            <textarea id="scopeNotes" rows="3" placeholder="Document assumptions and out-of-scope systems" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2"></textarea>
+          </label>
+        </section>
+
+        <section data-step="2" class="wizard-step hidden">
+          <div class="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3 sm:grid-cols-4">
+            <label class="text-sm sm:col-span-2">
+              <span class="mb-1 block text-slate-300">Search controls</span>
+              <input id="searchInput" type="text" placeholder="Control ID, title, owner" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" />
+            </label>
+            <label class="text-sm">
+              <span class="mb-1 block text-slate-300">Severity</span>
+              <select id="severityFilter" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+                <option value="all">All</option>
+                <option>Critical</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </label>
+            <label class="text-sm">
+              <span class="mb-1 block text-slate-300">Sort</span>
+              <select id="sortBy" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+                <option value="severityDesc">Severity ↓</option>
+                <option value="severityAsc">Severity ↑</option>
+                <option value="titleAsc">Title A→Z</option>
+                <option value="ownerAsc">Owner A→Z</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="mt-3 overflow-hidden rounded-lg border border-slate-800">
+            <table class="min-w-full divide-y divide-slate-800 text-sm">
+              <thead class="bg-slate-950/80 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th class="px-3 py-2 text-left">Scope</th>
+                  <th class="px-3 py-2 text-left">Control</th>
+                  <th class="px-3 py-2 text-left">Owner</th>
+                  <th class="px-3 py-2 text-left">Severity</th>
+                  <th class="px-3 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody id="controlTable" class="divide-y divide-slate-800 bg-slate-900/30"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section data-step="3" class="wizard-step hidden">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-200">Remediation planner</h2>
+            <button id="exportCsv" type="button" class="rounded-md border border-emerald-700 bg-emerald-950/40 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:border-emerald-500">Export CSV</button>
+          </div>
+
+          <div id="planList" class="space-y-3"></div>
+        </section>
+
+        <section data-step="4" class="wizard-step hidden space-y-3">
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-4">
+            <h2 class="text-base font-semibold">Submission summary</h2>
+            <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt class="text-slate-400">Framework</dt>
+                <dd id="summaryFramework" class="font-medium"></dd>
+              </div>
+              <div>
+                <dt class="text-slate-400">Business unit</dt>
+                <dd id="summaryUnit" class="font-medium"></dd>
+              </div>
+              <div>
+                <dt class="text-slate-400">Approver</dt>
+                <dd id="summaryApprover" class="font-medium"></dd>
+              </div>
+              <div>
+                <dt class="text-slate-400">Risk score</dt>
+                <dd id="summaryRisk" class="font-medium"></dd>
+              </div>
+            </dl>
+          </div>
+
+          <form id="submissionForm" class="rounded-lg border border-slate-800 bg-slate-950/70 p-4">
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input id="attestation" type="checkbox" class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500" />
+              <span>I confirm all failed controls have remediation owners and due dates.</span>
+            </label>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button type="button" id="submitReview" class="rounded-md border border-cyan-700 bg-cyan-950/40 px-3 py-2 text-sm text-cyan-300">Submit for legal review</button>
+              <button type="button" id="approvePlan" class="rounded-md border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">Approve remediation plan</button>
+              <button type="button" id="requestChanges" class="rounded-md border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">Request changes</button>
+            </div>
+            <p id="submissionError" class="mt-3 hidden rounded-md border border-rose-700 bg-rose-950/40 px-2 py-1 text-xs text-rose-300"></p>
+          </form>
+        </section>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-4">
+        <button id="prevBtn" type="button" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm hover:border-slate-500">← Previous</button>
+        <div class="flex gap-2">
+          <button id="saveDraft" type="button" class="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm">Save draft</button>
+          <button id="nextBtn" type="button" class="rounded-md border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">Next →</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <h2 class="text-sm font-semibold">Audit trail</h2>
+      <ul id="auditTrail" class="mt-3 space-y-2 text-xs text-slate-300"></ul>
+    </section>
+  </main>
+
+  <script>
+    const seedControls = [
+      { id: 'CC-101', title: 'Privileged Access Review', owner: 'Iris Vogel', severity: 'Critical', status: 'Fail', inScope: true, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-104', title: 'Vendor Security Assessment', owner: 'Jonas Maier', severity: 'High', status: 'At Risk', inScope: true, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-110', title: 'Incident Retrospective Completion', owner: 'Lena Bruck', severity: 'Medium', status: 'Pass', inScope: false, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-121', title: 'Data Processing Register', owner: 'Omar Dietz', severity: 'High', status: 'Fail', inScope: true, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-131', title: 'Encryption Key Rotation', owner: 'Aylin Koch', severity: 'Critical', status: 'At Risk', inScope: false, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-140', title: 'Employee Exit Checklist', owner: 'Nina Franke', severity: 'Low', status: 'Pass', inScope: false, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-148', title: 'Policy Exception Register', owner: 'Miro Hahn', severity: 'Medium', status: 'At Risk', inScope: true, dueDate: '', evidence: '', plan: '' },
+      { id: 'CC-151', title: 'Data Retention Job Monitoring', owner: 'Lara Stein', severity: 'High', status: 'Fail', inScope: true, dueDate: '', evidence: '', plan: '' }
+    ];
+
+    const state = {
+      currentStep: 1,
+      workflow: 'Draft',
+      role: 'Legal Counsel',
+      search: '',
+      severity: 'all',
+      sortBy: 'severityDesc',
+      controls: structuredClone(seedControls),
+      form: {
+        framework: '',
+        businessUnit: '',
+        windowStart: '',
+        windowEnd: '',
+        primaryApprover: '',
+        scopeNotes: ''
+      },
+      audit: [
+        `${timestamp()} — Compliance Analyst created remediation draft`,
+        `${timestamp()} — Seeded control library imported`
+      ]
+    };
+
+    const steps = [
+      { id: 1, label: 'Scope' },
+      { id: 2, label: 'Controls' },
+      { id: 3, label: 'Remediation' },
+      { id: 4, label: 'Review' }
+    ];
+
+    const severityRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+    const el = {
+      stepper: document.getElementById('stepper'),
+      prevBtn: document.getElementById('prevBtn'),
+      nextBtn: document.getElementById('nextBtn'),
+      saveDraft: document.getElementById('saveDraft'),
+      policyBanner: document.getElementById('policyBanner'),
+      roleView: document.getElementById('roleView'),
+      controlsTable: document.getElementById('controlTable'),
+      planList: document.getElementById('planList'),
+      auditTrail: document.getElementById('auditTrail'),
+      metricScope: document.getElementById('metricScope'),
+      metricOpen: document.getElementById('metricOpen'),
+      metricBlockers: document.getElementById('metricBlockers'),
+      metricState: document.getElementById('metricState'),
+      submissionError: document.getElementById('submissionError')
+    };
+
+    const field = {
+      framework: document.getElementById('framework'),
+      businessUnit: document.getElementById('businessUnit'),
+      windowStart: document.getElementById('windowStart'),
+      windowEnd: document.getElementById('windowEnd'),
+      primaryApprover: document.getElementById('primaryApprover'),
+      scopeNotes: document.getElementById('scopeNotes'),
+      searchInput: document.getElementById('searchInput'),
+      severityFilter: document.getElementById('severityFilter'),
+      sortBy: document.getElementById('sortBy'),
+      summaryFramework: document.getElementById('summaryFramework'),
+      summaryUnit: document.getElementById('summaryUnit'),
+      summaryApprover: document.getElementById('summaryApprover'),
+      summaryRisk: document.getElementById('summaryRisk'),
+      attestation: document.getElementById('attestation')
+    };
+
+    function timestamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function addAudit(action) {
+      state.audit.push(`${timestamp()} — ${state.role}: ${action}`);
+      renderAudit();
+    }
+
+    function setBanner(message = '', kind = 'warn') {
+      if (!message) {
+        el.policyBanner.classList.add('hidden');
+        el.policyBanner.textContent = '';
+        return;
+      }
+      el.policyBanner.className = `mt-3 rounded-md border px-3 py-2 text-xs ${kind === 'ok' ? 'border-emerald-700 bg-emerald-950/40 text-emerald-300' : 'border-amber-700 bg-amber-950/40 text-amber-300'}`;
+      el.policyBanner.textContent = message;
+    }
+
+    function inScopeControls() {
+      return state.controls.filter(c => c.inScope);
+    }
+
+    function openFindings() {
+      return inScopeControls().filter(c => c.status !== 'Pass');
+    }
+
+    function criticalBlockers() {
+      return inScopeControls().filter(c => c.severity === 'Critical' && c.status === 'Fail' && !c.evidence);
+    }
+
+    function riskScore() {
+      return inScopeControls().reduce((sum, c) => {
+        const weight = severityRank[c.severity] || 1;
+        const multiplier = c.status === 'Fail' ? 3 : c.status === 'At Risk' ? 2 : 0.5;
+        return sum + weight * multiplier;
+      }, 0).toFixed(1);
+    }
+
+    function filteredControls() {
+      const q = state.search.trim().toLowerCase();
+      return state.controls
+        .filter(c => state.severity === 'all' || c.severity === state.severity)
+        .filter(c => !q || `${c.id} ${c.title} ${c.owner}`.toLowerCase().includes(q))
+        .sort((a, b) => {
+          if (state.sortBy === 'severityAsc') return severityRank[a.severity] - severityRank[b.severity];
+          if (state.sortBy === 'titleAsc') return a.title.localeCompare(b.title);
+          if (state.sortBy === 'ownerAsc') return a.owner.localeCompare(b.owner);
+          return severityRank[b.severity] - severityRank[a.severity];
+        });
+    }
+
+    function renderStepper() {
+      el.stepper.innerHTML = '';
+      steps.forEach(step => {
+        const li = document.createElement('li');
+        const active = state.currentStep === step.id;
+        const complete = state.currentStep > step.id;
+        li.className = `rounded-md border px-3 py-1 ${active ? 'border-emerald-500 bg-emerald-950/30 text-emerald-300' : complete ? 'border-cyan-700 bg-cyan-950/30 text-cyan-300' : 'border-slate-700 bg-slate-950 text-slate-400'}`;
+        li.textContent = `${step.id}. ${step.label}`;
+        el.stepper.appendChild(li);
+      });
+
+      el.prevBtn.disabled = state.currentStep === 1;
+      el.prevBtn.classList.toggle('opacity-40', state.currentStep === 1);
+      el.prevBtn.classList.toggle('cursor-not-allowed', state.currentStep === 1);
+      el.nextBtn.textContent = state.currentStep === steps.length ? 'Finish ✓' : 'Next →';
+    }
+
+    function renderControls() {
+      const rows = filteredControls();
+      el.controlsTable.innerHTML = rows.map(c => {
+        const statusClass = c.status === 'Fail'
+          ? 'border-rose-700 bg-rose-950/40 text-rose-300'
+          : c.status === 'At Risk'
+          ? 'border-amber-700 bg-amber-950/40 text-amber-300'
+          : 'border-emerald-700 bg-emerald-950/40 text-emerald-300';
+
+        return `
+          <tr>
+            <td class="px-3 py-2">
+              <input aria-label="Include ${c.id}" data-action="scope" data-id="${c.id}" type="checkbox" ${c.inScope ? 'checked' : ''} class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500" />
+            </td>
+            <td class="px-3 py-2">
+              <p class="font-medium">${c.id}</p>
+              <p class="text-xs text-slate-400">${c.title}</p>
+            </td>
+            <td class="px-3 py-2 text-slate-300">${c.owner}</td>
+            <td class="px-3 py-2"><span class="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs">${c.severity}</span></td>
+            <td class="px-3 py-2">
+              <select data-action="status" data-id="${c.id}" class="rounded border px-2 py-1 text-xs ${statusClass}">
+                <option ${c.status === 'Fail' ? 'selected' : ''}>Fail</option>
+                <option ${c.status === 'At Risk' ? 'selected' : ''}>At Risk</option>
+                <option ${c.status === 'Pass' ? 'selected' : ''}>Pass</option>
+              </select>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function renderPlanner() {
+      const scoped = inScopeControls();
+      if (!scoped.length) {
+        el.planList.innerHTML = '<p class="rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-400">Select controls in step 2 to build a remediation plan.</p>';
+        return;
+      }
+
+      el.planList.innerHTML = scoped.map(c => `
+        <article class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold">${c.id} — ${c.title}</h3>
+            <span class="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs text-slate-300">${c.severity} • ${c.status}</span>
+          </div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-3">
+            <label class="text-xs text-slate-300">
+              Remediation owner
+              <input data-plan="owner" data-id="${c.id}" value="${escapeHtml(c.owner)}" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" />
+            </label>
+            <label class="text-xs text-slate-300">
+              Due date
+              <input data-plan="dueDate" data-id="${c.id}" type="date" value="${c.dueDate}" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" />
+            </label>
+            <label class="text-xs text-slate-300">
+              Evidence reference
+              <input data-plan="evidence" data-id="${c.id}" value="${escapeHtml(c.evidence)}" placeholder="Ticket / URL" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" />
+            </label>
+            <label class="text-xs text-slate-300 sm:col-span-3">
+              Remediation notes
+              <textarea data-plan="plan" data-id="${c.id}" rows="2" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm" placeholder="Describe remediation activity">${escapeHtml(c.plan)}</textarea>
+            </label>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderSummary() {
+      field.summaryFramework.textContent = state.form.framework || '—';
+      field.summaryUnit.textContent = state.form.businessUnit || '—';
+      field.summaryApprover.textContent = state.form.primaryApprover || '—';
+      field.summaryRisk.textContent = `${riskScore()} / 40`;
+
+      if (criticalBlockers().length) {
+        setBanner('Policy blocker: Critical failed controls require evidence references before approval.');
+      } else {
+        setBanner('No critical blockers currently detected.', 'ok');
+      }
+    }
+
+    function renderAudit() {
+      el.auditTrail.innerHTML = state.audit.slice().reverse().map(item => `<li class="rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5">${item}</li>`).join('');
+    }
+
+    function renderMetrics() {
+      el.metricScope.textContent = inScopeControls().length;
+      el.metricOpen.textContent = openFindings().length;
+      el.metricBlockers.textContent = criticalBlockers().length;
+      el.metricState.textContent = state.workflow;
+    }
+
+    function renderSteps() {
+      document.querySelectorAll('.wizard-step').forEach(sec => {
+        sec.classList.toggle('hidden', Number(sec.dataset.step) !== state.currentStep);
+      });
+      renderStepper();
+      renderMetrics();
+
+      if (state.currentStep === 2) renderControls();
+      if (state.currentStep === 3) renderPlanner();
+      if (state.currentStep === 4) renderSummary();
+    }
+
+    function escapeHtml(value = '') {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function syncFormState() {
+      state.form.framework = field.framework.value;
+      state.form.businessUnit = field.businessUnit.value.trim();
+      state.form.windowStart = field.windowStart.value;
+      state.form.windowEnd = field.windowEnd.value;
+      state.form.primaryApprover = field.primaryApprover.value;
+      state.form.scopeNotes = field.scopeNotes.value.trim();
+    }
+
+    function validateStep(step = state.currentStep) {
+      syncFormState();
+
+      if (step === 1) {
+        if (!state.form.framework || !state.form.businessUnit || !state.form.windowStart || !state.form.windowEnd || !state.form.primaryApprover) {
+          return 'Please complete framework, business unit, audit window, and approver.';
+        }
+        if (state.form.windowEnd < state.form.windowStart) {
+          return 'Audit window end date must be after the start date.';
+        }
+      }
+
+      if (step === 2) {
+        if (!inScopeControls().length) return 'Add at least one control to scope before continuing.';
+      }
+
+      if (step >= 3) {
+        const failing = inScopeControls().filter(c => c.status !== 'Pass');
+        for (const c of failing) {
+          if (!c.owner.trim() || !c.dueDate || !c.evidence.trim()) {
+            return `Complete owner, due date, and evidence for ${c.id}.`;
+          }
+          if (c.severity === 'Critical' && c.status === 'Fail') {
+            const due = new Date(`${c.dueDate}T00:00:00Z`);
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            const deltaDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+            if (deltaDays > 14) {
+              return `Policy violation: ${c.id} is critical and must be due within 14 days.`;
+            }
+          }
+        }
+      }
+
+      if (step === 4) {
+        if (!field.attestation.checked) {
+          return 'Attestation is required before submission.';
+        }
+      }
+
+      return '';
+    }
+
+    function nextStep() {
+      const error = validateStep();
+      if (error) {
+        setBanner(error);
+        return;
+      }
+      setBanner('');
+
+      if (state.currentStep < steps.length) {
+        state.currentStep += 1;
+        renderSteps();
+      } else {
+        setBanner('Wizard complete. Use submission actions to progress workflow.', 'ok');
+      }
+    }
+
+    function prevStep() {
+      if (state.currentStep === 1) return;
+      state.currentStep -= 1;
+      setBanner('');
+      renderSteps();
+    }
+
+    function saveDraft() {
+      syncFormState();
+      addAudit('Saved draft updates');
+      setBanner('Draft saved.', 'ok');
+    }
+
+    function updateWorkflow(action) {
+      const error = validateStep(4);
+      if (error) {
+        el.submissionError.textContent = error;
+        el.submissionError.classList.remove('hidden');
+        return;
+      }
+      el.submissionError.classList.add('hidden');
+
+      if (action === 'submit') {
+        state.workflow = 'In Legal Review';
+        addAudit('Submitted remediation plan for legal review');
+        setBanner('Plan submitted for legal review.', 'ok');
+      }
+
+      if (action === 'approve') {
+        if (state.role !== 'Legal Counsel' && state.role !== 'CISO') {
+          setBanner('Only Legal Counsel or CISO can approve the plan.');
+          return;
+        }
+        if (state.form.primaryApprover === 'Legal Counsel' && state.role !== 'Legal Counsel') {
+          setBanner('Primary approver is Legal Counsel. Switch role to finalize approval.');
+          return;
+        }
+        state.workflow = 'Approved';
+        addAudit('Approved remediation plan');
+        setBanner('Remediation plan approved.', 'ok');
+      }
+
+      if (action === 'changes') {
+        state.workflow = 'Changes Requested';
+        addAudit('Requested changes and reopened remediation tasks');
+        setBanner('Changes requested. Control owners must update plans.', 'ok');
+      }
+
+      renderMetrics();
+    }
+
+    function exportCsv() {
+      const header = ['id', 'title', 'owner', 'severity', 'status', 'dueDate', 'evidence', 'plan'];
+      const lines = [header.join(',')];
+      inScopeControls().forEach(c => {
+        const row = [c.id, c.title, c.owner, c.severity, c.status, c.dueDate, c.evidence, c.plan]
+          .map(v => `"${String(v).replaceAll('"', '""')}"`)
+          .join(',');
+        lines.push(row);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `compliance-remediation-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      addAudit('Exported remediation CSV');
+    }
+
+    field.framework.addEventListener('change', syncFormState);
+    field.businessUnit.addEventListener('input', syncFormState);
+    field.windowStart.addEventListener('change', syncFormState);
+    field.windowEnd.addEventListener('change', syncFormState);
+    field.primaryApprover.addEventListener('change', syncFormState);
+    field.scopeNotes.addEventListener('input', syncFormState);
+
+    field.searchInput.addEventListener('input', e => {
+      state.search = e.target.value;
+      renderControls();
+    });
+
+    field.severityFilter.addEventListener('change', e => {
+      state.severity = e.target.value;
+      renderControls();
+    });
+
+    field.sortBy.addEventListener('change', e => {
+      state.sortBy = e.target.value;
+      renderControls();
+    });
+
+    el.controlsTable.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      if (!id) return;
+      const control = state.controls.find(c => c.id === id);
+      if (!control) return;
+
+      if (e.target.dataset.action === 'scope') {
+        control.inScope = e.target.checked;
+        addAudit(`${control.id} ${control.inScope ? 'added to' : 'removed from'} scope`);
+      }
+
+      if (e.target.dataset.action === 'status') {
+        control.status = e.target.value;
+        addAudit(`${control.id} status set to ${control.status}`);
+      }
+
+      renderControls();
+      renderMetrics();
+    });
+
+    el.planList.addEventListener('input', e => {
+      const id = e.target.dataset.id;
+      const key = e.target.dataset.plan;
+      if (!id || !key) return;
+      const control = state.controls.find(c => c.id === id);
+      if (!control) return;
+      control[key] = e.target.value;
+    });
+
+    el.planList.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      const key = e.target.dataset.plan;
+      if (!id || !key) return;
+      const control = state.controls.find(c => c.id === id);
+      if (!control) return;
+      addAudit(`${control.id} remediation ${key} updated`);
+      renderMetrics();
+    });
+
+    el.roleView.addEventListener('change', e => {
+      state.role = e.target.value;
+      addAudit(`Role switched to ${state.role}`);
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', exportCsv);
+    document.getElementById('submitReview').addEventListener('click', () => updateWorkflow('submit'));
+    document.getElementById('approvePlan').addEventListener('click', () => updateWorkflow('approve'));
+    document.getElementById('requestChanges').addEventListener('click', () => updateWorkflow('changes'));
+
+    el.prevBtn.addEventListener('click', prevStep);
+    el.nextBtn.addEventListener('click', nextStep);
+    el.saveDraft.addEventListener('click', saveDraft);
+
+    document.addEventListener('keydown', e => {
+      if (e.altKey && e.key === 'ArrowRight') nextStep();
+      if (e.altKey && e.key === 'ArrowLeft') prevStep();
+    });
+
+    renderAudit();
+    renderSteps();
+  </script>
+</body>
+</html>

@@ -1145,5 +1145,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-24",
+    "day": 53,
+    "slug": "2026-03-24-compliance-remediation-wizard",
+    "name": "Compliance Checklist Remediation Wizard",
+    "description": "Wizard-based legal workspace for compliance findings with policy validation, remediation ownership, approvals, and audit-ready exports.",
+    "category": "Legal",
+    "pattern": "Wizard",
+    "tags": [
+      "compliance checklist",
+      "legal",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
