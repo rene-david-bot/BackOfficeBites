@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service Ticket Escalation Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.22em] text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-semibold mt-2">Service Ticket Escalation Timeline</h1>
+    <p class="text-slate-400 mt-2">Sales Ops desk for high-value service escalations with SLA risk scoring, approval gating, and audit-ready history.</p>
+
+    <section class="mt-6 bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5">
+      <div class="flex flex-wrap gap-3">
+        <label class="flex-1 min-w-[220px]">
+          <span class="block text-xs text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Ticket, account, owner..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+        <label class="min-w-[160px]">
+          <span class="block text-xs text-slate-400 mb-1">Queue</span>
+          <select id="queueFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All queues</option>
+            <option value="Enterprise">Enterprise</option>
+            <option value="Mid-Market">Mid-Market</option>
+            <option value="SMB">SMB</option>
+          </select>
+        </label>
+        <label class="min-w-[160px]">
+          <span class="block text-xs text-slate-400 mb-1">Severity</span>
+          <select id="severityFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All severities</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
+        </label>
+        <label class="min-w-[210px]">
+          <span class="block text-xs text-slate-400 mb-1">Sort by</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="arrDesc">ARR impact (high → low)</option>
+            <option value="slaAsc">SLA hours left (low → high)</option>
+            <option value="ageDesc">Escalation age (high → low)</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button id="exportCsv" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm">Export filtered CSV</button>
+        <div class="text-sm text-slate-400" id="summaryText"></div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-5 gap-4">
+      <div class="xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-3">
+        <h2 class="text-sm uppercase tracking-wider text-slate-400 mb-3">Escalation queue</h2>
+        <div id="ticketList" class="space-y-2 max-h-[62vh] overflow-auto pr-1"></div>
+      </div>
+
+      <div class="xl:col-span-3 bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5">
+        <div id="detailEmpty" class="text-slate-400">Select a ticket to inspect timeline, process updates, and approvals.</div>
+        <div id="detailPanel" class="hidden">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="detailTitle" class="text-xl font-semibold"></h2>
+              <p id="detailMeta" class="text-sm text-slate-400 mt-1"></p>
+            </div>
+            <span id="stateBadge" class="px-3 py-1 rounded-full text-xs font-medium"></span>
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">ARR at risk</p><p id="detailArr" class="text-lg font-semibold"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">SLA hours left</p><p id="detailSla" class="text-lg font-semibold"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Escalation age</p><p id="detailAge" class="text-lg font-semibold"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Risk score</p><p id="detailRisk" class="text-lg font-semibold"></p></div>
+          </div>
+
+          <h3 class="text-sm uppercase tracking-wider text-slate-400 mt-6">Timeline</h3>
+          <ol id="timelineList" class="mt-3 space-y-2"></ol>
+
+          <div class="mt-6 grid md:grid-cols-2 gap-4">
+            <form id="updateForm" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+              <h4 class="font-medium">Post timeline update</h4>
+              <label class="block mt-3 text-sm">
+                <span class="text-slate-400">Status update *</span>
+                <textarea id="updateNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="Describe latest customer-impacting update"></textarea>
+              </label>
+              <label class="block mt-3 text-sm">
+                <span class="text-slate-400">Next step owner *</span>
+                <input id="nextOwner" type="text" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Escalation Manager" />
+              </label>
+              <p id="formError" class="text-rose-400 text-sm mt-2 hidden"></p>
+              <button type="submit" class="mt-3 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm">Save update</button>
+            </form>
+
+            <form id="approvalForm" class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+              <h4 class="font-medium">Goodwill credit approval</h4>
+              <label class="block mt-3 text-sm">
+                <span class="text-slate-400">Credit amount (€) *</span>
+                <input id="creditAmount" type="number" min="0" step="100" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block mt-3 text-sm">
+                <span class="text-slate-400">Approver *</span>
+                <select id="approver" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="">Select approver</option>
+                  <option>Regional VP Sales</option>
+                  <option>Global Support Director</option>
+                  <option>Finance Controller</option>
+                </select>
+              </label>
+              <p class="text-xs text-slate-500 mt-2">Policy: credits over €5,000 require VP/Director approval and move state to Awaiting Approval.</p>
+              <p id="approvalError" class="text-rose-400 text-sm mt-2 hidden"></p>
+              <button type="submit" class="mt-3 bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm">Submit approval request</button>
+            </form>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <button id="advanceState" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm">Advance state</button>
+            <button id="revertState" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Revert state</button>
+          </div>
+
+          <h3 class="text-sm uppercase tracking-wider text-slate-400 mt-6">Audit trail</h3>
+          <ul id="auditTrail" class="mt-3 space-y-2 text-sm"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const workflow = ["New", "Triage", "Escalated", "Awaiting Approval", "Resolved"];
+
+    const tickets = [
+      {
+        id: "ST-4482",
+        account: "NordCom Logistics",
+        owner: "Mia Hoffmann",
+        queue: "Enterprise",
+        severity: "P1",
+        arrRisk: 420000,
+        slaHoursLeft: 6,
+        ageHours: 31,
+        state: "Escalated",
+        risk: 87,
+        timeline: [
+          { at: "2026-03-25 06:20", event: "Escalation opened after repeated API timeout incidents." },
+          { at: "2026-03-25 07:05", event: "SEV-2 bridge started, workaround distributed." },
+          { at: "2026-03-25 08:40", event: "Customer requested goodwill credit for missed SLA." }
+        ],
+        audit: ["06:20 — Ticket created by NOC bot", "07:08 — Routed to Enterprise queue by M. Hoffmann"]
+      },
+      {
+        id: "ST-4491",
+        account: "BluePeak Medical",
+        owner: "Jonas Kühn",
+        queue: "Mid-Market",
+        severity: "P2",
+        arrRisk: 185000,
+        slaHoursLeft: 14,
+        ageHours: 19,
+        state: "Triage",
+        risk: 61,
+        timeline: [
+          { at: "2026-03-24 14:10", event: "Patient document export stuck in processing state." },
+          { at: "2026-03-24 17:45", event: "Logs isolated to queue saturation on EU cluster." }
+        ],
+        audit: ["14:12 — Ticket created by CSM desk"]
+      },
+      {
+        id: "ST-4497",
+        account: "Artemis Retail Group",
+        owner: "Lea Stein",
+        queue: "SMB",
+        severity: "P3",
+        arrRisk: 62000,
+        slaHoursLeft: 27,
+        ageHours: 10,
+        state: "New",
+        risk: 34,
+        timeline: [
+          { at: "2026-03-25 00:32", event: "Incorrect tax display in invoice PDFs for one region." }
+        ],
+        audit: ["00:33 — Ticket created via portal"]
+      },
+      {
+        id: "ST-4502",
+        account: "Solis Energy Services",
+        owner: "Mia Hoffmann",
+        queue: "Enterprise",
+        severity: "P1",
+        arrRisk: 510000,
+        slaHoursLeft: 4,
+        ageHours: 42,
+        state: "Awaiting Approval",
+        risk: 93,
+        timeline: [
+          { at: "2026-03-24 03:02", event: "Critical outage in scheduling API." },
+          { at: "2026-03-24 04:11", event: "Interim fix restored 80% throughput." },
+          { at: "2026-03-24 11:20", event: "€8,500 service credit requested by account team." }
+        ],
+        audit: ["11:22 — Approval requested from Global Support Director", "13:10 — Finance requested root-cause attachment"]
+      }
+    ];
+
+    const searchInput = document.getElementById("searchInput");
+    const queueFilter = document.getElementById("queueFilter");
+    const severityFilter = document.getElementById("severityFilter");
+    const sortBy = document.getElementById("sortBy");
+    const ticketList = document.getElementById("ticketList");
+    const summaryText = document.getElementById("summaryText");
+
+    const detailEmpty = document.getElementById("detailEmpty");
+    const detailPanel = document.getElementById("detailPanel");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailMeta = document.getElementById("detailMeta");
+    const detailArr = document.getElementById("detailArr");
+    const detailSla = document.getElementById("detailSla");
+    const detailAge = document.getElementById("detailAge");
+    const detailRisk = document.getElementById("detailRisk");
+    const stateBadge = document.getElementById("stateBadge");
+    const timelineList = document.getElementById("timelineList");
+    const auditTrail = document.getElementById("auditTrail");
+
+    const updateForm = document.getElementById("updateForm");
+    const updateNote = document.getElementById("updateNote");
+    const nextOwner = document.getElementById("nextOwner");
+    const formError = document.getElementById("formError");
+
+    const approvalForm = document.getElementById("approvalForm");
+    const creditAmount = document.getElementById("creditAmount");
+    const approver = document.getElementById("approver");
+    const approvalError = document.getElementById("approvalError");
+
+    const advanceState = document.getElementById("advanceState");
+    const revertState = document.getElementById("revertState");
+
+    let selectedTicketId = null;
+
+    const euro = (n) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+    function filteredTickets() {
+      const q = searchInput.value.trim().toLowerCase();
+      let list = tickets.filter((t) => {
+        const matchesSearch = !q || `${t.id} ${t.account} ${t.owner}`.toLowerCase().includes(q);
+        const matchesQueue = queueFilter.value === "all" || t.queue === queueFilter.value;
+        const matchesSeverity = severityFilter.value === "all" || t.severity === severityFilter.value;
+        return matchesSearch && matchesQueue && matchesSeverity;
+      });
+
+      list.sort((a, b) => {
+        if (sortBy.value === "slaAsc") return a.slaHoursLeft - b.slaHoursLeft;
+        if (sortBy.value === "ageDesc") return b.ageHours - a.ageHours;
+        return b.arrRisk - a.arrRisk;
+      });
+
+      return list;
+    }
+
+    function stateBadgeClass(state) {
+      if (state === "Resolved") return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      if (state === "Awaiting Approval") return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      if (state === "Escalated") return "bg-rose-500/20 text-rose-300 border border-rose-500/30";
+      return "bg-slate-700 text-slate-200 border border-slate-600";
+    }
+
+    function renderList() {
+      const list = filteredTickets();
+      ticketList.innerHTML = "";
+
+      if (!list.length) {
+        ticketList.innerHTML = '<p class="text-sm text-slate-500">No tickets match current filters.</p>';
+        summaryText.textContent = "0 tickets in scope";
+        return;
+      }
+
+      const totalRisk = list.reduce((sum, t) => sum + t.arrRisk, 0);
+      summaryText.textContent = `${list.length} tickets • ${euro(totalRisk)} ARR in view`;
+
+      list.forEach((t) => {
+        const btn = document.createElement("button");
+        btn.className = `w-full text-left rounded-xl border p-3 transition ${selectedTicketId === t.id ? "border-emerald-500 bg-emerald-500/10" : "border-slate-800 bg-slate-950 hover:border-slate-600"}`;
+        btn.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">${t.id}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full ${stateBadgeClass(t.state)}">${t.state}</span>
+          </div>
+          <p class="text-sm mt-1">${t.account}</p>
+          <p class="text-xs text-slate-400 mt-1">${t.queue} • ${t.severity} • Owner: ${t.owner}</p>
+          <div class="mt-2 flex justify-between text-xs text-slate-400">
+            <span>SLA: ${t.slaHoursLeft}h</span>
+            <span>Risk: ${euro(t.arrRisk)}</span>
+          </div>
+        `;
+        btn.addEventListener("click", () => {
+          selectedTicketId = t.id;
+          renderList();
+          renderDetail();
+        });
+        ticketList.appendChild(btn);
+      });
+
+      if (!selectedTicketId || !tickets.some((t) => t.id === selectedTicketId)) {
+        selectedTicketId = list[0].id;
+        renderList();
+        renderDetail();
+      }
+    }
+
+    function renderDetail() {
+      const ticket = tickets.find((t) => t.id === selectedTicketId);
+      if (!ticket) {
+        detailEmpty.classList.remove("hidden");
+        detailPanel.classList.add("hidden");
+        return;
+      }
+
+      detailEmpty.classList.add("hidden");
+      detailPanel.classList.remove("hidden");
+
+      detailTitle.textContent = `${ticket.id} — ${ticket.account}`;
+      detailMeta.textContent = `${ticket.queue} queue • ${ticket.severity} severity • Owner: ${ticket.owner}`;
+      detailArr.textContent = euro(ticket.arrRisk);
+      detailSla.textContent = `${ticket.slaHoursLeft} h`;
+      detailAge.textContent = `${ticket.ageHours} h`;
+      detailRisk.textContent = `${ticket.risk}/100`;
+      stateBadge.textContent = ticket.state;
+      stateBadge.className = `px-3 py-1 rounded-full text-xs font-medium ${stateBadgeClass(ticket.state)}`;
+
+      timelineList.innerHTML = "";
+      ticket.timeline.slice().reverse().forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "border border-slate-800 rounded-lg p-3 bg-slate-950";
+        li.innerHTML = `<p class="text-xs text-slate-500">${item.at}</p><p class="mt-1 text-sm">${item.event}</p>`;
+        timelineList.appendChild(li);
+      });
+
+      auditTrail.innerHTML = "";
+      ticket.audit.slice().reverse().forEach((entry) => {
+        const li = document.createElement("li");
+        li.className = "border border-slate-800 bg-slate-950 rounded-lg px-3 py-2";
+        li.textContent = entry;
+        auditTrail.appendChild(li);
+      });
+    }
+
+    function nowStamp() {
+      const d = new Date();
+      const pad = (x) => String(x).padStart(2, "0");
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+
+    updateForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ticket = tickets.find((t) => t.id === selectedTicketId);
+      const note = updateNote.value.trim();
+      const owner = nextOwner.value.trim();
+
+      if (!ticket || note.length < 12 || owner.length < 3) {
+        formError.textContent = "Provide a clear update (min 12 chars) and a valid next-step owner.";
+        formError.classList.remove("hidden");
+        return;
+      }
+
+      formError.classList.add("hidden");
+      ticket.timeline.push({ at: nowStamp(), event: `${note} Next owner: ${owner}.` });
+      ticket.audit.push(`${nowStamp().slice(11)} — Timeline update saved by Sales Ops`);
+      ticket.owner = owner;
+      updateNote.value = "";
+      nextOwner.value = "";
+      renderList();
+      renderDetail();
+    });
+
+    approvalForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ticket = tickets.find((t) => t.id === selectedTicketId);
+      const amount = Number(creditAmount.value);
+      const selectedApprover = approver.value;
+
+      if (!ticket || !selectedApprover || Number.isNaN(amount) || amount <= 0) {
+        approvalError.textContent = "Enter a valid credit amount and select an approver.";
+        approvalError.classList.remove("hidden");
+        return;
+      }
+
+      if (amount > 5000 && !["Regional VP Sales", "Global Support Director"].includes(selectedApprover)) {
+        approvalError.textContent = "Policy violation: amounts above €5,000 require VP or Support Director approval.";
+        approvalError.classList.remove("hidden");
+        return;
+      }
+
+      approvalError.classList.add("hidden");
+      ticket.timeline.push({ at: nowStamp(), event: `Approval requested: ${euro(amount)} goodwill credit (${selectedApprover}).` });
+      ticket.audit.push(`${nowStamp().slice(11)} — Approval workflow triggered for ${euro(amount)} by Sales Ops`);
+      ticket.state = "Awaiting Approval";
+      creditAmount.value = "";
+      approver.value = "";
+      renderList();
+      renderDetail();
+    });
+
+    function transition(direction) {
+      const ticket = tickets.find((t) => t.id === selectedTicketId);
+      if (!ticket) return;
+      const idx = workflow.indexOf(ticket.state);
+      const nextIdx = idx + direction;
+      if (nextIdx < 0 || nextIdx >= workflow.length) return;
+
+      const prev = ticket.state;
+      ticket.state = workflow[nextIdx];
+      ticket.audit.push(`${nowStamp().slice(11)} — State changed ${prev} → ${ticket.state}`);
+      ticket.timeline.push({ at: nowStamp(), event: `Workflow transition: ${prev} → ${ticket.state}.` });
+      renderList();
+      renderDetail();
+    }
+
+    advanceState.addEventListener("click", () => transition(1));
+    revertState.addEventListener("click", () => transition(-1));
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      const rows = filteredTickets().map((t) => ({
+        id: t.id,
+        account: t.account,
+        queue: t.queue,
+        severity: t.severity,
+        owner: t.owner,
+        state: t.state,
+        arr_risk_eur: t.arrRisk,
+        sla_hours_left: t.slaHoursLeft,
+        escalation_age_hours: t.ageHours,
+        risk_score: t.risk
+      }));
+
+      const headers = Object.keys(rows[0] || { id: "", account: "" });
+      const csv = [headers.join(",")]
+        .concat(rows.map((row) => headers.map((h) => `"${String(row[h]).replaceAll('"', '""')}"`).join(",")))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "service-ticket-escalations.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    [searchInput, queueFilter, severityFilter, sortBy].forEach((el) => {
+      el.addEventListener("input", renderList);
+      el.addEventListener("change", renderList);
+    });
+
+    renderList();
+    renderDetail();
+  </script>
+</body>
+</html>

@@ -1168,5 +1168,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-25",
+    "day": 54,
+    "slug": "2026-03-25-service-ticket-escalation-timeline",
+    "name": "Service Ticket Escalation Timeline",
+    "description": "Timeline-first sales workspace for high-risk service escalations with SLA triage, approval-gated concessions, and audit-ready tracking.",
+    "category": "Sales",
+    "pattern": "Timeline",
+    "tags": [
+      "service tickets",
+      "sales",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
