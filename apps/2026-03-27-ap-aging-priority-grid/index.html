@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AP Aging Priority Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-[0.22em] text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-semibold mt-2">AP Aging Priority Grid</h1>
+    <p class="text-slate-400 mt-2">Finance command desk to triage overdue payables, enforce holdback policy, and push audit-ready approvals.</p>
+
+    <section class="mt-6 bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="xl:col-span-2">
+          <span class="block text-xs text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Invoice, vendor, owner..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+        <label>
+          <span class="block text-xs text-slate-400 mb-1">Region</span>
+          <select id="regionFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All regions</option>
+            <option value="DACH">DACH</option>
+            <option value="EMEA">EMEA</option>
+            <option value="US">US</option>
+            <option value="APAC">APAC</option>
+          </select>
+        </label>
+        <label>
+          <span class="block text-xs text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All statuses</option>
+            <option value="Review">Review</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Approval Pending">Approval Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Scheduled">Scheduled</option>
+          </select>
+        </label>
+        <label>
+          <span class="block text-xs text-slate-400 mb-1">Role view</span>
+          <select id="roleView" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="AP Analyst">AP Analyst</option>
+            <option value="Finance Controller">Finance Controller</option>
+          </select>
+        </label>
+        <label>
+          <span class="block text-xs text-slate-400 mb-1">Sort by</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="riskDesc">Risk score (high → low)</option>
+            <option value="overdueDesc">Days overdue (high → low)</option>
+            <option value="amountDesc">Amount (high → low)</option>
+            <option value="dueAsc">Due date (soonest first)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button id="exportCsv" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm">Export filtered CSV</button>
+        <p id="summaryText" class="text-sm text-slate-400"></p>
+      </div>
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-3 overflow-hidden">
+        <div class="overflow-auto">
+          <table class="w-full text-sm" aria-label="AP aging table">
+            <thead class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="py-2 px-2">Invoice</th>
+                <th class="py-2 px-2">Vendor</th>
+                <th class="py-2 px-2">Amount</th>
+                <th class="py-2 px-2">Due</th>
+                <th class="py-2 px-2">Overdue</th>
+                <th class="py-2 px-2">Risk</th>
+                <th class="py-2 px-2">Status</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 md:p-5">
+        <div id="emptyState" class="text-sm text-slate-400">Select an invoice row to review policy checks, approvals, and audit events.</div>
+        <div id="detailPanel" class="hidden">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <h2 id="detailTitle" class="text-lg font-semibold"></h2>
+              <p id="detailMeta" class="text-xs text-slate-400 mt-1"></p>
+            </div>
+            <span id="statusBadge" class="text-xs px-2 py-1 rounded-full border"></span>
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><p class="text-slate-400 text-xs">Amount</p><p id="detailAmount" class="font-medium"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><p class="text-slate-400 text-xs">Days overdue</p><p id="detailOverdue" class="font-medium"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><p class="text-slate-400 text-xs">Risk score</p><p id="detailRisk" class="font-medium"></p></div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><p class="text-slate-400 text-xs">Payment owner</p><p id="detailOwner" class="font-medium"></p></div>
+          </div>
+
+          <form id="actionForm" class="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-3">
+            <h3 class="text-sm font-medium">Holdback / approval action</h3>
+            <label class="block mt-2 text-sm">
+              <span class="text-slate-400 text-xs">Action *</span>
+              <select id="actionSelect" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                <option value="">Select action</option>
+                <option value="mark-review">Mark for review</option>
+                <option value="apply-hold">Apply payment hold</option>
+                <option value="request-approval">Request controller approval</option>
+                <option value="approve-payment">Approve payment</option>
+                <option value="schedule-payment">Schedule payment</option>
+              </select>
+            </label>
+            <label class="block mt-2 text-sm">
+              <span class="text-slate-400 text-xs">Reason note *</span>
+              <textarea id="reasonInput" rows="3" placeholder="What changed and why?" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+            </label>
+            <p class="text-xs text-slate-500 mt-2">Policy: invoices over €50k require Finance Controller approval before schedule. Blocked invoices cannot be approved until missing documents are resolved.</p>
+            <p id="formError" class="hidden text-rose-400 text-sm mt-2"></p>
+            <button type="submit" class="mt-3 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm">Apply action</button>
+          </form>
+
+          <h3 class="text-xs uppercase tracking-wide text-slate-400 mt-4">Audit trail</h3>
+          <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const invoices = [
+      {
+        id: "AP-90112",
+        vendor: "Helios Components GmbH",
+        region: "DACH",
+        owner: "Nina Krause",
+        amount: 68400,
+        dueDate: "2026-03-08",
+        daysOverdue: 19,
+        risk: 91,
+        status: "Approval Pending",
+        holdReason: "Missing signed goods receipt",
+        docsMissing: true,
+        audit: [
+          "2026-03-26 08:20 — Holdback applied due to missing GRN",
+          "2026-03-26 09:05 — Approval requested by AP analyst"
+        ]
+      },
+      {
+        id: "AP-90135",
+        vendor: "BlueTransit Logistics",
+        region: "EMEA",
+        owner: "Marta Silva",
+        amount: 22800,
+        dueDate: "2026-03-14",
+        daysOverdue: 13,
+        risk: 74,
+        status: "On Hold",
+        holdReason: "Rate-card mismatch",
+        docsMissing: false,
+        audit: [
+          "2026-03-24 11:14 — Invoice moved to hold for rate validation"
+        ]
+      },
+      {
+        id: "AP-90148",
+        vendor: "Quantum Cooling Inc.",
+        region: "US",
+        owner: "Alex Nguyen",
+        amount: 9720,
+        dueDate: "2026-03-23",
+        daysOverdue: 4,
+        risk: 46,
+        status: "Review",
+        holdReason: "",
+        docsMissing: false,
+        audit: [
+          "2026-03-25 15:40 — Added to AP aging queue"
+        ]
+      },
+      {
+        id: "AP-90157",
+        vendor: "Asahi Plant Systems",
+        region: "APAC",
+        owner: "Keiko Tanaka",
+        amount: 44100,
+        dueDate: "2026-03-11",
+        daysOverdue: 16,
+        risk: 79,
+        status: "Approved",
+        holdReason: "",
+        docsMissing: false,
+        audit: [
+          "2026-03-24 07:32 — Controller approved payment",
+          "2026-03-24 07:40 — Awaiting cash run"
+        ]
+      },
+      {
+        id: "AP-90163",
+        vendor: "Northvale Security Ltd.",
+        region: "EMEA",
+        owner: "Marta Silva",
+        amount: 120500,
+        dueDate: "2026-03-05",
+        daysOverdue: 22,
+        risk: 95,
+        status: "On Hold",
+        holdReason: "PO not aligned to scope change",
+        docsMissing: true,
+        audit: [
+          "2026-03-23 12:11 — Holdback policy triggered for scope mismatch"
+        ]
+      },
+      {
+        id: "AP-90170",
+        vendor: "Orion Fleet Tech",
+        region: "DACH",
+        owner: "Nina Krause",
+        amount: 18300,
+        dueDate: "2026-03-20",
+        daysOverdue: 7,
+        risk: 58,
+        status: "Scheduled",
+        holdReason: "",
+        docsMissing: false,
+        audit: [
+          "2026-03-26 06:30 — Payment scheduled for next run"
+        ]
+      }
+    ];
+
+    const searchInput = document.getElementById("searchInput");
+    const regionFilter = document.getElementById("regionFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const roleView = document.getElementById("roleView");
+    const sortBy = document.getElementById("sortBy");
+    const summaryText = document.getElementById("summaryText");
+    const gridBody = document.getElementById("gridBody");
+
+    const emptyState = document.getElementById("emptyState");
+    const detailPanel = document.getElementById("detailPanel");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailMeta = document.getElementById("detailMeta");
+    const detailAmount = document.getElementById("detailAmount");
+    const detailOverdue = document.getElementById("detailOverdue");
+    const detailRisk = document.getElementById("detailRisk");
+    const detailOwner = document.getElementById("detailOwner");
+    const statusBadge = document.getElementById("statusBadge");
+    const auditTrail = document.getElementById("auditTrail");
+
+    const actionForm = document.getElementById("actionForm");
+    const actionSelect = document.getElementById("actionSelect");
+    const reasonInput = document.getElementById("reasonInput");
+    const formError = document.getElementById("formError");
+
+    let selectedId = null;
+
+    function euro(value) {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function stamp() {
+      const d = new Date();
+      const p = (v) => String(v).padStart(2, "0");
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+    }
+
+    function badgeClass(status) {
+      if (status === "Scheduled") return "text-emerald-300 border-emerald-500/40 bg-emerald-500/10";
+      if (status === "Approved") return "text-cyan-300 border-cyan-500/40 bg-cyan-500/10";
+      if (status === "Approval Pending") return "text-amber-300 border-amber-500/40 bg-amber-500/10";
+      if (status === "On Hold") return "text-rose-300 border-rose-500/40 bg-rose-500/10";
+      return "text-slate-300 border-slate-600 bg-slate-700/30";
+    }
+
+    function filteredRows() {
+      const q = searchInput.value.trim().toLowerCase();
+      let rows = invoices.filter((inv) => {
+        const matchesSearch = !q || `${inv.id} ${inv.vendor} ${inv.owner}`.toLowerCase().includes(q);
+        const matchesRegion = regionFilter.value === "all" || inv.region === regionFilter.value;
+        const matchesStatus = statusFilter.value === "all" || inv.status === statusFilter.value;
+        return matchesSearch && matchesRegion && matchesStatus;
+      });
+
+      rows.sort((a, b) => {
+        if (sortBy.value === "overdueDesc") return b.daysOverdue - a.daysOverdue;
+        if (sortBy.value === "amountDesc") return b.amount - a.amount;
+        if (sortBy.value === "dueAsc") return new Date(a.dueDate) - new Date(b.dueDate);
+        return b.risk - a.risk;
+      });
+
+      return rows;
+    }
+
+    function renderGrid() {
+      const rows = filteredRows();
+      gridBody.innerHTML = "";
+
+      if (!rows.length) {
+        gridBody.innerHTML = '<tr><td colspan="7" class="px-2 py-5 text-slate-500 text-sm">No invoices match this filter set.</td></tr>';
+        summaryText.textContent = "0 invoices in scope";
+        selectedId = null;
+        renderDetail();
+        return;
+      }
+
+      const total = rows.reduce((sum, item) => sum + item.amount, 0);
+      const atRisk = rows.filter((r) => r.status === "On Hold" || r.status === "Approval Pending").length;
+      summaryText.textContent = `${rows.length} invoices • ${euro(total)} in view • ${atRisk} blocked`;
+
+      rows.forEach((inv) => {
+        const tr = document.createElement("tr");
+        const active = selectedId === inv.id;
+        tr.className = `border-b border-slate-800/70 hover:bg-slate-800/40 ${active ? "bg-emerald-500/10" : ""}`;
+        tr.innerHTML = `
+          <td class="px-2 py-3 font-medium">${inv.id}</td>
+          <td class="px-2 py-3">${inv.vendor}</td>
+          <td class="px-2 py-3">${euro(inv.amount)}</td>
+          <td class="px-2 py-3 text-slate-300">${inv.dueDate}</td>
+          <td class="px-2 py-3">${inv.daysOverdue}d</td>
+          <td class="px-2 py-3">${inv.risk}</td>
+          <td class="px-2 py-3"><span class="text-xs px-2 py-1 rounded-full border ${badgeClass(inv.status)}">${inv.status}</span></td>
+        `;
+        tr.tabIndex = 0;
+        tr.addEventListener("click", () => {
+          selectedId = inv.id;
+          renderGrid();
+          renderDetail();
+        });
+        tr.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectedId = inv.id;
+            renderGrid();
+            renderDetail();
+          }
+        });
+        gridBody.appendChild(tr);
+      });
+
+      if (!selectedId || !rows.some((r) => r.id === selectedId)) {
+        selectedId = rows[0].id;
+      }
+      renderDetail();
+    }
+
+    function renderDetail() {
+      const inv = invoices.find((item) => item.id === selectedId);
+      if (!inv) {
+        emptyState.classList.remove("hidden");
+        detailPanel.classList.add("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      detailPanel.classList.remove("hidden");
+
+      detailTitle.textContent = `${inv.id} — ${inv.vendor}`;
+      detailMeta.textContent = `${inv.region} • Due ${inv.dueDate} • Hold reason: ${inv.holdReason || "—"}`;
+      detailAmount.textContent = euro(inv.amount);
+      detailOverdue.textContent = `${inv.daysOverdue} days`;
+      detailRisk.textContent = `${inv.risk}/100`;
+      detailOwner.textContent = inv.owner;
+      statusBadge.textContent = inv.status;
+      statusBadge.className = `text-xs px-2 py-1 rounded-full border ${badgeClass(inv.status)}`;
+
+      auditTrail.innerHTML = "";
+      inv.audit.slice().reverse().forEach((entry) => {
+        const li = document.createElement("li");
+        li.className = "bg-slate-950 border border-slate-800 rounded-lg px-3 py-2";
+        li.textContent = entry;
+        auditTrail.appendChild(li);
+      });
+    }
+
+    function canApprove(inv, role) {
+      if (inv.docsMissing) return false;
+      if (inv.amount > 50000 && role !== "Finance Controller") return false;
+      return true;
+    }
+
+    actionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const inv = invoices.find((item) => item.id === selectedId);
+      const action = actionSelect.value;
+      const note = reasonInput.value.trim();
+      const role = roleView.value;
+
+      if (!inv || !action || note.length < 10) {
+        formError.textContent = "Select an action and provide a reason note with at least 10 characters.";
+        formError.classList.remove("hidden");
+        return;
+      }
+
+      if (action === "approve-payment" && !canApprove(inv, role)) {
+        formError.textContent = inv.docsMissing
+          ? "Policy violation: documents are missing. Resolve hold reason before approval."
+          : "Policy violation: invoices above €50k require Finance Controller role for approval.";
+        formError.classList.remove("hidden");
+        return;
+      }
+
+      if (action === "schedule-payment" && inv.status !== "Approved") {
+        formError.textContent = "Only approved invoices can be scheduled.";
+        formError.classList.remove("hidden");
+        return;
+      }
+
+      formError.classList.add("hidden");
+
+      if (action === "mark-review") inv.status = "Review";
+      if (action === "apply-hold") inv.status = "On Hold";
+      if (action === "request-approval") inv.status = "Approval Pending";
+      if (action === "approve-payment") {
+        inv.status = "Approved";
+        inv.docsMissing = false;
+      }
+      if (action === "schedule-payment") inv.status = "Scheduled";
+
+      const actionLabel = actionSelect.options[actionSelect.selectedIndex].text;
+      inv.audit.push(`${stamp()} — ${actionLabel} by ${role}. Note: ${note}`);
+      if (action === "apply-hold") {
+        inv.holdReason = note;
+      }
+
+      reasonInput.value = "";
+      actionSelect.value = "";
+      renderGrid();
+      renderDetail();
+    });
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      const rows = filteredRows();
+      const headers = ["invoice_id", "vendor", "region", "owner", "amount_eur", "due_date", "days_overdue", "risk_score", "status", "docs_missing"];
+      const data = rows.map((r) => [r.id, r.vendor, r.region, r.owner, r.amount, r.dueDate, r.daysOverdue, r.risk, r.status, r.docsMissing]);
+      const csv = [headers.join(",")].concat(data.map((line) => line.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ap-aging-priority-grid.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    [searchInput, regionFilter, statusFilter, roleView, sortBy].forEach((el) => {
+      el.addEventListener("input", renderGrid);
+      el.addEventListener("change", renderGrid);
+    });
+
+    renderGrid();
+  </script>
+</body>
+</html>

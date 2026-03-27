@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Service Ticket Escalation Timeline** — timeline-first sales workspace for SLA-risk escalations, approval-gated concessions, and audit-ready updates.
+**AP Aging Priority Grid** — finance data-grid workspace for overdue invoice triage with role-based approvals, holdback policy checks, and audit-ready state transitions.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -1191,5 +1191,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-27",
+    "day": 55,
+    "slug": "2026-03-27-ap-aging-priority-grid",
+    "name": "AP Aging Priority Grid",
+    "description": "Finance data-grid workspace for overdue invoice triage with role-based approvals, holdback policy checks, and audit-ready state transitions.",
+    "category": "Finance",
+    "pattern": "Data Grid",
+    "tags": [
+      "accounts payable",
+      "finance",
+      "data grid",
+      "role-based views",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "state machine",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
