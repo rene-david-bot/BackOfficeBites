@@ -1214,5 +1214,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-28",
+    "day": 56,
+    "slug": "2026-03-28-invoice-matching-dragboard",
+    "name": "Invoice Matching Dragboard",
+    "description": "Finance drag-and-drop workspace for three-way match exceptions with policy-gated approvals and audit-ready workflow transitions.",
+    "category": "Finance",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "invoice matching",
+      "finance",
+      "drag-and-drop",
+      "approval workflow",
+      "policy validation",
+      "state machine",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Matching Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold">Invoice Matching Dragboard</h1>
+        <p class="text-slate-400 mt-1">Drag-and-drop three-way match exceptions through policy-gated approval states with audit-ready traceability.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-slate-700 overflow-hidden w-fit" role="radiogroup" aria-label="Role selector">
+        <button data-role="AP Analyst" class="role-btn px-3 py-2 text-sm bg-emerald-600 text-white">AP Analyst</button>
+        <button data-role="AP Lead" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">AP Lead</button>
+        <button data-role="Finance Controller" class="role-btn px-3 py-2 text-sm bg-slate-900 text-slate-200">Finance Controller</button>
+      </div>
+    </div>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open exposure</p>
+        <p id="metricExposure" class="text-2xl font-semibold mt-1">€0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">High-risk exceptions</p>
+        <p id="metricHighRisk" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Pending approval</p>
+        <p id="metricPending" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy</p>
+        <p id="policyHint" class="text-sm text-slate-300 mt-1">AP Analyst cannot approve posting above €75,000 and variance >1.5% needs AP Lead review.</p>
+      </article>
+    </section>
+
+    <section class="mt-4 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <label class="text-sm md:col-span-2">
+          <span class="block text-slate-400 mb-1">Search invoice / supplier / PO</span>
+          <input id="search" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type to search..." />
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Risk</span>
+          <select id="riskFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by risk">
+            <option value="all">All risk levels</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Filter by status">
+            <option value="all">All statuses</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Sort</span>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Sort exceptions">
+            <option value="amount">Amount (high to low)</option>
+            <option value="variance">Variance (high to low)</option>
+            <option value="due">Due date (soonest first)</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="resetFilters" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">Reset filters</button>
+        <button id="exportCsv" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 2xl:grid-cols-4 gap-4">
+      <div id="board" class="2xl:col-span-3 grid grid-cols-1 xl:grid-cols-4 gap-4"></div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div>
+          <h2 class="font-semibold text-lg">Exception Details</h2>
+          <p class="text-slate-400 text-sm">Select an item to review three-way match details and audit history.</p>
+        </div>
+
+        <div id="selectedCard" class="text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-400">No exception selected.</div>
+
+        <label class="block text-sm">
+          <span class="text-slate-300">Audit note</span>
+          <textarea id="auditInput" rows="2" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Add decision rationale..."></textarea>
+        </label>
+        <button id="addAudit" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm">Append audit note</button>
+
+        <div>
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 text-sm space-y-2 max-h-52 overflow-auto"></ul>
+        </div>
+
+        <hr class="border-slate-800" />
+
+        <div>
+          <h3 class="font-semibold">New Match Exception</h3>
+          <p class="text-xs text-slate-400 mt-1">Validation checks run before creating the exception.</p>
+        </div>
+
+        <form id="newExceptionForm" class="space-y-3" novalidate>
+          <label class="block text-sm">
+            <span class="text-slate-300">Supplier</span>
+            <input id="supplierInput" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm">
+              <span class="text-slate-300">Invoice #</span>
+              <input id="invoiceInput" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">PO #</span>
+              <input id="poInput" type="text" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm">
+              <span class="text-slate-300">Amount (€)</span>
+              <input id="amountInput" type="number" min="500" max="250000" step="100" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Variance %</span>
+              <input id="varianceInput" type="number" min="0" max="10" step="0.1" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm">
+              <span class="text-slate-300">Due date</span>
+              <input id="dueInput" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" required />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Risk</span>
+              <select id="riskInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+            </label>
+          </div>
+          <label class="flex items-center gap-2 text-sm text-slate-300">
+            <input id="docsInput" type="checkbox" class="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500" checked />
+            Supporting documents complete
+          </label>
+          <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+          <button type="submit" class="w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold">Create exception</button>
+        </form>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const lanes = ['Unmatched', 'Investigating', 'Ready for Approval', 'Approved for Posting'];
+
+    const roleLimits = {
+      'AP Analyst': 75000,
+      'AP Lead': 150000,
+      'Finance Controller': 250000
+    };
+
+    const initialExceptions = [
+      { id: 'IM-781', supplier: 'Nordic Components GmbH', invoice: 'INV-88412', po: 'PO-33291', grn: 'GRN-10223', amount: 18250, variance: 0.9, risk: 'Low', dueDate: '2026-03-31', owner: 'Paula Weiss', docsComplete: true, status: 'Investigating', reason: 'Quantity mismatch on line 3', audit: ['AP Analyst flagged quantity mismatch from goods receipt.'] },
+      { id: 'IM-782', supplier: 'Blue Harbor Logistics', invoice: 'INV-77210', po: 'PO-33304', grn: 'GRN-10229', amount: 94700, variance: 2.3, risk: 'High', dueDate: '2026-03-30', owner: 'Henrik Maas', docsComplete: true, status: 'Ready for Approval', reason: 'Freight surcharge exceeds contract rate', audit: ['AP Lead validated surcharge exception for contract review.'] },
+      { id: 'IM-783', supplier: 'Aquila Software Services', invoice: 'INV-12018', po: 'PO-33204', grn: 'GRN-10194', amount: 35600, variance: 3.7, risk: 'High', dueDate: '2026-04-02', owner: 'Nina Wagner', docsComplete: false, status: 'Unmatched', reason: 'Missing signed timesheet backup', audit: ['System check failed: support documents missing.'] },
+      { id: 'IM-784', supplier: 'Prime Office Tech', invoice: 'INV-66133', po: 'PO-33350', grn: 'GRN-10241', amount: 128400, variance: 1.1, risk: 'Medium', dueDate: '2026-04-05', owner: 'Luca Frei', docsComplete: true, status: 'Approved for Posting', reason: 'Price uplift approved by sourcing', audit: ['Finance Controller approved posting with sourcing memo attached.'] },
+      { id: 'IM-785', supplier: 'Terra Parts International', invoice: 'INV-93001', po: 'PO-33314', grn: 'GRN-10236', amount: 62400, variance: 1.8, risk: 'Medium', dueDate: '2026-03-29', owner: 'Elisa Franke', docsComplete: true, status: 'Investigating', reason: 'Tax code mismatch between PO and invoice', audit: ['Tax check opened by AP Analyst.'] },
+      { id: 'IM-786', supplier: 'Delta Plant Equipment', invoice: 'INV-74529', po: 'PO-33279', grn: 'GRN-10211', amount: 154900, variance: 0.6, risk: 'High', dueDate: '2026-04-01', owner: 'Mara Klein', docsComplete: true, status: 'Ready for Approval', reason: 'Early-payment discount requires exception', audit: ['AP Lead prepared discount exception packet.'] }
+    ];
+
+    let exceptions = structuredClone(initialExceptions);
+    let selectedId = null;
+    let currentRole = 'AP Analyst';
+
+    const boardEl = document.getElementById('board');
+    const auditTrailEl = document.getElementById('auditTrail');
+    const selectedCardEl = document.getElementById('selectedCard');
+    const searchEl = document.getElementById('search');
+    const riskFilterEl = document.getElementById('riskFilter');
+    const statusFilterEl = document.getElementById('statusFilter');
+    const sortByEl = document.getElementById('sortBy');
+    const formErrorEl = document.getElementById('formError');
+
+    function stamp() {
+      return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatEuro(amount) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+    }
+
+    function rolePolicyText() {
+      return `${currentRole} can approve posting up to ${formatEuro(roleLimits[currentRole])}. Variance >3% or missing docs blocks approval.`;
+    }
+
+    function cardBorder(risk) {
+      if (risk === 'High') return 'border-rose-700';
+      if (risk === 'Medium') return 'border-amber-700';
+      return 'border-slate-700';
+    }
+
+    function statusBadge(status) {
+      const map = {
+        'Unmatched': 'bg-slate-800 text-slate-200',
+        'Investigating': 'bg-sky-900/60 text-sky-200',
+        'Ready for Approval': 'bg-amber-900/60 text-amber-200',
+        'Approved for Posting': 'bg-emerald-900/60 text-emerald-300'
+      };
+      return map[status] || 'bg-slate-800 text-slate-200';
+    }
+
+    function stateTransitionAllowed(from, to) {
+      const flow = {
+        'Unmatched': ['Investigating'],
+        'Investigating': ['Unmatched', 'Ready for Approval'],
+        'Ready for Approval': ['Investigating', 'Approved for Posting'],
+        'Approved for Posting': ['Investigating']
+      };
+      return flow[from]?.includes(to);
+    }
+
+    function filteredExceptions() {
+      const q = searchEl.value.trim().toLowerCase();
+      const risk = riskFilterEl.value;
+      const status = statusFilterEl.value;
+      const sort = sortByEl.value;
+
+      const list = exceptions.filter(item => {
+        const textMatch =
+          item.id.toLowerCase().includes(q) ||
+          item.invoice.toLowerCase().includes(q) ||
+          item.po.toLowerCase().includes(q) ||
+          item.supplier.toLowerCase().includes(q);
+        const riskMatch = risk === 'all' || item.risk === risk;
+        const statusMatch = status === 'all' || item.status === status;
+        return textMatch && riskMatch && statusMatch;
+      });
+
+      list.sort((a, b) => {
+        if (sort === 'variance') return b.variance - a.variance || b.amount - a.amount;
+        if (sort === 'due') return a.dueDate.localeCompare(b.dueDate) || b.amount - a.amount;
+        return b.amount - a.amount || b.variance - a.variance;
+      });
+
+      return list;
+    }
+
+    function updateMetrics() {
+      const visible = filteredExceptions();
+      const exposure = visible
+        .filter(item => item.status !== 'Approved for Posting')
+        .reduce((sum, item) => sum + item.amount, 0);
+      const highRisk = visible.filter(item => item.risk === 'High').length;
+      const pending = visible.filter(item => item.status === 'Ready for Approval').length;
+
+      document.getElementById('metricExposure').textContent = formatEuro(exposure);
+      document.getElementById('metricHighRisk').textContent = String(highRisk);
+      document.getElementById('metricPending').textContent = String(pending);
+      document.getElementById('policyHint').textContent = rolePolicyText();
+    }
+
+    function cardTemplate(item) {
+      return `
+        <article
+          class="exception-card cursor-pointer rounded-lg border ${cardBorder(item.risk)} bg-slate-950/90 p-3 ${item.id === selectedId ? 'ring-2 ring-emerald-500' : ''}"
+          draggable="true"
+          tabindex="0"
+          role="button"
+          aria-label="${item.id} ${item.supplier}"
+          data-id="${item.id}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-mono text-slate-400">${item.id}</span>
+            <span class="text-[11px] px-2 py-1 rounded ${statusBadge(item.status)}">${item.risk} risk</span>
+          </div>
+          <h3 class="font-semibold mt-2 leading-tight">${item.supplier}</h3>
+          <p class="text-xs text-slate-400 mt-1">${item.invoice} · ${item.po}</p>
+          <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
+            <span class="px-2 py-1 rounded bg-slate-800">${formatEuro(item.amount)}</span>
+            <span class="px-2 py-1 rounded bg-slate-800">Δ ${item.variance.toFixed(1)}%</span>
+            <span class="px-2 py-1 rounded bg-slate-800">Due ${item.dueDate}</span>
+          </div>
+          <p class="text-xs ${item.docsComplete ? 'text-emerald-300' : 'text-rose-300'} mt-2">${item.docsComplete ? 'Docs complete' : 'Docs missing'}</p>
+        </article>
+      `;
+    }
+
+    function renderBoard() {
+      const visible = filteredExceptions();
+      boardEl.innerHTML = lanes.map(lane => {
+        const cards = visible.filter(item => item.status === lane);
+        return `
+          <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3" data-lane="${lane}">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-semibold text-sm sm:text-base">${lane}</h2>
+              <span class="text-xs text-slate-400">${cards.length}</span>
+            </div>
+            <div class="drop-zone min-h-[300px] space-y-2 rounded-lg border border-dashed border-slate-700 p-2" data-lane="${lane}">
+              ${cards.map(cardTemplate).join('') || '<p class="text-xs text-slate-500 p-2">Drop exception here</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.exception-card').forEach(card => {
+        card.addEventListener('click', () => selectCard(card.dataset.id));
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectCard(card.dataset.id);
+          }
+        });
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          card.classList.add('opacity-60');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('opacity-60'));
+      });
+
+      document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('ring-2', 'ring-emerald-500');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('ring-2', 'ring-emerald-500'));
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('ring-2', 'ring-emerald-500');
+          const id = e.dataTransfer.getData('text/plain');
+          moveCard(id, zone.dataset.lane);
+        });
+      });
+
+      updateMetrics();
+      renderAudit();
+    }
+
+    function selectCard(id) {
+      selectedId = id;
+      const item = exceptions.find(row => row.id === id);
+      if (!item) return;
+      selectedCardEl.innerHTML = `
+        <p><span class="text-slate-500">ID:</span> ${item.id}</p>
+        <p class="mt-1"><span class="text-slate-500">Supplier:</span> ${item.supplier}</p>
+        <p class="mt-1"><span class="text-slate-500">Invoice:</span> ${item.invoice}</p>
+        <p class="mt-1"><span class="text-slate-500">PO / GRN:</span> ${item.po} / ${item.grn}</p>
+        <p class="mt-1"><span class="text-slate-500">Amount:</span> ${formatEuro(item.amount)} (Δ ${item.variance.toFixed(1)}%)</p>
+        <p class="mt-1"><span class="text-slate-500">Owner:</span> ${item.owner}</p>
+        <p class="mt-1"><span class="text-slate-500">Root cause:</span> ${item.reason}</p>
+      `;
+      renderBoard();
+    }
+
+    function renderAudit() {
+      const item = exceptions.find(row => row.id === selectedId);
+      if (!item) {
+        auditTrailEl.innerHTML = '<li class="text-slate-500">No exception selected.</li>';
+        return;
+      }
+      auditTrailEl.innerHTML = item.audit
+        .map((line, i) => `<li class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2"><span class="text-slate-500 mr-2">#${i + 1}</span>${line}</li>`)
+        .join('');
+    }
+
+    function moveCard(id, toLane) {
+      const item = exceptions.find(row => row.id === id);
+      if (!item || item.status === toLane) return;
+
+      if (!stateTransitionAllowed(item.status, toLane)) {
+        alert('State machine rule: move through Investigating and Ready for Approval before posting.');
+        return;
+      }
+
+      if (toLane === 'Ready for Approval' && item.variance > 1.5 && currentRole === 'AP Analyst') {
+        alert('Policy violation: AP Analyst cannot move variance >1.5% directly to Ready for Approval.');
+        item.audit.unshift(`${stamp()} ${currentRole}: move blocked (variance ${item.variance.toFixed(1)}% requires AP Lead pre-check).`);
+        if (selectedId === item.id) renderAudit();
+        return;
+      }
+
+      if (toLane === 'Approved for Posting') {
+        if (!item.docsComplete) {
+          alert('Policy violation: supporting documents are required before posting approval.');
+          item.audit.unshift(`${stamp()} ${currentRole}: approval blocked (missing supporting documents).`);
+          if (selectedId === item.id) renderAudit();
+          return;
+        }
+        if (item.variance > 3) {
+          alert('Policy violation: variance above 3.0% must be corrected before approval.');
+          item.audit.unshift(`${stamp()} ${currentRole}: approval blocked (variance ${item.variance.toFixed(1)}% > 3.0%).`);
+          if (selectedId === item.id) renderAudit();
+          return;
+        }
+        if (item.amount > roleLimits[currentRole]) {
+          alert(`Policy violation: ${currentRole} can only approve up to ${formatEuro(roleLimits[currentRole])}.`);
+          item.audit.unshift(`${stamp()} ${currentRole}: approval blocked (${formatEuro(item.amount)} exceeds role limit).`);
+          if (selectedId === item.id) renderAudit();
+          return;
+        }
+      }
+
+      const from = item.status;
+      item.status = toLane;
+      item.audit.unshift(`${stamp()} ${currentRole}: moved ${item.id} from ${from} → ${toLane}.`);
+      renderBoard();
+    }
+
+    function showFormError(message) {
+      formErrorEl.textContent = message;
+      formErrorEl.classList.remove('hidden');
+    }
+
+    function clearFormError() {
+      formErrorEl.classList.add('hidden');
+      formErrorEl.textContent = '';
+    }
+
+    function nextId() {
+      const max = exceptions.reduce((acc, row) => Math.max(acc, Number(row.id.split('-')[1]) || 0), 0);
+      return `IM-${String(max + 1).padStart(3, '0')}`;
+    }
+
+    function populateFilters() {
+      const risks = [...new Set(exceptions.map(item => item.risk))];
+      risks.forEach(risk => {
+        const option = document.createElement('option');
+        option.value = risk;
+        option.textContent = risk;
+        riskFilterEl.append(option);
+
+        const option2 = option.cloneNode(true);
+        document.getElementById('riskInput').append(option2);
+      });
+
+      lanes.forEach(lane => {
+        const option = document.createElement('option');
+        option.value = lane;
+        option.textContent = lane;
+        statusFilterEl.append(option);
+      });
+    }
+
+    document.getElementById('newExceptionForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      clearFormError();
+
+      const supplier = document.getElementById('supplierInput').value.trim();
+      const invoice = document.getElementById('invoiceInput').value.trim();
+      const po = document.getElementById('poInput').value.trim();
+      const amount = Number(document.getElementById('amountInput').value);
+      const variance = Number(document.getElementById('varianceInput').value);
+      const dueDate = document.getElementById('dueInput').value;
+      const risk = document.getElementById('riskInput').value;
+      const docsComplete = document.getElementById('docsInput').checked;
+
+      if (supplier.length < 3) return showFormError('Supplier name must be at least 3 characters.');
+      if (invoice.length < 4 || po.length < 4) return showFormError('Invoice and PO IDs must be at least 4 characters.');
+      if (!Number.isFinite(amount) || amount < 500 || amount > 250000) return showFormError('Amount must be between €500 and €250,000.');
+      if (!Number.isFinite(variance) || variance < 0 || variance > 10) return showFormError('Variance must be between 0.0% and 10.0%.');
+      if (!dueDate) return showFormError('Due date is required.');
+
+      const duplicate = exceptions.some(item => item.invoice.toLowerCase() === invoice.toLowerCase());
+      if (duplicate) return showFormError('Invoice number already exists in the queue.');
+
+      const newItem = {
+        id: nextId(),
+        supplier,
+        invoice,
+        po,
+        grn: `GRN-${Math.floor(10300 + Math.random() * 200)}`,
+        amount,
+        variance,
+        risk,
+        dueDate,
+        owner: currentRole,
+        docsComplete,
+        status: 'Unmatched',
+        reason: docsComplete ? 'Initial intake variance requires review' : 'Missing documentation at intake',
+        audit: [`${stamp()} ${currentRole}: created new exception in Unmatched.`]
+      };
+
+      exceptions.unshift(newItem);
+      e.target.reset();
+      document.getElementById('docsInput').checked = true;
+      selectedId = newItem.id;
+      selectCard(newItem.id);
+      renderBoard();
+    });
+
+    document.getElementById('addAudit').addEventListener('click', () => {
+      const item = exceptions.find(row => row.id === selectedId);
+      const note = document.getElementById('auditInput').value.trim();
+      if (!item || !note) return;
+      item.audit.unshift(`${stamp()} ${currentRole}: ${note}`);
+      document.getElementById('auditInput').value = '';
+      renderAudit();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const headers = ['id', 'supplier', 'invoice', 'po', 'grn', 'amount', 'variance', 'risk', 'dueDate', 'status', 'docsComplete'];
+      const rows = filteredExceptions().map(item => headers.map(key => JSON.stringify(item[key] ?? '')).join(','));
+      const csv = `${headers.join(',')}\n${rows.join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'invoice-matching-dragboard.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchEl.value = '';
+      riskFilterEl.value = 'all';
+      statusFilterEl.value = 'all';
+      sortByEl.value = 'amount';
+      renderBoard();
+    });
+
+    [searchEl, riskFilterEl, statusFilterEl, sortByEl].forEach(el => el.addEventListener('input', renderBoard));
+
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRole = btn.dataset.role;
+        document.querySelectorAll('.role-btn').forEach(button => {
+          const active = button.dataset.role === currentRole;
+          button.className = `role-btn px-3 py-2 text-sm ${active ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-200'}`;
+        });
+        document.getElementById('policyHint').textContent = rolePolicyText();
+      });
+    });
+
+    populateFilters();
+    renderBoard();
+  </script>
+</body>
+</html>

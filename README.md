@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**AP Aging Priority Grid** — finance data-grid workspace for overdue invoice triage with role-based approvals, holdback policy checks, and audit-ready state transitions.
+**Invoice Matching Dragboard** — finance drag-and-drop workspace for three-way match exceptions with policy-gated approvals and audit-ready workflow transitions.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
