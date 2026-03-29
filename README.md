@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Invoice Matching Dragboard** — finance drag-and-drop workspace for three-way match exceptions with policy-gated approvals and audit-ready workflow transitions.
+**Shipment Delay Early-Warning Dashboard** — supply chain command center for ETA slippage with role-based expedite approvals, audit logs, and exportable risk views.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

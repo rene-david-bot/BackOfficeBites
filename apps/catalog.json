@@ -1238,5 +1238,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-29",
+    "day": 57,
+    "slug": "2026-03-29-shipment-delay-early-warning-dashboard",
+    "name": "Shipment Delay Early-Warning Dashboard",
+    "description": "Supply chain command center for ETA slippage with role-based expedite approvals, audit logs, and exportable risk views.",
+    "category": "Supply Chain",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "supply chain",
+      "shipment delays",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "role-based views",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

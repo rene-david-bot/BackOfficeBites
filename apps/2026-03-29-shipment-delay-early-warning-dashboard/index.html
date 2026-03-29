@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shipment Delay Early-Warning Dashboard</title>
+  <meta name="description" content="Supply chain dashboard for tracking shipment delay risks with role-based expedite approvals and audit trail." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="mt-3">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Shipment Delay Early-Warning Dashboard</h1>
+      <p class="mt-2 text-slate-300 max-w-3xl">
+        Monitor ETA slippage across lanes and carriers, escalate priority loads, and run policy-aware expedite approvals with a full audit trail.
+      </p>
+    </header>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-3 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label for="roleView" class="block text-xs uppercase tracking-wide text-slate-400">Role View</label>
+            <select id="roleView" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option>Planner</option>
+              <option>Ops Manager</option>
+              <option>Logistics Director</option>
+            </select>
+          </div>
+          <div>
+            <label for="regionFilter" class="block text-xs uppercase tracking-wide text-slate-400">Region</label>
+            <select id="regionFilter" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="all">All regions</option>
+            </select>
+          </div>
+          <div>
+            <label for="carrierFilter" class="block text-xs uppercase tracking-wide text-slate-400">Carrier</label>
+            <select id="carrierFilter" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="all">All carriers</option>
+            </select>
+          </div>
+          <div>
+            <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-400">Status</label>
+            <select id="statusFilter" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="all">All statuses</option>
+              <option value="Monitoring">Monitoring</option>
+              <option value="At Risk">At Risk</option>
+              <option value="Escalated">Escalated</option>
+              <option value="Expedite Approved">Expedite Approved</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+          <div>
+            <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-400">Search</label>
+            <input id="searchInput" type="search" placeholder="Shipment ID, lane, owner..." class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+      </div>
+
+      <aside class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Policy Snapshot</p>
+        <ul class="mt-2 space-y-2 text-sm text-slate-300" id="policyList">
+          <li>Planner can request expedite only.</li>
+          <li>Ops Manager approval cap: €1,500.</li>
+          <li>Director can approve all expedite budgets.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" id="kpis"></section>
+
+    <section class="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="xl:col-span-2 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold">Shipments in Scope</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="sortBy" class="text-sm text-slate-300">Sort</label>
+            <select id="sortBy" class="rounded-lg bg-slate-950 border border-slate-700 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="delayDesc">Delay (high → low)</option>
+              <option value="delayAsc">Delay (low → high)</option>
+              <option value="budgetDesc">Expedite cost (high → low)</option>
+              <option value="etaAsc">ETA (soonest first)</option>
+              <option value="priority">Priority</option>
+            </select>
+            <button id="exportBtn" class="rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 text-sm hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500">Export CSV</button>
+          </div>
+        </div>
+
+        <p id="tableStatus" class="mt-2 text-sm text-slate-400"></p>
+
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full min-w-[820px] text-sm" aria-label="Shipment delay table">
+            <thead>
+              <tr class="text-left text-slate-400 border-b border-slate-800">
+                <th class="py-2 pr-2">Shipment</th>
+                <th class="py-2 pr-2">Lane</th>
+                <th class="py-2 pr-2">Carrier</th>
+                <th class="py-2 pr-2">Priority</th>
+                <th class="py-2 pr-2">ETA</th>
+                <th class="py-2 pr-2">Delay (h)</th>
+                <th class="py-2 pr-2">Cost (€)</th>
+                <th class="py-2 pr-2">Status</th>
+                <th class="py-2 pr-2">Owner</th>
+                <th class="py-2 pr-2">Action</th>
+              </tr>
+            </thead>
+            <tbody id="shipmentRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h2 class="text-lg font-semibold">Expedite Workflow</h2>
+        <p id="selectedHint" class="mt-2 text-sm text-slate-400">Select a shipment from the table to review and process.</p>
+
+        <dl id="selectedMeta" class="mt-3 space-y-2 text-sm text-slate-300"></dl>
+
+        <form id="workflowForm" class="mt-4 space-y-3" novalidate>
+          <div>
+            <label for="reasonInput" class="block text-xs uppercase tracking-wide text-slate-400">Reason</label>
+            <textarea id="reasonInput" rows="3" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g., customer launch date at risk due to customs hold"></textarea>
+          </div>
+          <div>
+            <label for="budgetInput" class="block text-xs uppercase tracking-wide text-slate-400">Proposed Expedite Budget (€)</label>
+            <input id="budgetInput" type="number" min="0" step="50" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="requestBtn" class="rounded-lg border border-amber-500/50 bg-amber-500/20 text-amber-300 px-3 py-2 text-sm hover:bg-amber-500/30 focus:outline-none focus:ring-2 focus:ring-amber-500">Submit Escalation</button>
+            <button type="submit" id="approveBtn" class="rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-300 px-3 py-2 text-sm hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500">Approve Expedite</button>
+          </div>
+          <p id="formFeedback" class="text-sm"></p>
+        </form>
+      </aside>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h2 class="text-lg font-semibold">Carrier Delay Profile (avg delay hours)</h2>
+        <div id="carrierBars" class="mt-4 space-y-3"></div>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h2 class="text-lg font-semibold">Status Mix</h2>
+        <div class="mt-4 flex items-center gap-5">
+          <div id="statusDonut" class="h-40 w-40 rounded-full border border-slate-700"></div>
+          <ul id="statusLegend" class="space-y-2 text-sm"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <span class="text-xs text-slate-400" id="auditCount">0 events</span>
+      </div>
+      <div id="auditLog" class="mt-3 space-y-2"></div>
+    </section>
+  </div>
+
+  <script>
+    const shipments = [
+      { id: 'SHP-4012', lane: 'Hamburg → Warsaw', region: 'EU', carrier: 'NordRail', priority: 'High', eta: '2026-03-30T10:00:00Z', delayHours: 18, expediteCost: 1200, status: 'At Risk', owner: 'Marta K.' },
+      { id: 'SHP-4013', lane: 'Rotterdam → Lyon', region: 'EU', carrier: 'BlueFreight', priority: 'Medium', eta: '2026-03-29T22:00:00Z', delayHours: 6, expediteCost: 700, status: 'Monitoring', owner: 'Daniel S.' },
+      { id: 'SHP-4014', lane: 'Shenzhen → Prague', region: 'APAC', carrier: 'SkyBridge', priority: 'Critical', eta: '2026-03-31T15:00:00Z', delayHours: 31, expediteCost: 2300, status: 'Escalated', owner: 'Eva N.' },
+      { id: 'SHP-4015', lane: 'Dallas → Berlin', region: 'NA', carrier: 'AeroStack', priority: 'High', eta: '2026-03-30T18:00:00Z', delayHours: 14, expediteCost: 1500, status: 'At Risk', owner: 'Jonas R.' },
+      { id: 'SHP-4016', lane: 'Osaka → Dresden', region: 'APAC', carrier: 'SkyBridge', priority: 'Medium', eta: '2026-04-01T08:30:00Z', delayHours: 2, expediteCost: 450, status: 'Monitoring', owner: 'Lea T.' },
+      { id: 'SHP-4017', lane: 'Milan → Munich', region: 'EU', carrier: 'NordRail', priority: 'Low', eta: '2026-03-29T14:00:00Z', delayHours: -1, expediteCost: 200, status: 'Delivered', owner: 'Ivo P.' },
+      { id: 'SHP-4018', lane: 'Chicago → Dresden', region: 'NA', carrier: 'AeroStack', priority: 'Critical', eta: '2026-03-30T04:00:00Z', delayHours: 20, expediteCost: 1800, status: 'Escalated', owner: 'Nina H.' },
+      { id: 'SHP-4019', lane: 'Antwerp → Vienna', region: 'EU', carrier: 'BlueFreight', priority: 'High', eta: '2026-03-30T09:00:00Z', delayHours: 9, expediteCost: 1050, status: 'At Risk', owner: 'Kai M.' },
+      { id: 'SHP-4020', lane: 'Seoul → Leipzig', region: 'APAC', carrier: 'SkyBridge', priority: 'Critical', eta: '2026-03-31T03:00:00Z', delayHours: 27, expediteCost: 2600, status: 'Escalated', owner: 'Rana B.' },
+      { id: 'SHP-4021', lane: 'Paris → Dresden', region: 'EU', carrier: 'NordRail', priority: 'Medium', eta: '2026-03-29T20:00:00Z', delayHours: 4, expediteCost: 550, status: 'Monitoring', owner: 'Tom W.' },
+      { id: 'SHP-4022', lane: 'Toronto → Hamburg', region: 'NA', carrier: 'AeroStack', priority: 'Low', eta: '2026-03-31T12:00:00Z', delayHours: 1, expediteCost: 300, status: 'Monitoring', owner: 'Lara V.' },
+      { id: 'SHP-4023', lane: 'Gdansk → Brno', region: 'EU', carrier: 'BlueFreight', priority: 'High', eta: '2026-03-30T02:00:00Z', delayHours: 12, expediteCost: 980, status: 'At Risk', owner: 'Armin D.' }
+    ];
+
+    const state = {
+      selectedId: null,
+      role: 'Planner',
+      audit: [
+        { time: '2026-03-29 07:35', actor: 'System', text: 'SHP-4014 moved to Escalated after customs hold exceeded 18h SLA.' },
+        { time: '2026-03-29 07:48', actor: 'System', text: 'SHP-4018 flagged as Critical due to customer launch dependency.' }
+      ]
+    };
+
+    const roleCaps = {
+      'Planner': 0,
+      'Ops Manager': 1500,
+      'Logistics Director': Infinity
+    };
+
+    const priorityRank = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+
+    const roleView = document.getElementById('roleView');
+    const regionFilter = document.getElementById('regionFilter');
+    const carrierFilter = document.getElementById('carrierFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const shipmentRows = document.getElementById('shipmentRows');
+    const tableStatus = document.getElementById('tableStatus');
+    const kpis = document.getElementById('kpis');
+    const selectedHint = document.getElementById('selectedHint');
+    const selectedMeta = document.getElementById('selectedMeta');
+    const reasonInput = document.getElementById('reasonInput');
+    const budgetInput = document.getElementById('budgetInput');
+    const requestBtn = document.getElementById('requestBtn');
+    const workflowForm = document.getElementById('workflowForm');
+    const formFeedback = document.getElementById('formFeedback');
+    const exportBtn = document.getElementById('exportBtn');
+    const carrierBars = document.getElementById('carrierBars');
+    const statusDonut = document.getElementById('statusDonut');
+    const statusLegend = document.getElementById('statusLegend');
+    const auditLog = document.getElementById('auditLog');
+    const auditCount = document.getElementById('auditCount');
+    const policyList = document.getElementById('policyList');
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleString('en-GB', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC';
+    }
+
+    function formatMoney(value) {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function badge(status) {
+      const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs border';
+      if (status === 'Escalated') return `${base} border-rose-500/40 bg-rose-500/15 text-rose-300`;
+      if (status === 'At Risk') return `${base} border-amber-500/40 bg-amber-500/15 text-amber-300`;
+      if (status === 'Expedite Approved') return `${base} border-emerald-500/40 bg-emerald-500/15 text-emerald-300`;
+      if (status === 'Delivered') return `${base} border-sky-500/40 bg-sky-500/15 text-sky-300`;
+      return `${base} border-slate-600 bg-slate-700/20 text-slate-300`;
+    }
+
+    function unique(list, key) {
+      return [...new Set(list.map(item => item[key]))].sort();
+    }
+
+    function populateFilters() {
+      unique(shipments, 'region').forEach(region => {
+        const opt = document.createElement('option');
+        opt.value = region;
+        opt.textContent = region;
+        regionFilter.appendChild(opt);
+      });
+      unique(shipments, 'carrier').forEach(carrier => {
+        const opt = document.createElement('option');
+        opt.value = carrier;
+        opt.textContent = carrier;
+        carrierFilter.appendChild(opt);
+      });
+    }
+
+    function filteredShipments() {
+      const query = searchInput.value.trim().toLowerCase();
+      const rows = shipments.filter(row => {
+        if (regionFilter.value !== 'all' && row.region !== regionFilter.value) return false;
+        if (carrierFilter.value !== 'all' && row.carrier !== carrierFilter.value) return false;
+        if (statusFilter.value !== 'all' && row.status !== statusFilter.value) return false;
+        if (query) {
+          const haystack = `${row.id} ${row.lane} ${row.owner} ${row.carrier}`.toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      });
+
+      const sorted = rows.sort((a, b) => {
+        if (sortBy.value === 'delayAsc') return a.delayHours - b.delayHours;
+        if (sortBy.value === 'budgetDesc') return b.expediteCost - a.expediteCost;
+        if (sortBy.value === 'etaAsc') return new Date(a.eta) - new Date(b.eta);
+        if (sortBy.value === 'priority') return priorityRank[a.priority] - priorityRank[b.priority];
+        return b.delayHours - a.delayHours;
+      });
+
+      return sorted;
+    }
+
+    function selectedShipment() {
+      return shipments.find(item => item.id === state.selectedId) || null;
+    }
+
+    function setFeedback(text, kind = 'info') {
+      const classes = {
+        info: 'text-slate-300',
+        error: 'text-rose-300',
+        success: 'text-emerald-300'
+      };
+      formFeedback.className = `text-sm ${classes[kind] || classes.info}`;
+      formFeedback.textContent = text;
+    }
+
+    function updatePolicyHint() {
+      const cap = roleCaps[state.role];
+      policyList.innerHTML = '';
+      const hints = [
+        `${state.role} is active.`,
+        cap === 0 ? 'This role can submit escalation requests but cannot approve budgets.' : cap === Infinity ? 'This role can approve any expedite budget.' : `Approval cap for this role: ${formatMoney(cap)}.`,
+        'Every submission adds a timestamped audit event.'
+      ];
+      hints.forEach(hint => {
+        const li = document.createElement('li');
+        li.textContent = hint;
+        policyList.appendChild(li);
+      });
+    }
+
+    function renderKpis(rows) {
+      const atRisk = rows.filter(r => r.status === 'At Risk' || r.status === 'Escalated').length;
+      const avgDelay = rows.length ? (rows.reduce((sum, r) => sum + r.delayHours, 0) / rows.length).toFixed(1) : '0.0';
+      const onTime = rows.length ? Math.round((rows.filter(r => r.delayHours <= 0).length / rows.length) * 100) : 0;
+      const openBudget = rows.filter(r => r.status !== 'Delivered').reduce((sum, r) => sum + r.expediteCost, 0);
+
+      const cards = [
+        { label: 'Shipments in scope', value: rows.length, tone: 'text-slate-100' },
+        { label: 'At-risk or escalated', value: atRisk, tone: 'text-amber-300' },
+        { label: 'Average delay', value: `${avgDelay}h`, tone: 'text-rose-300' },
+        { label: 'On-time ratio', value: `${onTime}%`, tone: 'text-emerald-300' },
+        { label: 'Open expedite budget', value: formatMoney(openBudget), tone: 'text-sky-300' }
+      ];
+
+      kpis.innerHTML = '';
+      cards.forEach(card => {
+        const el = document.createElement('div');
+        el.className = 'rounded-xl border border-slate-800 bg-slate-900/70 p-4';
+        el.innerHTML = `<p class="text-xs uppercase tracking-wide text-slate-400">${card.label}</p><p class="mt-2 text-2xl font-semibold ${card.tone}">${card.value}</p>`;
+        kpis.appendChild(el);
+      });
+    }
+
+    function renderTable(rows) {
+      tableStatus.textContent = `${rows.length} shipment${rows.length === 1 ? '' : 's'} shown`;
+      shipmentRows.innerHTML = '';
+
+      if (!rows.length) {
+        const empty = document.createElement('tr');
+        empty.innerHTML = '<td colspan="10" class="py-6 text-center text-slate-400">No shipments match the current filters.</td>';
+        shipmentRows.appendChild(empty);
+        return;
+      }
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const isSelected = row.id === state.selectedId;
+        tr.className = `border-b border-slate-800/70 ${isSelected ? 'bg-emerald-500/10' : 'hover:bg-slate-800/40'}`;
+        tr.innerHTML = `
+          <td class="py-2 pr-2 font-medium">${row.id}</td>
+          <td class="py-2 pr-2">${row.lane}</td>
+          <td class="py-2 pr-2">${row.carrier}</td>
+          <td class="py-2 pr-2">${row.priority}</td>
+          <td class="py-2 pr-2 text-slate-300">${formatDate(row.eta)}</td>
+          <td class="py-2 pr-2 ${row.delayHours > 12 ? 'text-rose-300' : row.delayHours > 0 ? 'text-amber-300' : 'text-emerald-300'}">${row.delayHours}</td>
+          <td class="py-2 pr-2">${formatMoney(row.expediteCost)}</td>
+          <td class="py-2 pr-2"><span class="${badge(row.status)}">${row.status}</span></td>
+          <td class="py-2 pr-2">${row.owner}</td>
+          <td class="py-2 pr-2">
+            <button class="selectBtn rounded-md border border-slate-700 px-2 py-1 text-xs hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" data-id="${row.id}">Select</button>
+          </td>
+        `;
+        shipmentRows.appendChild(tr);
+      });
+
+      shipmentRows.querySelectorAll('.selectBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderSelectedPanel() {
+      const item = selectedShipment();
+      if (!item) {
+        selectedHint.textContent = 'Select a shipment from the table to review and process.';
+        selectedMeta.innerHTML = '';
+        budgetInput.value = '';
+        return;
+      }
+
+      selectedHint.textContent = `${item.id} selected. Review policy checks before submitting.`;
+      selectedMeta.innerHTML = `
+        <div><dt class="text-slate-400">Lane</dt><dd>${item.lane}</dd></div>
+        <div><dt class="text-slate-400">Current status</dt><dd>${item.status}</dd></div>
+        <div><dt class="text-slate-400">Delay / ETA</dt><dd>${item.delayHours}h · ${formatDate(item.eta)}</dd></div>
+        <div><dt class="text-slate-400">Expedite benchmark</dt><dd>${formatMoney(item.expediteCost)}</dd></div>
+      `;
+      if (!budgetInput.value) budgetInput.value = item.expediteCost;
+    }
+
+    function renderCarrierBars(rows) {
+      const byCarrier = rows.reduce((acc, row) => {
+        if (!acc[row.carrier]) acc[row.carrier] = [];
+        acc[row.carrier].push(row.delayHours);
+        return acc;
+      }, {});
+
+      const entries = Object.entries(byCarrier).map(([carrier, delays]) => {
+        const avg = delays.reduce((s, n) => s + n, 0) / delays.length;
+        return { carrier, avg };
+      }).sort((a, b) => b.avg - a.avg);
+
+      const max = Math.max(...entries.map(e => e.avg), 1);
+      carrierBars.innerHTML = '';
+
+      if (!entries.length) {
+        carrierBars.innerHTML = '<p class="text-sm text-slate-400">No data for this filter set.</p>';
+        return;
+      }
+
+      entries.forEach(entry => {
+        const pct = Math.max(8, Math.round((entry.avg / max) * 100));
+        const row = document.createElement('div');
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-sm mb-1">
+            <span>${entry.carrier}</span>
+            <span class="text-slate-300">${entry.avg.toFixed(1)}h</span>
+          </div>
+          <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-400" style="width:${pct}%"></div>
+          </div>
+        `;
+        carrierBars.appendChild(row);
+      });
+    }
+
+    function renderStatusMix(rows) {
+      const palette = {
+        'Monitoring': '#94a3b8',
+        'At Risk': '#f59e0b',
+        'Escalated': '#f43f5e',
+        'Expedite Approved': '#10b981',
+        'Delivered': '#38bdf8'
+      };
+
+      const counts = rows.reduce((acc, row) => {
+        acc[row.status] = (acc[row.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      const total = rows.length || 1;
+      let current = 0;
+      const slices = [];
+      Object.entries(counts).forEach(([status, count]) => {
+        const pct = (count / total) * 100;
+        slices.push(`${palette[status] || '#64748b'} ${current}% ${current + pct}%`);
+        current += pct;
+      });
+
+      statusDonut.style.background = slices.length ? `conic-gradient(${slices.join(',')})` : '#1e293b';
+      statusLegend.innerHTML = '';
+
+      if (!Object.keys(counts).length) {
+        statusLegend.innerHTML = '<li class="text-slate-400">No rows selected.</li>';
+        return;
+      }
+
+      Object.entries(counts).forEach(([status, count]) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:${palette[status] || '#64748b'}"></span>${status}: <span class="text-slate-300">${count}</span>`;
+        statusLegend.appendChild(li);
+      });
+    }
+
+    function renderAudit() {
+      auditCount.textContent = `${state.audit.length} event${state.audit.length === 1 ? '' : 's'}`;
+      auditLog.innerHTML = '';
+
+      const latest = [...state.audit].reverse().slice(0, 10);
+      latest.forEach(event => {
+        const row = document.createElement('div');
+        row.className = 'rounded-lg border border-slate-800 bg-slate-950/70 p-3';
+        row.innerHTML = `
+          <div class="flex items-center justify-between gap-2 text-xs text-slate-400">
+            <span>${event.time}</span>
+            <span>${event.actor}</span>
+          </div>
+          <p class="mt-1 text-sm text-slate-200">${event.text}</p>
+        `;
+        auditLog.appendChild(row);
+      });
+    }
+
+    function escapeCsv(value) {
+      const text = String(value ?? '');
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+
+    function exportCsv(rows) {
+      const header = ['id', 'lane', 'region', 'carrier', 'priority', 'eta_utc', 'delay_hours', 'expedite_cost_eur', 'status', 'owner'];
+      const lines = [header.join(',')];
+
+      rows.forEach(row => {
+        lines.push([
+          row.id,
+          row.lane,
+          row.region,
+          row.carrier,
+          row.priority,
+          row.eta,
+          row.delayHours,
+          row.expediteCost,
+          row.status,
+          row.owner
+        ].map(escapeCsv).join(','));
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'shipment-delay-view.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      setFeedback('CSV exported for the current filter set.', 'success');
+    }
+
+    function addAudit(actor, text) {
+      const now = new Date();
+      const stamp = now.toISOString().slice(0, 16).replace('T', ' ');
+      state.audit.push({ time: stamp, actor, text });
+    }
+
+    function validateReason() {
+      const reason = reasonInput.value.trim();
+      if (reason.length < 10) {
+        setFeedback('Provide a reason with at least 10 characters.', 'error');
+        reasonInput.focus();
+        return null;
+      }
+      return reason;
+    }
+
+    function submitEscalation() {
+      const item = selectedShipment();
+      if (!item) {
+        setFeedback('Select a shipment first.', 'error');
+        return;
+      }
+      const reason = validateReason();
+      if (!reason) return;
+
+      if (item.status === 'Delivered') {
+        setFeedback('Delivered shipments cannot be escalated.', 'error');
+        return;
+      }
+
+      item.status = 'Escalated';
+      item.delayHours = Math.max(item.delayHours, 10);
+      addAudit(state.role, `${item.id} escalated. Reason: ${reason}`);
+      setFeedback(`${item.id} moved to Escalated queue.`, 'success');
+      render();
+    }
+
+    function approveExpedite(event) {
+      event.preventDefault();
+      const item = selectedShipment();
+      if (!item) {
+        setFeedback('Select a shipment first.', 'error');
+        return;
+      }
+
+      const reason = validateReason();
+      if (!reason) return;
+
+      if (item.status === 'Delivered') {
+        setFeedback('Delivered shipments do not need expedite approval.', 'error');
+        return;
+      }
+
+      const budget = Number(budgetInput.value);
+      if (!Number.isFinite(budget) || budget <= 0) {
+        setFeedback('Enter a valid expedite budget above 0.', 'error');
+        budgetInput.focus();
+        return;
+      }
+
+      const cap = roleCaps[state.role];
+      if (cap === 0) {
+        setFeedback('Planner role cannot approve budgets. Use Submit Escalation.', 'error');
+        return;
+      }
+
+      if (budget > cap) {
+        setFeedback(`${state.role} approval cap exceeded (${formatMoney(cap)}).`, 'error');
+        return;
+      }
+
+      item.expediteCost = budget;
+      item.status = 'Expedite Approved';
+      item.delayHours = Math.max(0, item.delayHours - 8);
+      addAudit(state.role, `${item.id} expedite approved at ${formatMoney(budget)}. Reason: ${reason}`);
+      setFeedback(`${item.id} approved for expedite (${formatMoney(budget)}).`, 'success');
+      render();
+    }
+
+    function render() {
+      state.role = roleView.value;
+      updatePolicyHint();
+      const rows = filteredShipments();
+      renderKpis(rows);
+      renderTable(rows);
+      renderSelectedPanel();
+      renderCarrierBars(rows);
+      renderStatusMix(rows);
+      renderAudit();
+    }
+
+    [roleView, regionFilter, carrierFilter, statusFilter, sortBy].forEach(el => {
+      el.addEventListener('change', () => {
+        setFeedback('', 'info');
+        render();
+      });
+    });
+
+    searchInput.addEventListener('input', render);
+    requestBtn.addEventListener('click', submitEscalation);
+    workflowForm.addEventListener('submit', approveExpedite);
+    exportBtn.addEventListener('click', () => exportCsv(filteredShipments()));
+
+    populateFilters();
+    render();
+  </script>
+</body>
+</html>
