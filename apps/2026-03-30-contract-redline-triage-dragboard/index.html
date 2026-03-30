@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contract Redline Triage Dragboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+      <a
+        href="../../index.html"
+        class="text-sm font-semibold text-emerald-400 hover:text-emerald-300"
+        >BackOfficeBites 🍔</a
+      >
+
+      <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight lg:text-3xl">Contract Redline Triage Dragboard</h1>
+          <p class="mt-1 text-sm text-slate-400">
+            Legal workflow board for clause-risk triage with policy-gated approvals, audit trail, and exportable views.
+          </p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+          <span class="text-slate-500">Shortcut:</span>
+          <span class="font-semibold">Alt + ← / →</span>
+          to move selected card
+        </div>
+      </div>
+
+      <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <label class="block xl:col-span-1">
+            <span class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Role view</span>
+            <select
+              id="roleSelect"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+            >
+              <option>Legal Counsel</option>
+              <option>Procurement Lead</option>
+              <option>Finance Controller</option>
+            </select>
+          </label>
+
+          <label class="block xl:col-span-2">
+            <span class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Search</span>
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Vendor, contract, owner..."
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition placeholder:text-slate-500 focus:ring"
+            />
+          </label>
+
+          <label class="block xl:col-span-1">
+            <span class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Risk</span>
+            <select
+              id="riskFilter"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+            >
+              <option value="all">All risks</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </label>
+
+          <label class="block xl:col-span-1">
+            <span class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Sort</span>
+            <select
+              id="sortBy"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+            >
+              <option value="dueAsc">Due date ↑</option>
+              <option value="dueDesc">Due date ↓</option>
+              <option value="valueDesc">Contract value ↓</option>
+              <option value="riskDesc">Risk severity ↓</option>
+            </select>
+          </label>
+
+          <div class="xl:col-span-1">
+            <span class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Actions</span>
+            <button
+              id="exportBtn"
+              class="w-full rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20"
+            >
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4" id="metrics"></div>
+      </section>
+
+      <div class="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
+        <section
+          id="board"
+          class="grid gap-4 overflow-x-auto pb-2 sm:grid-cols-2 xl:grid-cols-5"
+          aria-label="Contract workflow board"
+        ></section>
+
+        <aside class="space-y-5">
+          <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">Add contract</h2>
+            <form id="addForm" class="mt-3 space-y-3" novalidate>
+              <label class="block">
+                <span class="mb-1 block text-xs text-slate-400">Vendor *</span>
+                <input
+                  required
+                  name="vendor"
+                  type="text"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+                />
+              </label>
+
+              <label class="block">
+                <span class="mb-1 block text-xs text-slate-400">Contract type *</span>
+                <select
+                  required
+                  name="type"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+                >
+                  <option value="">Select</option>
+                  <option>MSA Renewal</option>
+                  <option>DPA Addendum</option>
+                  <option>SLA Amendment</option>
+                  <option>Procurement Terms</option>
+                  <option>Reseller Agreement</option>
+                </select>
+              </label>
+
+              <div class="grid grid-cols-2 gap-3">
+                <label class="block">
+                  <span class="mb-1 block text-xs text-slate-400">Value (€) *</span>
+                  <input
+                    required
+                    min="1000"
+                    step="1000"
+                    name="value"
+                    type="number"
+                    class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+                  />
+                </label>
+
+                <label class="block">
+                  <span class="mb-1 block text-xs text-slate-400">Risk *</span>
+                  <select
+                    required
+                    name="risk"
+                    class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+                  >
+                    <option>High</option>
+                    <option selected>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="block">
+                <span class="mb-1 block text-xs text-slate-400">Target signature date *</span>
+                <input
+                  required
+                  name="due"
+                  type="date"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+                />
+              </label>
+
+              <button
+                type="submit"
+                class="w-full rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400"
+              >
+                Add to Intake
+              </button>
+              <p id="formError" class="hidden text-xs text-rose-400"></p>
+            </form>
+          </section>
+
+          <section class="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">Audit trail</h2>
+              <span class="text-xs text-slate-500">latest 12 events</span>
+            </div>
+            <ul id="auditList" class="mt-3 space-y-2 text-xs"></ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <div
+      id="toast"
+      class="pointer-events-none fixed bottom-4 left-1/2 hidden -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 shadow-xl"
+      role="status"
+      aria-live="polite"
+    ></div>
+
+    <script>
+      const STAGES = [
+        { id: "intake", label: "Intake" },
+        { id: "review", label: "Legal Review" },
+        { id: "negotiation", label: "Negotiation" },
+        { id: "approval", label: "Approval" },
+        { id: "executed", label: "Executed" },
+      ];
+
+      const ROLE_RULES = {
+        "Legal Counsel": { legal: true, finance: false },
+        "Procurement Lead": { legal: false, finance: false },
+        "Finance Controller": { legal: false, finance: true },
+      };
+
+      const RISK_SCORE = { High: 3, Medium: 2, Low: 1 };
+
+      let contracts = [
+        {
+          id: "CTR-4211",
+          vendor: "NordCom Logistics",
+          type: "MSA Renewal",
+          owner: "E. Krause",
+          value: 420000,
+          risk: "High",
+          due: "2026-04-02",
+          stage: "review",
+          legalApproved: false,
+          financeApproved: false,
+        },
+        {
+          id: "CTR-4212",
+          vendor: "Helio Data GmbH",
+          type: "DPA Addendum",
+          owner: "M. Petrov",
+          value: 165000,
+          risk: "Medium",
+          due: "2026-04-04",
+          stage: "negotiation",
+          legalApproved: true,
+          financeApproved: false,
+        },
+        {
+          id: "CTR-4213",
+          vendor: "Atlas Facilities",
+          type: "SLA Amendment",
+          owner: "N. Weiss",
+          value: 89000,
+          risk: "Low",
+          due: "2026-04-06",
+          stage: "approval",
+          legalApproved: true,
+          financeApproved: true,
+        },
+        {
+          id: "CTR-4214",
+          vendor: "Waveline Systems",
+          type: "Procurement Terms",
+          owner: "S. Berger",
+          value: 250000,
+          risk: "High",
+          due: "2026-04-03",
+          stage: "negotiation",
+          legalApproved: true,
+          financeApproved: false,
+        },
+        {
+          id: "CTR-4215",
+          vendor: "Orchid Retail Ops",
+          type: "Reseller Agreement",
+          owner: "L. Schmitt",
+          value: 315000,
+          risk: "Medium",
+          due: "2026-04-08",
+          stage: "intake",
+          legalApproved: false,
+          financeApproved: false,
+        },
+        {
+          id: "CTR-4216",
+          vendor: "ByteForge Cloud",
+          type: "DPA Addendum",
+          owner: "F. Adler",
+          value: 132000,
+          risk: "High",
+          due: "2026-04-01",
+          stage: "approval",
+          legalApproved: true,
+          financeApproved: false,
+        },
+        {
+          id: "CTR-4217",
+          vendor: "PrimeFleet Mobility",
+          type: "SLA Amendment",
+          owner: "D. Riedel",
+          value: 97000,
+          risk: "Low",
+          due: "2026-04-09",
+          stage: "executed",
+          legalApproved: true,
+          financeApproved: true,
+        },
+      ];
+
+      const audit = [
+        stamped("CTR-4216 moved to Approval by Legal Counsel"),
+        stamped("CTR-4212 legal approval granted"),
+        stamped("CTR-4213 contract executed"),
+        stamped("CTR-4214 finance approval pending (high-risk policy)"),
+      ];
+
+      const boardEl = document.getElementById("board");
+      const metricsEl = document.getElementById("metrics");
+      const auditList = document.getElementById("auditList");
+      const roleSelect = document.getElementById("roleSelect");
+      const searchInput = document.getElementById("searchInput");
+      const riskFilter = document.getElementById("riskFilter");
+      const sortBy = document.getElementById("sortBy");
+      const exportBtn = document.getElementById("exportBtn");
+      const addForm = document.getElementById("addForm");
+      const formError = document.getElementById("formError");
+      const toastEl = document.getElementById("toast");
+
+      let draggedId = null;
+
+      function stamped(message) {
+        const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return { stamp, message };
+      }
+
+      function getVisibleContracts() {
+        const query = searchInput.value.trim().toLowerCase();
+        const risk = riskFilter.value;
+        const sort = sortBy.value;
+
+        let list = contracts.filter((item) => {
+          const text = `${item.id} ${item.vendor} ${item.type} ${item.owner}`.toLowerCase();
+          const qOk = !query || text.includes(query);
+          const rOk = risk === "all" || item.risk === risk;
+          return qOk && rOk;
+        });
+
+        list = list.sort((a, b) => {
+          if (sort === "dueAsc") return a.due.localeCompare(b.due);
+          if (sort === "dueDesc") return b.due.localeCompare(a.due);
+          if (sort === "valueDesc") return b.value - a.value;
+          if (sort === "riskDesc") return RISK_SCORE[b.risk] - RISK_SCORE[a.risk];
+          return 0;
+        });
+
+        return list;
+      }
+
+      function render() {
+        renderMetrics();
+        renderBoard();
+        renderAudit();
+      }
+
+      function renderMetrics() {
+        const visible = getVisibleContracts();
+        const highPending = visible.filter((c) => c.risk === "High" && (!c.legalApproved || !c.financeApproved)).length;
+        const dueSoon = visible.filter((c) => {
+          const days = Math.ceil((new Date(c.due) - new Date()) / (1000 * 60 * 60 * 24));
+          return days <= 5;
+        }).length;
+
+        const cards = [
+          { label: "Visible contracts", value: visible.length, tone: "text-emerald-300" },
+          { label: "High-risk pending approvals", value: highPending, tone: "text-amber-300" },
+          {
+            label: "Due ≤ 5 days",
+            value: dueSoon,
+            tone: dueSoon > 2 ? "text-rose-300" : "text-sky-300",
+          },
+          {
+            label: "Executed",
+            value: contracts.filter((c) => c.stage === "executed").length,
+            tone: "text-indigo-300",
+          },
+        ];
+
+        metricsEl.innerHTML = cards
+          .map(
+            (c) => `
+          <article class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <p class="text-xs uppercase tracking-wide text-slate-500">${c.label}</p>
+            <p class="mt-1 text-2xl font-semibold ${c.tone}">${c.value}</p>
+          </article>
+        `
+          )
+          .join("");
+      }
+
+      function renderBoard() {
+        const visible = getVisibleContracts();
+        const role = roleSelect.value;
+
+        boardEl.innerHTML = STAGES.map((stage) => {
+          const items = visible.filter((item) => item.stage === stage.id);
+          return `
+            <section class="min-w-[260px] rounded-2xl border border-slate-800 bg-slate-900/80 p-3" data-stage="${stage.id}">
+              <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-slate-200">${stage.label}</h2>
+                <span class="rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">${items.length}</span>
+              </div>
+              <div class="space-y-3 min-h-[160px]" data-dropzone="${stage.id}">
+                ${items
+                  .map((item) => {
+                    const legalCan = ROLE_RULES[role].legal;
+                    const financeCan = ROLE_RULES[role].finance;
+                    return `
+                      <article
+                        tabindex="0"
+                        draggable="true"
+                        data-id="${item.id}"
+                        class="rounded-xl border border-slate-700 bg-slate-950 p-3 outline-none transition hover:border-slate-500 focus:ring-2 focus:ring-indigo-500"
+                        aria-label="${item.id} ${item.vendor} in ${stage.label}"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div>
+                            <p class="text-xs font-semibold text-slate-400">${item.id}</p>
+                            <p class="text-sm font-semibold text-slate-100">${item.vendor}</p>
+                            <p class="text-xs text-slate-500">${item.type} • Owner ${item.owner}</p>
+                          </div>
+                          <span class="rounded-full px-2 py-0.5 text-xs font-medium ${riskClass(item.risk)}">${item.risk}</span>
+                        </div>
+
+                        <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-300">
+                          <div class="rounded-md border border-slate-800 bg-slate-900 px-2 py-1">€${item.value.toLocaleString("de-DE")}</div>
+                          <div class="rounded-md border border-slate-800 bg-slate-900 px-2 py-1">Due ${item.due}</div>
+                        </div>
+
+                        <div class="mt-3 space-y-2">
+                          <button
+                            data-action="legal"
+                            data-id="${item.id}"
+                            class="w-full rounded-md border px-2 py-1 text-xs font-medium ${
+                              legalCan
+                                ? "border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20"
+                                : "border-slate-700 bg-slate-900 text-slate-500"
+                            }"
+                            ${legalCan ? "" : "disabled"}
+                          >
+                            ${item.legalApproved ? "✓" : "○"} Legal approval
+                          </button>
+                          <button
+                            data-action="finance"
+                            data-id="${item.id}"
+                            class="w-full rounded-md border px-2 py-1 text-xs font-medium ${
+                              financeCan
+                                ? "border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                                : "border-slate-700 bg-slate-900 text-slate-500"
+                            }"
+                            ${financeCan ? "" : "disabled"}
+                          >
+                            ${item.financeApproved ? "✓" : "○"} Finance approval
+                          </button>
+                        </div>
+                      </article>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+          `;
+        }).join("");
+
+        boardEl.querySelectorAll("[data-id]").forEach((card) => {
+          card.addEventListener("dragstart", () => {
+            draggedId = card.dataset.id;
+          });
+
+          card.addEventListener("keydown", (event) => {
+            if (!event.altKey) return;
+            const contract = contracts.find((c) => c.id === card.dataset.id);
+            const index = STAGES.findIndex((s) => s.id === contract.stage);
+            if (event.key === "ArrowRight" && index < STAGES.length - 1) {
+              event.preventDefault();
+              attemptMove(contract.id, STAGES[index + 1].id, "keyboard");
+            }
+            if (event.key === "ArrowLeft" && index > 0) {
+              event.preventDefault();
+              attemptMove(contract.id, STAGES[index - 1].id, "keyboard");
+            }
+          });
+        });
+
+        boardEl.querySelectorAll("[data-dropzone]").forEach((zone) => {
+          zone.addEventListener("dragover", (event) => event.preventDefault());
+          zone.addEventListener("drop", () => {
+            if (!draggedId) return;
+            attemptMove(draggedId, zone.dataset.dropzone, "drag");
+            draggedId = null;
+          });
+        });
+
+        boardEl.querySelectorAll("button[data-action]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const contract = contracts.find((c) => c.id === btn.dataset.id);
+            if (!contract) return;
+            if (btn.dataset.action === "legal") {
+              contract.legalApproved = !contract.legalApproved;
+              audit.unshift(
+                stamped(`${contract.id} legal approval ${contract.legalApproved ? "granted" : "revoked"} by ${roleSelect.value}`)
+              );
+            }
+            if (btn.dataset.action === "finance") {
+              contract.financeApproved = !contract.financeApproved;
+              audit.unshift(
+                stamped(`${contract.id} finance approval ${contract.financeApproved ? "granted" : "revoked"} by ${roleSelect.value}`)
+              );
+            }
+            render();
+          });
+        });
+      }
+
+      function riskClass(risk) {
+        if (risk === "High") return "bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        if (risk === "Medium") return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      }
+
+      function attemptMove(id, nextStage, source) {
+        const item = contracts.find((c) => c.id === id);
+        if (!item || item.stage === nextStage) return;
+
+        const fromIdx = STAGES.findIndex((s) => s.id === item.stage);
+        const toIdx = STAGES.findIndex((s) => s.id === nextStage);
+
+        if (Math.abs(toIdx - fromIdx) > 1) {
+          notify("State machine: move only to adjacent stages.");
+          return;
+        }
+
+        if ((nextStage === "approval" || nextStage === "executed") && item.risk === "High") {
+          if (!item.legalApproved || !item.financeApproved) {
+            notify("Policy block: high-risk contracts need legal + finance approvals.");
+            audit.unshift(stamped(`${item.id} blocked by policy on move to ${labelFor(nextStage)}`));
+            renderAudit();
+            return;
+          }
+        }
+
+        if (nextStage === "executed" && (!item.legalApproved || !item.financeApproved)) {
+          notify("Execution requires both approvals.");
+          return;
+        }
+
+        item.stage = nextStage;
+        audit.unshift(stamped(`${item.id} moved to ${labelFor(nextStage)} via ${source} by ${roleSelect.value}`));
+        render();
+      }
+
+      function labelFor(stageId) {
+        return STAGES.find((s) => s.id === stageId)?.label || stageId;
+      }
+
+      function renderAudit() {
+        auditList.innerHTML = audit
+          .slice(0, 12)
+          .map(
+            (entry) => `
+            <li class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-300">
+              <span class="mr-2 text-slate-500">${entry.stamp}</span>${entry.message}
+            </li>
+          `
+          )
+          .join("");
+      }
+
+      function notify(message) {
+        toastEl.textContent = message;
+        toastEl.classList.remove("hidden");
+        clearTimeout(notify.timer);
+        notify.timer = setTimeout(() => toastEl.classList.add("hidden"), 2200);
+      }
+
+      function exportCsv() {
+        const rows = getVisibleContracts().map((c) => ({
+          id: c.id,
+          vendor: c.vendor,
+          type: c.type,
+          owner: c.owner,
+          stage: labelFor(c.stage),
+          risk: c.risk,
+          valueEUR: c.value,
+          due: c.due,
+          legalApproved: c.legalApproved,
+          financeApproved: c.financeApproved,
+        }));
+
+        const headers = Object.keys(rows[0] || {
+          id: "",
+          vendor: "",
+          type: "",
+          owner: "",
+          stage: "",
+          risk: "",
+          valueEUR: "",
+          due: "",
+          legalApproved: "",
+          financeApproved: "",
+        });
+
+        const csv = [
+          headers.join(","),
+          ...rows.map((row) =>
+            headers
+              .map((h) => {
+                const val = `${row[h] ?? ""}`.replaceAll('"', '""');
+                return `"${val}"`;
+              })
+              .join(",")
+          ),
+        ].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "contract-triage-export.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+        notify("CSV exported.");
+      }
+
+      addForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        formError.classList.add("hidden");
+
+        const fd = new FormData(addForm);
+        const vendor = `${fd.get("vendor") || ""}`.trim();
+        const type = `${fd.get("type") || ""}`.trim();
+        const value = Number(fd.get("value"));
+        const risk = `${fd.get("risk") || "Medium"}`;
+        const due = `${fd.get("due") || ""}`;
+
+        if (!vendor || !type || !value || !due) {
+          formError.textContent = "Please fill all required fields.";
+          formError.classList.remove("hidden");
+          return;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueDate = new Date(due);
+        if (dueDate < today) {
+          formError.textContent = "Target signature date cannot be in the past.";
+          formError.classList.remove("hidden");
+          return;
+        }
+
+        const nextNum = contracts.length + 4211;
+        const id = `CTR-${nextNum}`;
+
+        contracts.unshift({
+          id,
+          vendor,
+          type,
+          owner: roleSelect.value === "Procurement Lead" ? "Procurement Queue" : roleSelect.value,
+          value,
+          risk,
+          due,
+          stage: "intake",
+          legalApproved: false,
+          financeApproved: false,
+        });
+
+        audit.unshift(stamped(`${id} created in Intake by ${roleSelect.value}`));
+        addForm.reset();
+        render();
+        notify("Contract added to Intake.");
+      });
+
+      [roleSelect, searchInput, riskFilter, sortBy].forEach((el) => el.addEventListener("input", render));
+      exportBtn.addEventListener("click", exportCsv);
+
+      render();
+    </script>
+  </body>
+</html>
