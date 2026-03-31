@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Contract Redline Triage Dragboard** — legal drag-and-drop triage board for redlined agreements with approval-gated execution, audit logs, and CSV-ready review queues.
+**Employee Directory Governance Desk** — HR master-detail workspace for profile change approvals, role-based governance, and audit-ready exports.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

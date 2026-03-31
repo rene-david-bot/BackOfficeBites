@@ -1286,5 +1286,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-03-31",
+    "day": 59,
+    "slug": "2026-03-31-employee-directory-governance-desk",
+    "name": "Employee Directory Governance Desk",
+    "description": "HR master-detail workspace for profile change approvals with policy validation, audit trail actions, and CSV-ready exports.",
+    "category": "HR",
+    "pattern": "Master-Detail",
+    "tags": [
+      "employee directory",
+      "hr",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

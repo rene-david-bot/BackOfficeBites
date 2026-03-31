@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee Directory Governance Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+      <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <a href="../../index.html" class="text-xs font-semibold uppercase tracking-wider text-emerald-400 hover:text-emerald-300">BackOfficeBites 🍔</a>
+        <h1 class="mt-2 text-2xl font-bold tracking-tight">Employee Directory Governance Desk</h1>
+        <p class="mt-1 text-sm text-slate-300">HR master-detail workspace for profile change approvals, policy checks, and audit-ready exports.</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6 lg:px-8">
+      <section class="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Employees</p>
+          <p id="kpiTotal" class="mt-2 text-2xl font-semibold text-cyan-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Needs Update</p>
+          <p id="kpiNeeds" class="mt-2 text-2xl font-semibold text-amber-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Pending Approval</p>
+          <p id="kpiPending" class="mt-2 text-2xl font-semibold text-violet-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <label for="role" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+          <select id="role" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+            <option>HRBP</option>
+            <option>Manager</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-5">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label class="text-xs text-slate-400">Search
+                <input id="search" type="text" placeholder="Name, manager, location..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+              </label>
+              <label class="text-xs text-slate-400">Department
+                <select id="deptFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  <option value="all">All Departments</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400">Status
+                <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  <option value="all">All Statuses</option>
+                  <option>Needs Update</option>
+                  <option>Pending Approval</option>
+                  <option>Verified</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400">Sort
+                <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  <option value="name">Name (A-Z)</option>
+                  <option value="dept">Department</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button id="reset" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800">Reset Filters</button>
+              <button id="csv" class="rounded-lg border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+            <div class="max-h-[580px] overflow-auto">
+              <table class="min-w-full text-sm">
+                <thead class="sticky top-0 bg-slate-800/95 text-xs uppercase tracking-wide text-slate-300">
+                  <tr>
+                    <th class="px-3 py-2 text-left">Employee</th>
+                    <th class="px-3 py-2 text-left">Dept</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="rows" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-7">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <h2 class="text-lg font-semibold">Employee Detail</h2>
+            <p id="detailHint" class="text-sm text-slate-400">Select an employee to review profile governance actions.</p>
+            <div id="detail" class="mt-3 hidden space-y-3">
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p id="dName" class="text-base font-semibold text-cyan-300"></p>
+                  <p id="dMeta" class="text-xs text-slate-400"></p>
+                  <p id="dManager" class="mt-1 text-sm"></p>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p class="text-xs uppercase tracking-wide text-slate-400">Current Profile</p>
+                  <ul id="dProfile" class="mt-2 space-y-1 text-sm"></ul>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                <h3 class="text-sm font-semibold">Submit Directory Change</h3>
+                <form id="changeForm" class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <label class="text-xs text-slate-400">Field
+                    <select id="field" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                      <option value="title">Title</option>
+                      <option value="manager">Manager</option>
+                      <option value="location">Location</option>
+                      <option value="costCenter">Cost Center</option>
+                    </select>
+                  </label>
+                  <label class="text-xs text-slate-400">New Value
+                    <input id="newValue" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                  </label>
+                  <label class="text-xs text-slate-400">Reason (min 10 chars)
+                    <input id="reason" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                  </label>
+                  <div class="md:col-span-3 flex items-center gap-2">
+                    <button class="rounded-lg border border-violet-600/60 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20" type="submit">Create Approval Request</button>
+                    <p id="formMsg" class="text-xs text-slate-400"></p>
+                  </div>
+                </form>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold">Pending Requests</h3>
+                    <p id="pendingCount" class="text-xs text-slate-400">0 open</p>
+                  </div>
+                  <ul id="requests" class="mt-2 space-y-2 text-sm"></ul>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <h3 class="text-sm font-semibold">Audit Trail</h3>
+                  <ul id="audit" class="mt-2 max-h-52 space-y-2 overflow-auto text-xs text-slate-300"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+const data = [
+  { id: 'E-1042', name: 'Nora Steiner', dept: 'Finance', title: 'Senior AP Analyst', manager: 'Lena Braun', location: 'Dresden', costCenter: 'FIN-210', status: 'Pending Approval', risk: 'Medium' },
+  { id: 'E-1178', name: 'Amir Yildiz', dept: 'IT Ops', title: 'IAM Specialist', manager: 'Tobias Koch', location: 'Berlin', costCenter: 'ITO-120', status: 'Needs Update', risk: 'High' },
+  { id: 'E-1231', name: 'Mila Schuster', dept: 'Sales', title: 'Enterprise AE', manager: 'Jonas Wolf', location: 'Munich', costCenter: 'SAL-330', status: 'Verified', risk: 'Low' },
+  { id: 'E-1267', name: 'Kai Neumann', dept: 'HR', title: 'HRBP', manager: 'Sophie Adler', location: 'Dresden', costCenter: 'HR-100', status: 'Needs Update', risk: 'Medium' },
+  { id: 'E-1320', name: 'Elena Varga', dept: 'Legal', title: 'Compliance Counsel', manager: 'Pia Ritter', location: 'Frankfurt', costCenter: 'LEG-510', status: 'Pending Approval', risk: 'High' },
+  { id: 'E-1393', name: 'Tom Becker', dept: 'Supply Chain', title: 'Logistics Planner', manager: 'Mara Hahn', location: 'Leipzig', costCenter: 'SC-440', status: 'Verified', risk: 'Low' }
+];
+
+let selectedId = data[0].id;
+let requests = [
+  { id: 'CR-9001', empId: 'E-1042', field: 'title', oldValue: 'AP Analyst', newValue: 'Senior AP Analyst', reason: 'Role expanded to handle month-end exception board ownership.', status: 'Pending HRBP Approval', by: 'Manager', ts: '2026-03-31 07:30' },
+  { id: 'CR-9002', empId: 'E-1320', field: 'location', oldValue: 'Berlin', newValue: 'Frankfurt', reason: 'Transferred to central legal escalation team.', status: 'Pending HRBP Approval', by: 'Manager', ts: '2026-03-31 06:55' },
+  { id: 'CR-9003', empId: 'E-1178', field: 'costCenter', oldValue: 'ITO-100', newValue: 'ITO-120', reason: 'Moved under new IAM security operations budget.', status: 'Pending Manager Approval', by: 'HRBP', ts: '2026-03-31 06:10' }
+];
+
+let audit = [
+  { text: 'HRBP created governance batch check for Q2 org updates.', ts: '2026-03-31 05:55' },
+  { text: 'Manager submitted title update for Nora Steiner.', ts: '2026-03-31 07:30' },
+  { text: 'Directory policy flagged missing cost center for IAM team.', ts: '2026-03-31 06:00' }
+];
+
+const statusColor = {
+  'Needs Update': 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+  'Pending Approval': 'bg-violet-500/15 text-violet-300 border border-violet-500/30',
+  'Verified': 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+};
+
+const rowsEl = document.getElementById('rows');
+const detailEl = document.getElementById('detail');
+const detailHint = document.getElementById('detailHint');
+const searchEl = document.getElementById('search');
+const deptFilterEl = document.getElementById('deptFilter');
+const statusFilterEl = document.getElementById('statusFilter');
+const sortByEl = document.getElementById('sortBy');
+const roleEl = document.getElementById('role');
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function initFilters() {
+  [...new Set(data.map(d => d.dept))].sort().forEach(dept => {
+    const opt = document.createElement('option');
+    opt.value = dept;
+    opt.textContent = dept;
+    deptFilterEl.appendChild(opt);
+  });
+}
+
+function filtered() {
+  const q = searchEl.value.toLowerCase().trim();
+  const dept = deptFilterEl.value;
+  const status = statusFilterEl.value;
+  const sortBy = sortByEl.value;
+
+  return data
+    .filter(d => {
+      const matchQ = !q || [d.name, d.manager, d.location, d.title, d.id].join(' ').toLowerCase().includes(q);
+      const matchDept = dept === 'all' || d.dept === dept;
+      const matchStatus = status === 'all' || d.status === status;
+      return matchQ && matchDept && matchStatus;
+    })
+    .sort((a, b) => String(a[sortBy]).localeCompare(String(b[sortBy])));
+}
+
+function renderRows() {
+  const list = filtered();
+  rowsEl.innerHTML = list.map(emp => `
+    <tr data-id="${emp.id}" tabindex="0" class="cursor-pointer ${emp.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'} focus:bg-slate-800/60 focus:outline-none">
+      <td class="px-3 py-2">
+        <p class="font-medium">${escapeHtml(emp.name)}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(emp.id)} · ${escapeHtml(emp.location)}</p>
+      </td>
+      <td class="px-3 py-2 text-slate-300">${escapeHtml(emp.dept)}</td>
+      <td class="px-3 py-2"><span class="inline-flex rounded-full px-2 py-1 text-xs ${statusColor[emp.status]}">${escapeHtml(emp.status)}</span></td>
+    </tr>
+  `).join('');
+
+  rowsEl.querySelectorAll('tr').forEach(tr => {
+    const select = () => {
+      selectedId = tr.dataset.id;
+      renderRows();
+      renderDetail();
+    };
+    tr.addEventListener('click', select);
+    tr.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        select();
+      }
+    });
+  });
+
+  if (!list.find(x => x.id === selectedId) && list.length) {
+    selectedId = list[0].id;
+    renderDetail();
+  }
+
+  document.getElementById('kpiTotal').textContent = data.length;
+  document.getElementById('kpiNeeds').textContent = data.filter(x => x.status === 'Needs Update').length;
+  document.getElementById('kpiPending').textContent = data.filter(x => x.status === 'Pending Approval').length;
+}
+
+function renderDetail() {
+  const emp = data.find(d => d.id === selectedId);
+  if (!emp) {
+    detailEl.classList.add('hidden');
+    detailHint.textContent = 'No matching employee for current filter selection.';
+    return;
+  }
+
+  detailEl.classList.remove('hidden');
+  detailHint.textContent = `Policy profile: ${emp.risk} directory-change risk`;
+
+  document.getElementById('dName').textContent = emp.name;
+  document.getElementById('dMeta').textContent = `${emp.id} · ${emp.dept}`;
+  document.getElementById('dManager').textContent = `Manager: ${emp.manager}`;
+  document.getElementById('dProfile').innerHTML = `
+    <li><strong>Title:</strong> ${escapeHtml(emp.title)}</li>
+    <li><strong>Location:</strong> ${escapeHtml(emp.location)}</li>
+    <li><strong>Cost Center:</strong> ${escapeHtml(emp.costCenter)}</li>
+    <li><strong>Status:</strong> <span class="inline-flex rounded-full px-2 py-0.5 text-xs ${statusColor[emp.status]}">${escapeHtml(emp.status)}</span></li>
+  `;
+
+  const myReq = requests.filter(r => r.empId === emp.id);
+  document.getElementById('pendingCount').textContent = `${myReq.filter(r => r.status.includes('Pending')).length} open`;
+  const role = roleEl.value;
+
+  document.getElementById('requests').innerHTML = myReq.length ? myReq.map(r => {
+    const canAct = role !== 'Auditor' && r.status.includes('Pending') && (
+      (role === 'HRBP' && r.status === 'Pending HRBP Approval') ||
+      (role === 'Manager' && r.status === 'Pending Manager Approval')
+    );
+
+    return `
+      <li class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+        <p class="text-xs text-slate-400">${escapeHtml(r.id)} · ${escapeHtml(r.ts)}</p>
+        <p><strong>${escapeHtml(r.field)}</strong>: ${escapeHtml(r.oldValue)} → ${escapeHtml(r.newValue)}</p>
+        <p class="text-xs text-slate-400">Reason: ${escapeHtml(r.reason)}</p>
+        <p class="mt-1"><span class="inline-flex rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-300">${escapeHtml(r.status)}</span></p>
+        ${canAct ? `
+          <div class="mt-2 flex gap-2">
+            <button data-act="approve" data-id="${escapeHtml(r.id)}" class="rounded-md border border-emerald-600/50 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20">Approve</button>
+            <button data-act="reject" data-id="${escapeHtml(r.id)}" class="rounded-md border border-rose-600/50 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/20">Reject</button>
+          </div>
+        ` : ''}
+      </li>
+    `;
+  }).join('') : '<li class="text-xs text-slate-400">No requests yet.</li>';
+
+  document.getElementById('audit').innerHTML = audit.map(a => `
+    <li class="rounded border border-slate-800 bg-slate-900 p-2">
+      <p>${escapeHtml(a.text)}</p>
+      <p class="mt-1 text-[11px] text-slate-500">${escapeHtml(a.ts)}</p>
+    </li>
+  `).join('');
+
+  bindActions();
+}
+
+function bindActions() {
+  document.querySelectorAll('[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.act;
+      const id = btn.dataset.id;
+      const req = requests.find(r => r.id === id);
+      const emp = data.find(d => d.id === selectedId);
+      if (!req || !emp) return;
+
+      if (action === 'approve') {
+        req.status = 'Approved';
+        emp[req.field] = req.newValue;
+        emp.status = 'Verified';
+        audit.unshift({ text: `${roleEl.value} approved ${req.id} for ${emp.name}.`, ts: new Date().toISOString().slice(0,16).replace('T',' ') });
+      } else {
+        req.status = 'Rejected';
+        emp.status = 'Needs Update';
+        audit.unshift({ text: `${roleEl.value} rejected ${req.id} for ${emp.name}.`, ts: new Date().toISOString().slice(0,16).replace('T',' ') });
+      }
+      renderRows();
+      renderDetail();
+    });
+  });
+}
+
+document.getElementById('changeForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const emp = data.find(d => d.id === selectedId);
+  if (!emp) return;
+  const field = document.getElementById('field').value;
+  const newValue = document.getElementById('newValue').value.trim();
+  const reason = document.getElementById('reason').value.trim();
+  const msg = document.getElementById('formMsg');
+
+  if (!newValue || reason.length < 10) {
+    msg.textContent = 'Validation failed: provide a value and reason with at least 10 characters.';
+    msg.className = 'text-xs text-rose-300';
+    return;
+  }
+
+  const req = {
+    id: `CR-${Math.floor(Math.random() * 9000 + 1000)}`,
+    empId: emp.id,
+    field,
+    oldValue: emp[field],
+    newValue,
+    reason,
+    status: roleEl.value === 'Manager' ? 'Pending HRBP Approval' : 'Pending Manager Approval',
+    by: roleEl.value,
+    ts: new Date().toISOString().slice(0,16).replace('T',' ')
+  };
+  requests.unshift(req);
+  emp.status = 'Pending Approval';
+  audit.unshift({ text: `${roleEl.value} created ${req.id} for ${emp.name} (${field}).`, ts: req.ts });
+
+  msg.textContent = `Created ${req.id} and routed for approval.`;
+  msg.className = 'text-xs text-emerald-300';
+  document.getElementById('newValue').value = '';
+  document.getElementById('reason').value = '';
+  renderRows();
+  renderDetail();
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  searchEl.value = '';
+  deptFilterEl.value = 'all';
+  statusFilterEl.value = 'all';
+  sortByEl.value = 'name';
+  renderRows();
+  renderDetail();
+});
+
+document.getElementById('csv').addEventListener('click', () => {
+  const list = filtered();
+  const headers = ['id','name','dept','title','manager','location','costCenter','status','risk'];
+  const lines = [headers.join(',')].concat(list.map(item => headers.map(h => `"${String(item[h]).replaceAll('"','""')}"`).join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'employee-directory-governance.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  audit.unshift({ text: `${roleEl.value} exported filtered employee directory CSV (${list.length} rows).`, ts: new Date().toISOString().slice(0,16).replace('T',' ') });
+  renderDetail();
+});
+
+[searchEl, deptFilterEl, statusFilterEl, sortByEl, roleEl].forEach(el =>
+  el.addEventListener('input', () => {
+    renderRows();
+    renderDetail();
+  })
+);
+
+initFilters();
+renderRows();
+renderDetail();
+</script>
+</body>
+</html>
