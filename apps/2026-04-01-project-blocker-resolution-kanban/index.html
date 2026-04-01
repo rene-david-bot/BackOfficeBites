@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Blocker Resolution Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#020617',
+            panel: '#0f172a',
+            panel2: '#111827',
+            line: '#1f2937'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-6 lg:px-8 space-y-6">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-semibold">Project Blocker Resolution Kanban</h1>
+        <p class="text-slate-300 mt-1">Planning board for dependency risks, approvals, and execution handoffs.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <label class="text-sm">
+          <span class="text-slate-300">Role view</span>
+          <select id="roleView" class="mt-1 w-full rounded-lg bg-panel border border-line px-3 py-2">
+            <option>PMO Lead</option>
+            <option>Team Lead</option>
+            <option>Exec Approver</option>
+          </select>
+        </label>
+        <button id="exportBtn" class="self-end rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="bg-panel border border-line rounded-xl p-4">
+      <h2 class="font-medium text-slate-100 mb-3">Search, filter, and sort</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <label class="text-sm">
+          <span class="text-slate-300">Search</span>
+          <input id="searchInput" type="text" placeholder="title, owner, squad" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2" />
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Severity</span>
+          <select id="severityFilter" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2">
+            <option value="all">All</option>
+            <option>Critical</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Squad</span>
+          <select id="squadFilter" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2">
+            <option value="all">All</option>
+            <option>EU Core</option>
+            <option>Data Platform</option>
+            <option>Mobile Ops</option>
+            <option>Integration Hub</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="text-slate-300">Sort by</span>
+          <select id="sortBy" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2">
+            <option value="due">Due date</option>
+            <option value="impact">Impact days</option>
+            <option value="severity">Severity</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <article class="bg-panel border border-line rounded-xl p-4 lg:col-span-2">
+        <h2 class="font-medium mb-3">Kanban board</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" id="board"></div>
+      </article>
+
+      <aside class="space-y-4">
+        <article class="bg-panel border border-line rounded-xl p-4">
+          <h2 class="font-medium">New blocker intake</h2>
+          <form id="blockerForm" class="mt-3 space-y-2">
+            <label class="block text-sm">
+              <span class="text-slate-300">Title</span>
+              <input name="title" required minlength="8" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Owner</span>
+              <input name="owner" required class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="text-slate-300">Squad</span>
+              <select name="squad" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2">
+                <option>EU Core</option>
+                <option>Data Platform</option>
+                <option>Mobile Ops</option>
+                <option>Integration Hub</option>
+              </select>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm">
+                <span class="text-slate-300">Severity</span>
+                <select name="severity" class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2">
+                  <option>Critical</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </label>
+              <label class="block text-sm">
+                <span class="text-slate-300">Impact (days)</span>
+                <input name="impactDays" type="number" min="1" max="30" required class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2" />
+              </label>
+            </div>
+            <label class="block text-sm">
+              <span class="text-slate-300">Due date</span>
+              <input name="dueDate" type="date" required class="mt-1 w-full rounded-lg bg-panel2 border border-line px-3 py-2" />
+            </label>
+            <button class="w-full rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold px-3 py-2">Add blocker</button>
+            <p id="formError" class="text-rose-300 text-sm min-h-[1.25rem]"></p>
+          </form>
+        </article>
+
+        <article class="bg-panel border border-line rounded-xl p-4">
+          <h2 class="font-medium">Approval queue</h2>
+          <ul id="approvalQueue" class="mt-3 space-y-2 text-sm"></ul>
+        </article>
+
+        <article class="bg-panel border border-line rounded-xl p-4">
+          <h2 class="font-medium">Audit trail</h2>
+          <ul id="auditTrail" class="mt-3 space-y-1 text-xs text-slate-300 max-h-56 overflow-auto"></ul>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const columns = [
+      { key: 'intake', label: 'Intake' },
+      { key: 'analysis', label: 'Analysis' },
+      { key: 'approval', label: 'Approval' },
+      { key: 'done', label: 'Done' }
+    ]
+
+    const severityWeight = { Critical: 4, High: 3, Medium: 2, Low: 1 }
+
+    const state = {
+      role: 'PMO Lead',
+      filters: { search: '', severity: 'all', squad: 'all', sort: 'due' },
+      blockers: [
+        {
+          id: 'BLK-731',
+          title: 'Vendor API quota increase pending legal addendum',
+          owner: 'Nina Hoffmann',
+          squad: 'Integration Hub',
+          severity: 'Critical',
+          impactDays: 8,
+          dueDate: '2026-04-04',
+          status: 'analysis',
+          requiresApproval: true,
+          approved: false
+        },
+        {
+          id: 'BLK-728',
+          title: 'Mobile rollout blocked by unresolved SSO certificate chain',
+          owner: 'Luca Schmidt',
+          squad: 'Mobile Ops',
+          severity: 'High',
+          impactDays: 4,
+          dueDate: '2026-04-03',
+          status: 'intake',
+          requiresApproval: false,
+          approved: false
+        },
+        {
+          id: 'BLK-722',
+          title: 'Data retention policy exception required for migration script',
+          owner: 'Yara Petrov',
+          squad: 'Data Platform',
+          severity: 'High',
+          impactDays: 6,
+          dueDate: '2026-04-06',
+          status: 'approval',
+          requiresApproval: true,
+          approved: false
+        },
+        {
+          id: 'BLK-715',
+          title: 'EU Core dependency matrix cleaned and release gate passed',
+          owner: 'Jan Keller',
+          squad: 'EU Core',
+          severity: 'Medium',
+          impactDays: 2,
+          dueDate: '2026-04-02',
+          status: 'done',
+          requiresApproval: false,
+          approved: true
+        }
+      ],
+      audit: [
+        '[07:44] BLK-715 moved to Done by PMO Lead',
+        '[07:35] BLK-722 submitted for executive approval',
+        '[07:20] BLK-731 flagged as policy-sensitive (critical >5 impact days)'
+      ]
+    }
+
+    const boardEl = document.getElementById('board')
+    const approvalQueueEl = document.getElementById('approvalQueue')
+    const auditTrailEl = document.getElementById('auditTrail')
+    const formErrorEl = document.getElementById('formError')
+
+    const byId = (id) => document.getElementById(id)
+
+    function nowStamp() {
+      const d = new Date()
+      return `[${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}]`
+    }
+
+    function log(entry) {
+      state.audit.unshift(`${nowStamp()} ${entry}`)
+      state.audit = state.audit.slice(0, 40)
+      renderAudit()
+    }
+
+    function getVisibleBlockers() {
+      return state.blockers
+        .filter((b) => state.filters.search === '' || `${b.id} ${b.title} ${b.owner} ${b.squad}`.toLowerCase().includes(state.filters.search))
+        .filter((b) => state.filters.severity === 'all' || b.severity === state.filters.severity)
+        .filter((b) => state.filters.squad === 'all' || b.squad === state.filters.squad)
+        .sort((a, b) => {
+          if (state.filters.sort === 'impact') return b.impactDays - a.impactDays
+          if (state.filters.sort === 'severity') return severityWeight[b.severity] - severityWeight[a.severity]
+          return new Date(a.dueDate) - new Date(b.dueDate)
+        })
+    }
+
+    function canMove(userRole, blocker, to) {
+      const from = blocker.status
+      if (from === to) return true
+
+      const order = { intake: 0, analysis: 1, approval: 2, done: 3 }
+      if (Math.abs(order[to] - order[from]) > 1) return false
+
+      if (userRole === 'Team Lead' && (to === 'approval' || to === 'done')) return false
+      if (userRole === 'Exec Approver' && to !== 'approval' && from !== 'approval') return false
+
+      if (to === 'approval' && !blocker.requiresApproval) return false
+      if (to === 'done' && blocker.requiresApproval && !blocker.approved) return false
+      if (from === 'analysis' && to === 'done' && blocker.requiresApproval) return false
+
+      return true
+    }
+
+    function moveBlocker(blockerId, to, via = 'button') {
+      const blocker = state.blockers.find((b) => b.id === blockerId)
+      if (!blocker) return
+
+      if (!canMove(state.role, blocker, to)) {
+        log(`${blocker.id} blocked by policy (${state.role} cannot move ${blocker.status} → ${to})`)
+        return
+      }
+
+      const prev = blocker.status
+      blocker.status = to
+      if (to === 'approval') blocker.approved = false
+      log(`${blocker.id} moved ${prev} → ${to} via ${via}`)
+      renderAll()
+    }
+
+    function approve(blockerId, approveDecision) {
+      const blocker = state.blockers.find((b) => b.id === blockerId)
+      if (!blocker || blocker.status !== 'approval') return
+      if (state.role !== 'Exec Approver') {
+        log(`${blocker.id} approval denied: role ${state.role} has no approval rights`)
+        return
+      }
+
+      if (approveDecision) {
+        blocker.approved = true
+        log(`${blocker.id} approved by executive reviewer`)
+      } else {
+        blocker.approved = false
+        blocker.status = 'analysis'
+        log(`${blocker.id} rejected and sent back to analysis`)
+      }
+      renderAll()
+    }
+
+    function renderBoard() {
+      const visible = getVisibleBlockers()
+      boardEl.innerHTML = ''
+
+      columns.forEach((col) => {
+        const lane = document.createElement('section')
+        lane.className = 'rounded-lg bg-panel2 border border-line p-2 min-h-[280px]'
+        lane.dataset.status = col.key
+        lane.innerHTML = `<h3 class="text-sm font-medium mb-2">${col.label}</h3>`
+
+        lane.addEventListener('dragover', (e) => e.preventDefault())
+        lane.addEventListener('drop', (e) => {
+          e.preventDefault()
+          const blockerId = e.dataTransfer.getData('text/plain')
+          moveBlocker(blockerId, col.key, 'drag')
+        })
+
+        visible.filter((b) => b.status === col.key).forEach((b) => {
+          const card = document.createElement('article')
+          card.className = 'rounded-md border border-slate-700 bg-slate-900 p-2 mb-2 focus-within:ring-2 ring-amber-400'
+          card.draggable = true
+          card.tabIndex = 0
+          card.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', b.id))
+
+          const badgeColor = b.severity === 'Critical' ? 'rose' : b.severity === 'High' ? 'amber' : b.severity === 'Medium' ? 'sky' : 'emerald'
+          const requiresText = b.requiresApproval ? (b.approved ? 'Approval ✔' : 'Approval required') : 'No approval'
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs text-slate-400">${b.id}</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-${badgeColor}-500/20 text-${badgeColor}-300 border border-${badgeColor}-500/30">${b.severity}</span>
+            </div>
+            <h4 class="font-medium text-sm mt-1">${b.title}</h4>
+            <p class="text-xs text-slate-300 mt-1">${b.owner} · ${b.squad}</p>
+            <p class="text-xs text-slate-400">Impact: ${b.impactDays}d · Due ${b.dueDate}</p>
+            <p class="text-xs ${b.approved ? 'text-emerald-300' : 'text-amber-300'} mt-1">${requiresText}</p>
+            <div class="mt-2 flex gap-1">
+              <button data-action="back" data-id="${b.id}" class="rounded bg-slate-700 hover:bg-slate-600 px-2 py-1 text-xs" aria-label="Move blocker backward">◀</button>
+              <button data-action="next" data-id="${b.id}" class="rounded bg-slate-700 hover:bg-slate-600 px-2 py-1 text-xs" aria-label="Move blocker forward">▶</button>
+            </div>
+          `
+          lane.appendChild(card)
+        })
+
+        boardEl.appendChild(lane)
+      })
+
+      boardEl.querySelectorAll('button[data-action]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const blocker = state.blockers.find((b) => b.id === btn.dataset.id)
+          const order = ['intake', 'analysis', 'approval', 'done']
+          const idx = order.indexOf(blocker.status)
+          const nextStatus = btn.dataset.action === 'next' ? order[Math.min(idx + 1, 3)] : order[Math.max(idx - 1, 0)]
+          moveBlocker(blocker.id, nextStatus)
+        })
+      })
+    }
+
+    function renderApprovalQueue() {
+      const queue = state.blockers.filter((b) => b.status === 'approval')
+      approvalQueueEl.innerHTML = ''
+
+      if (!queue.length) {
+        approvalQueueEl.innerHTML = '<li class="text-slate-400">No pending approvals</li>'
+        return
+      }
+
+      queue.forEach((b) => {
+        const li = document.createElement('li')
+        li.className = 'rounded border border-line bg-panel2 p-2'
+        li.innerHTML = `
+          <p class="font-medium">${b.id} · ${b.title}</p>
+          <p class="text-slate-300 text-xs">Policy check: ${b.severity === 'Critical' || b.impactDays > 5 ? 'Executive approval mandatory' : 'Standard approval'}</p>
+          <div class="mt-2 flex gap-2">
+            <button data-approve="yes" data-id="${b.id}" class="rounded bg-emerald-600 hover:bg-emerald-500 px-2 py-1 text-xs">Approve</button>
+            <button data-approve="no" data-id="${b.id}" class="rounded bg-rose-600 hover:bg-rose-500 px-2 py-1 text-xs">Reject</button>
+          </div>
+        `
+        approvalQueueEl.appendChild(li)
+      })
+
+      approvalQueueEl.querySelectorAll('button[data-approve]').forEach((btn) => {
+        btn.addEventListener('click', () => approve(btn.dataset.id, btn.dataset.approve === 'yes'))
+      })
+    }
+
+    function renderAudit() {
+      auditTrailEl.innerHTML = state.audit
+        .map((entry) => `<li class="border-b border-slate-800 pb-1">${entry}</li>`)
+        .join('')
+    }
+
+    function exportCsv() {
+      const rows = getVisibleBlockers().map((b) => [
+        b.id,
+        b.title,
+        b.owner,
+        b.squad,
+        b.severity,
+        b.impactDays,
+        b.dueDate,
+        b.status,
+        b.requiresApproval ? 'yes' : 'no',
+        b.approved ? 'yes' : 'no'
+      ])
+
+      const csv = [
+        ['id', 'title', 'owner', 'squad', 'severity', 'impactDays', 'dueDate', 'status', 'requiresApproval', 'approved'],
+        ...rows
+      ].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = 'project-blockers.csv'
+      link.click()
+      URL.revokeObjectURL(link.href)
+      log('CSV export generated for current filtered view')
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault()
+      formErrorEl.textContent = ''
+
+      const fd = new FormData(e.target)
+      const title = String(fd.get('title')).trim()
+      const owner = String(fd.get('owner')).trim()
+      const impactDays = Number(fd.get('impactDays'))
+      const dueDate = String(fd.get('dueDate'))
+      const severity = String(fd.get('severity'))
+
+      if (title.length < 8) {
+        formErrorEl.textContent = 'Title must be at least 8 characters.'
+        return
+      }
+      if (!owner) {
+        formErrorEl.textContent = 'Owner is required.'
+        return
+      }
+      if (!Number.isFinite(impactDays) || impactDays < 1 || impactDays > 30) {
+        formErrorEl.textContent = 'Impact must be between 1 and 30 days.'
+        return
+      }
+      const today = new Date().toISOString().slice(0, 10)
+      if (!dueDate || dueDate < today) {
+        formErrorEl.textContent = 'Due date cannot be in the past.'
+        return
+      }
+
+      const requiresApproval = severity === 'Critical' || impactDays > 5
+      const newId = `BLK-${Math.floor(Math.random() * 900 + 100)}`
+      state.blockers.unshift({
+        id: newId,
+        title,
+        owner,
+        squad: String(fd.get('squad')),
+        severity,
+        impactDays,
+        dueDate,
+        status: 'intake',
+        requiresApproval,
+        approved: false
+      })
+
+      e.target.reset()
+      log(`${newId} created in intake${requiresApproval ? ' with mandatory executive approval policy' : ''}`)
+      renderAll()
+    }
+
+    function bindControls() {
+      byId('searchInput').addEventListener('input', (e) => {
+        state.filters.search = e.target.value.toLowerCase().trim()
+        renderBoard()
+      })
+      byId('severityFilter').addEventListener('change', (e) => {
+        state.filters.severity = e.target.value
+        renderBoard()
+      })
+      byId('squadFilter').addEventListener('change', (e) => {
+        state.filters.squad = e.target.value
+        renderBoard()
+      })
+      byId('sortBy').addEventListener('change', (e) => {
+        state.filters.sort = e.target.value
+        renderBoard()
+      })
+      byId('roleView').addEventListener('change', (e) => {
+        state.role = e.target.value
+        log(`Role view switched to ${state.role}`)
+      })
+      byId('blockerForm').addEventListener('submit', handleFormSubmit)
+      byId('exportBtn').addEventListener('click', exportCsv)
+    }
+
+    function renderAll() {
+      renderBoard()
+      renderApprovalQueue()
+      renderAudit()
+    }
+
+    bindControls()
+    renderAll()
+  </script>
+</body>
+</html>

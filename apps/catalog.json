@@ -1310,5 +1310,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-01",
+    "day": 60,
+    "slug": "2026-04-01-project-blocker-resolution-kanban",
+    "name": "Project Blocker Resolution Kanban",
+    "description": "Planning kanban board for project dependency blockers with executive approvals, policy checks, and audit-ready state transitions.",
+    "category": "Planning",
+    "pattern": "Kanban",
+    "tags": [
+      "project board",
+      "planning",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "state machine",
+      "drag-and-drop",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

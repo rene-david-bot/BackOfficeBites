@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Employee Directory Governance Desk** — HR master-detail workspace for profile change approvals, role-based governance, and audit-ready exports.
+**Project Blocker Resolution Kanban** — Planning board for dependency risks with policy-gated approvals, role-based handoffs, and audit-ready transitions.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
