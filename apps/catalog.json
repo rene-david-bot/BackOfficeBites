@@ -1335,5 +1335,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-02",
+    "day": 61,
+    "slug": "2026-04-02-rma-disposition-wizard",
+    "name": "RMA Disposition Wizard",
+    "description": "Supply-chain wizard for return claims with policy-aware approval routing, role-based triage, and audit-ready workflow transitions.",
+    "category": "Supply Chain",
+    "pattern": "Wizard",
+    "tags": [
+      "rma portal",
+      "supply chain",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "audit trail",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
