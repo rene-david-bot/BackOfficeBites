@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>On-Call Rota Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">On-Call Rota Dragboard</h1>
+        <p class="text-slate-300 mt-2">Plan and approve IT on-call coverage with drag-and-drop routing, policy checks, and audit-ready handovers.</p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs w-full lg:w-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Open Shifts</span><span id="kpiOpen" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Uncovered Hours</span><span id="kpiHours" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">P1 in Review</span><span id="kpiP1" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Weekend Ready</span><span id="kpiWeekend" class="text-lg font-semibold">0%</span></div>
+      </div>
+    </div>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="searchInput" class="text-xs uppercase tracking-wider text-slate-400">Search</label>
+        <input id="searchInput" aria-label="Search shifts" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Shift ID, engineer, service" />
+
+        <label for="teamFilter" class="sr-only">Team filter</label>
+        <select id="teamFilter" aria-label="Team filter" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="all">All teams</option>
+          <option value="Platform">Platform</option>
+          <option value="Payments">Payments</option>
+          <option value="Identity">Identity</option>
+          <option value="DataOps">DataOps</option>
+        </select>
+
+        <label for="severityFilter" class="sr-only">Severity filter</label>
+        <select id="severityFilter" aria-label="Severity filter" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="all">All severities</option>
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="P3">P3</option>
+        </select>
+
+        <label for="roleView" class="sr-only">Role view</label>
+        <select id="roleView" aria-label="Role-based view" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="Rota Manager">Rota Manager</option>
+          <option value="Incident Commander">Incident Commander</option>
+          <option value="Team Lead">Team Lead</option>
+        </select>
+
+        <button id="exportBtn" class="ml-auto bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-3 py-2 rounded">Export CSV</button>
+      </div>
+      <p id="roleHint" class="text-xs text-slate-400 mt-3">Rota Manager can stage, approve, and escalate all shifts.</p>
+    </section>
+
+    <section class="mt-4 grid lg:grid-cols-4 gap-3" id="board"></section>
+
+    <section class="mt-4 grid lg:grid-cols-3 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 lg:col-span-2">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold">Coverage Table</h2>
+          <p class="text-xs text-slate-400">Click headers to sort</p>
+        </div>
+        <div class="overflow-x-auto rounded border border-slate-800">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-950 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2"><button data-sort="id" class="sortBtn hover:underline">Shift</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="date" class="sortBtn hover:underline">Date</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="service" class="sortBtn hover:underline">Service</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="engineer" class="sortBtn hover:underline">Engineer</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="hours" class="sortBtn hover:underline">Hours</button></th>
+                <th class="text-left px-3 py-2">State</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <h2 class="font-semibold text-lg">Add Shift</h2>
+          <p class="text-sm text-slate-400 mt-1">New coverage requests start in Backlog.</p>
+          <form id="shiftForm" class="mt-3 space-y-3">
+            <div>
+              <label for="fDate" class="text-sm block mb-1">Date</label>
+              <input id="fDate" type="date" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <div>
+              <label for="fTeam" class="text-sm block mb-1">Team</label>
+              <select id="fTeam" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+                <option>Platform</option>
+                <option>Payments</option>
+                <option>Identity</option>
+                <option>DataOps</option>
+              </select>
+            </div>
+            <div>
+              <label for="fService" class="text-sm block mb-1">Service</label>
+              <input id="fService" required placeholder="api-gateway" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="fSeverity" class="text-sm block mb-1">Severity</label>
+                <select id="fSeverity" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+                  <option>P1</option>
+                  <option>P2</option>
+                  <option>P3</option>
+                </select>
+              </div>
+              <div>
+                <label for="fHours" class="text-sm block mb-1">Hours</label>
+                <input id="fHours" type="number" min="1" max="24" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+              </div>
+            </div>
+            <div>
+              <label for="fEngineer" class="text-sm block mb-1">Engineer</label>
+              <input id="fEngineer" required placeholder="Priya Nair" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+              <input id="fCertified" type="checkbox" class="accent-emerald-500" />
+              P1 certified for weekend incidents
+            </label>
+            <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+            <button class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-2 text-sm" type="submit">Create Shift</button>
+          </form>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">Audit Trail</h2>
+            <button id="clearAudit" class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Clear</button>
+          </div>
+          <ul id="auditTrail" class="mt-3 text-sm text-slate-300 space-y-2"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const columns = [
+      { key: 'Backlog', label: 'Backlog', tone: 'border-slate-700' },
+      { key: 'Proposed', label: 'Proposed', tone: 'border-sky-700/70' },
+      { key: 'Approved', label: 'Approved', tone: 'border-emerald-700/70' },
+      { key: 'Escalated', label: 'Escalated', tone: 'border-rose-700/70' }
+    ];
+
+    const rolePermissions = {
+      'Rota Manager': ['Backlog', 'Proposed', 'Approved', 'Escalated'],
+      'Incident Commander': ['Proposed', 'Approved', 'Escalated'],
+      'Team Lead': ['Backlog', 'Proposed']
+    };
+
+    const shifts = [
+      { id: 'ROT-3181', date: '2026-04-04', team: 'Platform', service: 'API Gateway', engineer: 'Priya Nair', severity: 'P1', hours: 12, certified: true, state: 'Proposed' },
+      { id: 'ROT-3182', date: '2026-04-04', team: 'Payments', service: 'Ledger Sync', engineer: 'Luca Meyer', severity: 'P2', hours: 8, certified: true, state: 'Approved' },
+      { id: 'ROT-3183', date: '2026-04-05', team: 'Identity', service: 'SSO Bridge', engineer: 'Marta Klein', severity: 'P1', hours: 10, certified: false, state: 'Backlog' },
+      { id: 'ROT-3184', date: '2026-04-05', team: 'DataOps', service: 'Ingest Pipeline', engineer: 'Jonas Wolf', severity: 'P3', hours: 6, certified: false, state: 'Proposed' },
+      { id: 'ROT-3185', date: '2026-04-06', team: 'Platform', service: 'Alert Router', engineer: 'Tariq Rahman', severity: 'P1', hours: 12, certified: true, state: 'Escalated' }
+    ];
+
+    const board = document.getElementById('board');
+    const tableBody = document.getElementById('tableBody');
+    const auditTrail = document.getElementById('auditTrail');
+    const searchInput = document.getElementById('searchInput');
+    const teamFilter = document.getElementById('teamFilter');
+    const severityFilter = document.getElementById('severityFilter');
+    const roleView = document.getElementById('roleView');
+    const roleHint = document.getElementById('roleHint');
+
+    let sortState = { key: 'date', dir: 'asc' };
+
+    function isWeekend(dateStr) {
+      const day = new Date(dateStr + 'T00:00:00').getDay();
+      return day === 0 || day === 6;
+    }
+
+    function badge(sev) {
+      if (sev === 'P1') return 'bg-rose-900/70 text-rose-200';
+      if (sev === 'P2') return 'bg-amber-900/70 text-amber-200';
+      return 'bg-sky-900/70 text-sky-200';
+    }
+
+    function stateChip(state) {
+      const map = {
+        Backlog: 'bg-slate-700 text-slate-100',
+        Proposed: 'bg-sky-900/70 text-sky-200',
+        Approved: 'bg-emerald-900/70 text-emerald-200',
+        Escalated: 'bg-rose-900/70 text-rose-200'
+      };
+      return `<span class="px-2 py-1 rounded text-xs ${map[state] || 'bg-slate-700'}">${state}</span>`;
+    }
+
+    function addAudit(message) {
+      const li = document.createElement('li');
+      li.className = 'border border-slate-800 rounded px-3 py-2 bg-slate-950';
+      li.textContent = `${new Date().toLocaleTimeString('en-GB', { hour12: false })} — ${message}`;
+      auditTrail.prepend(li);
+      while (auditTrail.children.length > 12) auditTrail.removeChild(auditTrail.lastChild);
+    }
+
+    function filteredShifts() {
+      const q = searchInput.value.trim().toLowerCase();
+      const team = teamFilter.value;
+      const sev = severityFilter.value;
+      const visibleStates = rolePermissions[roleView.value];
+
+      return shifts
+        .filter(s => visibleStates.includes(s.state))
+        .filter(s => team === 'all' || s.team === team)
+        .filter(s => sev === 'all' || s.severity === sev)
+        .filter(s => !q || `${s.id} ${s.engineer} ${s.service} ${s.team}`.toLowerCase().includes(q));
+    }
+
+    function sortedShifts() {
+      const list = [...filteredShifts()];
+      const { key, dir } = sortState;
+      list.sort((a, b) => {
+        const av = a[key];
+        const bv = b[key];
+        if (typeof av === 'number') return dir === 'asc' ? av - bv : bv - av;
+        return dir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+      });
+      return list;
+    }
+
+    function renderKpis() {
+      const rows = filteredShifts();
+      const open = rows.filter(r => r.state !== 'Approved').length;
+      const uncovered = rows.filter(r => r.state !== 'Approved').reduce((sum, r) => sum + r.hours, 0);
+      const p1Review = rows.filter(r => r.severity === 'P1' && ['Backlog', 'Proposed'].includes(r.state)).length;
+      const weekend = rows.filter(r => isWeekend(r.date));
+      const weekendApproved = weekend.filter(r => r.state === 'Approved').length;
+      const weekendRatio = weekend.length ? Math.round((weekendApproved / weekend.length) * 100) : 100;
+
+      document.getElementById('kpiOpen').textContent = open;
+      document.getElementById('kpiHours').textContent = uncovered;
+      document.getElementById('kpiP1').textContent = p1Review;
+      document.getElementById('kpiWeekend').textContent = `${weekendRatio}%`;
+    }
+
+    function renderBoard() {
+      const visible = filteredShifts();
+      board.innerHTML = columns.map(col => {
+        const cards = visible.filter(s => s.state === col.key);
+        return `
+          <div class="bg-slate-900 border ${col.tone} rounded-xl p-3 min-h-56" data-column="${col.key}" tabindex="0" aria-label="${col.label} column">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold">${col.label}</h3>
+              <span class="text-xs text-slate-400">${cards.length}</span>
+            </div>
+            <div class="space-y-2 drop-zone" data-column="${col.key}">
+              ${cards.map(card => `
+                <article draggable="true" data-id="${card.id}" class="drag-card border border-slate-700 rounded-lg p-2 bg-slate-950 cursor-move hover:border-emerald-500/60">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="font-mono text-xs text-slate-300">${card.id}</p>
+                    <span class="px-2 py-0.5 rounded text-[11px] ${badge(card.severity)}">${card.severity}</span>
+                  </div>
+                  <p class="text-sm font-medium mt-1">${card.service}</p>
+                  <p class="text-xs text-slate-400 mt-1">${card.date} · ${card.team} · ${card.hours}h</p>
+                  <p class="text-xs mt-1">${card.engineer}${card.certified ? ' · ✅ Cert' : ' · ⚠️ No cert'}</p>
+                </article>
+              `).join('') || '<p class="text-xs text-slate-500">No shifts</p>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.drag-card').forEach(card => {
+        card.addEventListener('dragstart', event => {
+          event.dataTransfer.setData('text/plain', event.currentTarget.dataset.id);
+        });
+      });
+
+      document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', event => {
+          event.preventDefault();
+        });
+        zone.addEventListener('drop', event => {
+          event.preventDefault();
+          const id = event.dataTransfer.getData('text/plain');
+          const targetState = event.currentTarget.dataset.column;
+          moveShift(id, targetState);
+        });
+      });
+    }
+
+    function renderTable() {
+      const rows = sortedShifts();
+      tableBody.innerHTML = rows.map(row => `
+        <tr class="hover:bg-slate-800/50">
+          <td class="px-3 py-2 font-mono text-xs">${row.id}</td>
+          <td class="px-3 py-2">${row.date}</td>
+          <td class="px-3 py-2">${row.service}</td>
+          <td class="px-3 py-2">${row.engineer}</td>
+          <td class="px-3 py-2">${row.hours}</td>
+          <td class="px-3 py-2">${stateChip(row.state)}</td>
+        </tr>
+      `).join('');
+
+      if (!rows.length) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-slate-400">No shifts match this filter.</td></tr>';
+      }
+    }
+
+    function policyCheck(shift, nextState) {
+      if (nextState === 'Approved' && roleView.value === 'Team Lead') {
+        return 'Policy: Team Lead cannot approve shifts directly.';
+      }
+      if (nextState === 'Approved' && shift.severity === 'P1' && isWeekend(shift.date) && !shift.certified) {
+        return 'Policy: Weekend P1 shifts require certified engineer before approval.';
+      }
+      if (nextState === 'Approved' && shift.hours > 12) {
+        return 'Policy: shifts above 12h require escalation before approval.';
+      }
+      return '';
+    }
+
+    function moveShift(id, nextState) {
+      const shift = shifts.find(s => s.id === id);
+      if (!shift || shift.state === nextState) return;
+
+      const visibleStates = rolePermissions[roleView.value];
+      if (!visibleStates.includes(nextState)) {
+        addAudit(`${id} move blocked: ${roleView.value} lacks access to ${nextState}.`);
+        return;
+      }
+
+      const violation = policyCheck(shift, nextState);
+      if (violation) {
+        shift.state = 'Escalated';
+        addAudit(`${id} auto-escalated. ${violation}`);
+      } else {
+        shift.state = nextState;
+        addAudit(`${id} moved to ${nextState} by ${roleView.value}.`);
+      }
+      rerender();
+    }
+
+    function rerender() {
+      renderKpis();
+      renderBoard();
+      renderTable();
+    }
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort;
+        if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+        else sortState = { key, dir: 'asc' };
+        addAudit(`Coverage table sorted by ${key} (${sortState.dir}).`);
+        renderTable();
+      });
+    });
+
+    [searchInput, teamFilter, severityFilter].forEach(el => {
+      el.addEventListener('input', rerender);
+      el.addEventListener('change', rerender);
+    });
+
+    roleView.addEventListener('change', () => {
+      const hints = {
+        'Rota Manager': 'Rota Manager can stage, approve, and escalate all shifts.',
+        'Incident Commander': 'Incident Commander sees proposed/approved/escalated shifts for incident readiness.',
+        'Team Lead': 'Team Lead can only manage backlog and proposal steps.'
+      };
+      roleHint.textContent = hints[roleView.value];
+      addAudit(`Role view changed to ${roleView.value}.`);
+      rerender();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = sortedShifts();
+      const headers = ['id', 'date', 'team', 'service', 'engineer', 'severity', 'hours', 'state', 'certified'];
+      const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${String(r[h]).replaceAll('"','""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'on-call-rota-export.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addAudit(`CSV export generated (${rows.length} rows).`);
+    });
+
+    const shiftForm = document.getElementById('shiftForm');
+    const formError = document.getElementById('formError');
+
+    shiftForm.addEventListener('submit', event => {
+      event.preventDefault();
+      formError.classList.add('hidden');
+      const date = document.getElementById('fDate').value;
+      const team = document.getElementById('fTeam').value;
+      const service = document.getElementById('fService').value.trim();
+      const severity = document.getElementById('fSeverity').value;
+      const hours = Number(document.getElementById('fHours').value);
+      const engineer = document.getElementById('fEngineer').value.trim();
+      const certified = document.getElementById('fCertified').checked;
+
+      if (!date || !service || !engineer || !hours || hours < 1 || hours > 24) {
+        formError.textContent = 'Please complete all fields with valid values.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      if (severity === 'P1' && isWeekend(date) && !certified) {
+        formError.textContent = 'Weekend P1 shifts require certification. Enable the checkbox or choose another assignee.';
+        formError.classList.remove('hidden');
+        return;
+      }
+
+      const nextId = `ROT-${3180 + shifts.length + 1}`;
+      shifts.unshift({ id: nextId, date, team, service, engineer, severity, hours, certified, state: 'Backlog' });
+      shiftForm.reset();
+      addAudit(`${nextId} created for ${service} (${team}) and queued in Backlog.`);
+      rerender();
+    });
+
+    document.getElementById('clearAudit').addEventListener('click', () => {
+      auditTrail.innerHTML = '';
+      addAudit('Audit trail manually cleared.');
+    });
+
+    addAudit('Policy profile loaded: ROTA_WEEKEND_P1_CERT_v3.');
+    addAudit('Coverage demand imported from Ops calendar feed.');
+    rerender();
+  </script>
+</body>
+</html>

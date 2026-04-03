@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**RMA Disposition Wizard** — Supply-chain return workflow with policy-gated approval routing, role-based triage, and audit-ready state transitions.
+**On-Call Rota Dragboard** — IT on-call planning board with drag-and-drop routing, weekend P1 policy validation, and audit-ready handovers.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

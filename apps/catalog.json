@@ -1359,5 +1359,25 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-03",
+    "day": 62,
+    "slug": "2026-04-03-on-call-rota-dragboard",
+    "name": "On-Call Rota Dragboard",
+    "description": "Plan and approve on-call coverage with drag-and-drop workflow, weekend P1 policy checks, and audit-ready handovers.",
+    "category": "HR",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "on-call rota",
+      "drag-and-drop",
+      "policy validation",
+      "role-based views",
+      "audit trail",
+      "csv export",
+      "search",
+      "sort"
+    ],
+    "thumb": ""
   }
 ]
