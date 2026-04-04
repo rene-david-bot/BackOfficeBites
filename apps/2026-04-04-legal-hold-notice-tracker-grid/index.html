@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legal Hold Notice Tracker Grid — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Legal Hold Notice Tracker Grid</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Legal operations teams triage, review, and approve litigation hold notices with policy validation, role-gated workflow, and export-ready evidence history.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Viewer role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Legal Ops Analyst</option>
+          <option>Senior Counsel</option>
+          <option>Compliance Lead</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option>Draft</option>
+          <option>In Review</option>
+          <option>Approved</option>
+          <option>Rejected</option>
+          <option>On Hold</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="riskFilter" class="text-xs uppercase text-slate-400">Risk level</label>
+        <select id="riskFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All risks</option>
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+          <option>Critical</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="regionFilter" class="text-xs uppercase text-slate-400">Region</label>
+        <select id="regionFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All regions</option>
+          <option>EU</option>
+          <option>US</option>
+          <option>APAC</option>
+          <option>LATAM</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortSelect" class="text-xs uppercase text-slate-400">Sort by</label>
+        <select id="sortSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="updated">Last updated</option>
+          <option value="due">Nearest deadline</option>
+          <option value="risk">Highest risk</option>
+          <option value="matter">Matter name</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="matter, custodian, id..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Notice pipeline overview</p>
+        <div class="flex items-center gap-2">
+          <button id="exportBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section class="xl:col-span-8 bg-panel border border-slate-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold">Hold notice queue</h2>
+          <p class="text-xs text-slate-400">Use arrow keys + Enter to open selected row</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[56rem]">
+            <thead class="text-slate-400">
+              <tr class="border-b border-slate-700">
+                <th class="text-left py-2 px-2">ID</th>
+                <th class="text-left py-2 px-2">Matter</th>
+                <th class="text-left py-2 px-2">Custodian</th>
+                <th class="text-left py-2 px-2">Region</th>
+                <th class="text-left py-2 px-2">Risk</th>
+                <th class="text-left py-2 px-2">Status</th>
+                <th class="text-left py-2 px-2">Deadline</th>
+                <th class="text-left py-2 px-2">Owner</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="xl:col-span-4 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Selected notice</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">No notice selected.</p>
+
+          <div id="detailPanel" class="hidden mt-3 space-y-4">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailDesc" class="text-sm text-slate-200 mt-2"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy checks</h4>
+              <ul id="policyList" class="mt-2 space-y-1 text-sm"></ul>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Workflow actions</h4>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <button id="requestReviewBtn" class="px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">Submit for review</button>
+                <button id="approveBtn" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Approve</button>
+                <button id="rejectBtn" class="px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-900 font-semibold text-sm">Reject</button>
+                <button id="holdBtn" class="px-3 py-2 rounded-lg border border-slate-600 hover:bg-slate-700 text-sm">Mark on hold</button>
+              </div>
+              <p id="actionHint" class="text-xs text-slate-400 mt-3"></p>
+            </div>
+
+            <form id="auditNoteForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <label for="auditNoteInput" class="text-xs uppercase text-slate-400">Audit note</label>
+              <div class="flex gap-2 mt-2">
+                <input id="auditNoteInput" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Custodian list confirmed by HR" />
+                <button class="px-3 py-2 rounded-lg border border-slate-600 hover:bg-slate-700 text-sm" type="submit">Log</button>
+              </div>
+              <p id="auditNoteMsg" class="text-xs mt-2 text-slate-400"></p>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-lg font-semibold">Create notice</h3>
+          <p class="text-sm text-slate-400 mt-1">Start a new legal hold with deadline and risk validation.</p>
+          <form id="createForm" class="space-y-3 mt-4">
+            <div>
+              <label for="matterInput" class="text-xs uppercase text-slate-400">Matter name</label>
+              <input id="matterInput" required minlength="6" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Vendor billing dispute Q2" />
+            </div>
+            <div>
+              <label for="custodianInput" class="text-xs uppercase text-slate-400">Primary custodian</label>
+              <input id="custodianInput" required class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Name + department" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="regionInput" class="text-xs uppercase text-slate-400">Region</label>
+                <select id="regionInput" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>EU</option>
+                  <option>US</option>
+                  <option>APAC</option>
+                  <option>LATAM</option>
+                </select>
+              </div>
+              <div>
+                <label for="riskInput" class="text-xs uppercase text-slate-400">Risk</label>
+                <select id="riskInput" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                  <option>Critical</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="deadlineInput" class="text-xs uppercase text-slate-400">Notification deadline</label>
+                <input id="deadlineInput" required type="date" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label for="ownerInput" class="text-xs uppercase text-slate-400">Case owner</label>
+                <input id="ownerInput" required class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Legal Ops" />
+              </div>
+            </div>
+            <button type="submit" class="w-full rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2">Create draft notice</button>
+          </form>
+          <p id="formMsg" class="text-sm text-slate-300 mt-3"></p>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h3 class="text-lg font-semibold">Audit trail</h3>
+          <ul id="auditList" class="mt-3 space-y-2 text-sm max-h-64 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const regionFilter = document.getElementById('regionFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const searchInput = document.getElementById('searchInput');
+    const gridBody = document.getElementById('gridBody');
+    const resultCount = document.getElementById('resultCount');
+    const kpis = document.getElementById('kpis');
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailDesc = document.getElementById('detailDesc');
+    const policyList = document.getElementById('policyList');
+    const actionHint = document.getElementById('actionHint');
+    const auditList = document.getElementById('auditList');
+
+    const riskRank = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      activeId: 'LH-6201',
+      notices: [
+        {
+          id: 'LH-6201',
+          matter: 'Procurement kickback allegations',
+          custodian: 'Nora Klein · Strategic Sourcing',
+          region: 'EU',
+          risk: 'Critical',
+          status: 'In Review',
+          deadline: '2026-04-08',
+          owner: 'Lina Scholz',
+          documents: 4,
+          desc: 'Potential misconduct case requiring immediate preservation across mailbox, procurement drive, and Slack channels.',
+          updated: '2026-04-04T09:48:00Z'
+        },
+        {
+          id: 'LH-6203',
+          matter: 'Distributor rebate dispute',
+          custodian: 'Marco Diaz · Channel Finance',
+          region: 'LATAM',
+          risk: 'High',
+          status: 'Draft',
+          deadline: '2026-04-12',
+          owner: 'Pia Wolf',
+          documents: 2,
+          desc: 'Draft notice for disputed quarter-end rebates and disputed payment authorizations.',
+          updated: '2026-04-04T08:34:00Z'
+        },
+        {
+          id: 'LH-6204',
+          matter: 'IP ownership challenge',
+          custodian: 'Hiro Tan · Product R&D',
+          region: 'APAC',
+          risk: 'High',
+          status: 'Approved',
+          deadline: '2026-04-10',
+          owner: 'Jonas Fehr',
+          documents: 6,
+          desc: 'Approved legal hold for design files, repositories, and supplier communication evidence.',
+          updated: '2026-04-03T16:10:00Z'
+        },
+        {
+          id: 'LH-6206',
+          matter: 'Legacy payroll access claim',
+          custodian: 'Emma Baum · HR Shared Services',
+          region: 'US',
+          risk: 'Medium',
+          status: 'On Hold',
+          deadline: '2026-04-19',
+          owner: 'Dario Weiss',
+          documents: 1,
+          desc: 'On hold pending scope confirmation on historical payroll tenant exports.',
+          updated: '2026-04-04T07:52:00Z'
+        },
+        {
+          id: 'LH-6208',
+          matter: 'Warranty reserve restatement',
+          custodian: 'Sofia Krug · Corporate Controlling',
+          region: 'EU',
+          risk: 'Low',
+          status: 'Rejected',
+          deadline: '2026-04-18',
+          owner: 'Lina Scholz',
+          documents: 3,
+          desc: 'Rejected due to missing custodian inventory and legal basis reference.',
+          updated: '2026-04-04T06:41:00Z'
+        }
+      ],
+      audit: [
+        { ts: '2026-04-04 09:49', text: 'LH-6201 moved to In Review after data-preservation checklist completion.' },
+        { ts: '2026-04-04 08:36', text: 'LH-6203 draft created by Legal Ops Analyst with preliminary custodian list.' },
+        { ts: '2026-04-03 16:12', text: 'LH-6204 approved by Senior Counsel and preservation notices dispatched.' }
+      ]
+    };
+
+    function toDateLabel(dateStr) {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function toDateTimeLabel(dateStr) {
+      return new Date(dateStr).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function addAudit(text) {
+      const ts = new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      state.audit.unshift({ ts, text });
+      state.audit = state.audit.slice(0, 50);
+      renderAudit();
+    }
+
+    function filteredNotices() {
+      const search = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const risk = riskFilter.value;
+      const region = regionFilter.value;
+      const sort = sortSelect.value;
+
+      const rows = state.notices.filter(item => {
+        const haystack = [item.id, item.matter, item.custodian, item.owner].join(' ').toLowerCase();
+        const matchSearch = search.length === 0 || haystack.includes(search);
+        const matchStatus = status === 'all' || item.status === status;
+        const matchRisk = risk === 'all' || item.risk === risk;
+        const matchRegion = region === 'all' || item.region === region;
+        return matchSearch && matchStatus && matchRisk && matchRegion;
+      });
+
+      rows.sort((a, b) => {
+        if (sort === 'due') return new Date(a.deadline) - new Date(b.deadline);
+        if (sort === 'risk') return riskRank[b.risk] - riskRank[a.risk] || new Date(a.deadline) - new Date(b.deadline);
+        if (sort === 'matter') return a.matter.localeCompare(b.matter);
+        return new Date(b.updated) - new Date(a.updated);
+      });
+
+      return rows;
+    }
+
+    function policyChecks(item) {
+      const daysUntilDeadline = Math.ceil((new Date(item.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+      return [
+        {
+          ok: item.custodian.includes('·'),
+          text: item.custodian.includes('·') ? 'Custodian name and department captured.' : 'Custodian field must include person and department.'
+        },
+        {
+          ok: item.documents >= 2,
+          text: item.documents >= 2 ? 'At least two supporting evidence artifacts listed.' : 'Attach at least two supporting evidence artifacts before review.'
+        },
+        {
+          ok: !(item.risk === 'Critical' && daysUntilDeadline < 3),
+          text: !(item.risk === 'Critical' && daysUntilDeadline < 3)
+            ? 'Critical matter has minimum 3-day notification window.'
+            : 'Critical matters require a notification deadline at least 3 days out.'
+        },
+        {
+          ok: !(item.status === 'Approved' && item.documents < 3),
+          text: !(item.status === 'Approved' && item.documents < 3)
+            ? 'Approved notices include full evidence packet.'
+            : 'Approved notices require at least three evidence documents.'
+        }
+      ];
+    }
+
+    function renderKpis(rows) {
+      const cards = [
+        ['Visible notices', rows.length, 'text-cyan-300'],
+        ['In review', rows.filter(r => r.status === 'In Review').length, 'text-amber-300'],
+        ['Approved', rows.filter(r => r.status === 'Approved').length, 'text-emerald-300'],
+        ['High/Critical', rows.filter(r => ['High', 'Critical'].includes(r.risk)).length, 'text-orange-300'],
+        ['Due ≤ 5 days', rows.filter(r => Math.ceil((new Date(r.deadline) - new Date()) / 86400000) <= 5).length, 'text-rose-300']
+      ];
+
+      kpis.innerHTML = cards.map(([label, value, color]) => `
+        <div class="rounded-lg border border-slate-700 bg-panelSoft p-3">
+          <p class="text-xs text-slate-400 uppercase">${label}</p>
+          <p class="text-2xl font-bold mt-1 ${color}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid() {
+      const rows = filteredNotices();
+      resultCount.textContent = `${rows.length} result${rows.length === 1 ? '' : 's'}`;
+      renderKpis(rows);
+
+      if (!rows.some(row => row.id === state.activeId)) {
+        state.activeId = rows[0]?.id || null;
+      }
+
+      if (!rows.length) {
+        gridBody.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-slate-400">No notices match current filters.</td></tr>';
+        renderDetail();
+        return;
+      }
+
+      gridBody.innerHTML = rows.map(row => {
+        const isActive = row.id === state.activeId;
+        const trClass = isActive ? 'bg-slate-800/70 outline outline-1 outline-cyan-400' : 'hover:bg-slate-900/70';
+        const riskColor = row.risk === 'Critical' ? 'text-rose-300' : row.risk === 'High' ? 'text-orange-300' : 'text-slate-200';
+
+        return `
+          <tr class="border-b border-slate-800 ${trClass}" tabindex="0" role="button" data-id="${row.id}" aria-label="Open ${row.id}">
+            <td class="py-2 px-2 font-medium">${row.id}</td>
+            <td class="py-2 px-2">${row.matter}</td>
+            <td class="py-2 px-2 text-slate-300">${row.custodian}</td>
+            <td class="py-2 px-2">${row.region}</td>
+            <td class="py-2 px-2 ${riskColor}">${row.risk}</td>
+            <td class="py-2 px-2">${row.status}</td>
+            <td class="py-2 px-2">${toDateLabel(row.deadline)}</td>
+            <td class="py-2 px-2 text-slate-300">${row.owner}</td>
+          </tr>
+        `;
+      }).join('');
+
+      gridBody.querySelectorAll('tr[data-id]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          state.activeId = tr.dataset.id;
+          renderGrid();
+          renderDetail();
+        });
+        tr.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            state.activeId = tr.dataset.id;
+            renderGrid();
+            renderDetail();
+          }
+        });
+      });
+
+      renderDetail();
+    }
+
+    function updateWorkflowButtons(item, checks) {
+      const role = roleSelect.value;
+      const checksPass = checks.every(c => c.ok);
+
+      const canSubmit = ['Legal Ops Analyst', 'Compliance Lead'].includes(role) && ['Draft', 'Rejected'].includes(item.status);
+      const canApprove = role === 'Senior Counsel' && item.status === 'In Review' && checksPass;
+      const canReject = role === 'Senior Counsel' && item.status === 'In Review';
+      const canHold = ['Legal Ops Analyst', 'Compliance Lead', 'Senior Counsel'].includes(role) && item.status !== 'On Hold';
+
+      const requestReviewBtn = document.getElementById('requestReviewBtn');
+      const approveBtn = document.getElementById('approveBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
+      const holdBtn = document.getElementById('holdBtn');
+
+      requestReviewBtn.disabled = !canSubmit;
+      approveBtn.disabled = !canApprove;
+      rejectBtn.disabled = !canReject;
+      holdBtn.disabled = !canHold;
+
+      [requestReviewBtn, approveBtn, rejectBtn, holdBtn].forEach(btn => {
+        if (btn.disabled) {
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      });
+
+      actionHint.textContent = `Role: ${role}. Counsel approval requires all policy checks to pass.`;
+    }
+
+    function renderDetail() {
+      const item = state.notices.find(n => n.id === state.activeId);
+      if (!item) {
+        emptyDetail.classList.remove('hidden');
+        detailPanel.classList.add('hidden');
+        return;
+      }
+
+      emptyDetail.classList.add('hidden');
+      detailPanel.classList.remove('hidden');
+
+      detailTitle.textContent = `${item.matter} (${item.id})`;
+      detailMeta.textContent = `${item.region} · ${item.risk} risk · Deadline ${toDateLabel(item.deadline)} · Updated ${toDateTimeLabel(item.updated)}`;
+      detailDesc.textContent = item.desc;
+
+      const checks = policyChecks(item);
+      policyList.innerHTML = checks.map(check => `
+        <li class="${check.ok ? 'text-emerald-300' : 'text-rose-300'}">${check.ok ? '✓' : '✕'} ${check.text}</li>
+      `).join('');
+
+      updateWorkflowButtons(item, checks);
+    }
+
+    function exportCsv() {
+      const rows = filteredNotices();
+      const headers = ['id', 'matter', 'custodian', 'region', 'risk', 'status', 'deadline', 'owner', 'documents', 'updated'];
+      const lines = rows.map(row => [
+        row.id,
+        row.matter,
+        row.custodian,
+        row.region,
+        row.risk,
+        row.status,
+        row.deadline,
+        row.owner,
+        row.documents,
+        row.updated
+      ].map(v => `"${String(v).replaceAll('"', '""')}"`).join(','));
+
+      const blob = new Blob([[headers.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'legal-hold-notices.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('Filtered notice grid exported to CSV.');
+    }
+
+    function wireEvents() {
+      document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+      document.getElementById('requestReviewBtn').addEventListener('click', () => {
+        const item = state.notices.find(n => n.id === state.activeId);
+        if (!item) return;
+        const checks = policyChecks(item);
+        if (!checks.every(c => c.ok)) {
+          addAudit(`${item.id}: submit blocked due to failed policy checks.`);
+          renderDetail();
+          return;
+        }
+        item.status = 'In Review';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: submitted for counsel review by ${roleSelect.value}.`);
+        renderGrid();
+      });
+
+      document.getElementById('approveBtn').addEventListener('click', () => {
+        const item = state.notices.find(n => n.id === state.activeId);
+        if (!item) return;
+        item.status = 'Approved';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: approved by Senior Counsel.`);
+        renderGrid();
+      });
+
+      document.getElementById('rejectBtn').addEventListener('click', () => {
+        const item = state.notices.find(n => n.id === state.activeId);
+        if (!item) return;
+        item.status = 'Rejected';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: rejected with rework request by Senior Counsel.`);
+        renderGrid();
+      });
+
+      document.getElementById('holdBtn').addEventListener('click', () => {
+        const item = state.notices.find(n => n.id === state.activeId);
+        if (!item) return;
+        item.status = 'On Hold';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: marked on hold by ${roleSelect.value}.`);
+        renderGrid();
+      });
+
+      document.getElementById('auditNoteForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const input = document.getElementById('auditNoteInput');
+        const msg = document.getElementById('auditNoteMsg');
+        const item = state.notices.find(n => n.id === state.activeId);
+        const text = input.value.trim();
+
+        if (!item) return;
+        if (text.length < 8) {
+          msg.textContent = 'Note must be at least 8 characters.';
+          msg.className = 'text-xs mt-2 text-rose-300';
+          return;
+        }
+
+        addAudit(`${item.id}: ${text}`);
+        msg.textContent = 'Audit note logged.';
+        msg.className = 'text-xs mt-2 text-emerald-300';
+        input.value = '';
+      });
+
+      document.getElementById('createForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const matter = document.getElementById('matterInput').value.trim();
+        const custodian = document.getElementById('custodianInput').value.trim();
+        const region = document.getElementById('regionInput').value;
+        const risk = document.getElementById('riskInput').value;
+        const deadline = document.getElementById('deadlineInput').value;
+        const owner = document.getElementById('ownerInput').value.trim();
+        const formMsg = document.getElementById('formMsg');
+
+        if (matter.length < 6 || custodian.length < 6 || owner.length < 3) {
+          formMsg.textContent = 'Please complete all fields with realistic values.';
+          formMsg.className = 'text-sm text-rose-300 mt-3';
+          return;
+        }
+
+        const daysOut = Math.ceil((new Date(deadline) - new Date()) / 86400000);
+        if (!deadline || daysOut < 1) {
+          formMsg.textContent = 'Deadline must be at least one day in the future.';
+          formMsg.className = 'text-sm text-rose-300 mt-3';
+          return;
+        }
+
+        if (risk === 'Critical' && daysOut < 3) {
+          formMsg.textContent = 'Critical matters require a minimum 3-day deadline window.';
+          formMsg.className = 'text-sm text-rose-300 mt-3';
+          return;
+        }
+
+        const next = 6210 + state.notices.length;
+        const id = `LH-${next}`;
+        const notice = {
+          id,
+          matter,
+          custodian,
+          region,
+          risk,
+          status: 'Draft',
+          deadline,
+          owner,
+          documents: 2,
+          desc: 'New draft legal hold notice awaiting review and counsel approval.',
+          updated: new Date().toISOString()
+        };
+
+        state.notices.unshift(notice);
+        state.activeId = id;
+        addAudit(`${id}: draft notice created by ${roleSelect.value}.`);
+        formMsg.textContent = `Draft ${id} created.`;
+        formMsg.className = 'text-sm text-emerald-300 mt-3';
+        event.target.reset();
+        renderGrid();
+      });
+
+      [roleSelect, statusFilter, riskFilter, regionFilter, sortSelect].forEach(el => el.addEventListener('change', renderGrid));
+      searchInput.addEventListener('input', renderGrid);
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = state.audit.map(entry => `
+        <li class="rounded-lg border border-slate-700 bg-panelSoft p-2">
+          <p class="text-xs text-slate-400">${entry.ts}</p>
+          <p class="text-slate-200 mt-1">${entry.text}</p>
+        </li>
+      `).join('');
+    }
+
+    renderAudit();
+    wireEvents();
+    renderGrid();
+  </script>
+</body>
+</html>

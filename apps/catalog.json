@@ -1451,5 +1451,23 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 66,
+    "slug": "2026-04-04-legal-hold-notice-tracker-grid",
+    "name": "Legal Hold Notice Tracker Grid",
+    "description": "Data-grid legal hold tracker with policy checks, role-based approvals, audit logging, and filtered CSV export.",
+    "category": "Legal",
+    "pattern": "Data Grid",
+    "tags": [
+      "legal hold",
+      "data grid",
+      "approval workflow",
+      "audit trail",
+      "policy validation",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]
