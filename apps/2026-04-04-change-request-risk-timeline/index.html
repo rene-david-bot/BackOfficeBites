@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Change Request Risk Timeline — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Change Request Risk Timeline</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">IT teams track production changes through impact review, CAB approval, scheduling, and post-implementation checks with policy gates and a full audit trail.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Requester</option>
+          <option>CAB Reviewer</option>
+          <option>Change Manager</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="stageFilter" class="text-xs uppercase text-slate-400">Stage</label>
+        <select id="stageFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All stages</option>
+          <option value="proposed">Proposed</option>
+          <option value="impact_review">Impact Review</option>
+          <option value="cab_approval">CAB Approval</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="implemented">Implemented</option>
+          <option value="rolled_back">Rolled Back</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="riskFilter" class="text-xs uppercase text-slate-400">Risk</label>
+        <select id="riskFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All risks</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="systemFilter" class="text-xs uppercase text-slate-400">System</label>
+        <select id="systemFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All systems</option>
+          <option>ERP Core</option>
+          <option>Identity Gateway</option>
+          <option>Warehouse API</option>
+          <option>Finance DataHub</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="id, service, owner..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortBy" class="text-xs uppercase text-slate-400">Sort</label>
+        <select id="sortBy" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="window_asc">Earliest window</option>
+          <option value="risk_desc">Highest risk</option>
+          <option value="updated_desc">Recently updated</option>
+          <option value="duration_desc">Longest duration</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Change ops pulse</p>
+        <div class="flex items-center gap-2">
+          <button id="exportBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section class="xl:col-span-4 bg-panel border border-slate-800 rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Timeline Queue</h2>
+        <p class="text-sm text-slate-400 mt-1">Select a change to review policy checks, approvals, and deployment history.</p>
+        <ul id="changeList" class="mt-4 space-y-3 max-h-[42rem] overflow-auto"></ul>
+      </section>
+
+      <aside class="xl:col-span-8 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Change Detail</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">No change selected.</p>
+
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailSummary" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="transitionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="text-sm font-semibold">State Transition</h4>
+              <label class="block text-sm" for="nextStage">Next stage
+                <select id="nextStage" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></select>
+              </label>
+
+              <label class="block text-sm" for="rollbackPlan">Rollback plan status
+                <select id="rollbackPlan" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Ready</option>
+                  <option>Partial</option>
+                  <option>Missing</option>
+                </select>
+              </label>
+
+              <label class="block text-sm" for="approvalCode">Approval code (required for high/critical scheduling)
+                <input id="approvalCode" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. CAB-APR-921" />
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 14 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+              <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Apply transition</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Register New Change</h2>
+          <form id="newChangeForm" class="space-y-3 mt-3" novalidate>
+            <label class="block text-sm" for="newTitle">Change title
+              <input id="newTitle" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Price calculation patch rollout" />
+            </label>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newSystem">System
+                <select id="newSystem" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>ERP Core</option>
+                  <option>Identity Gateway</option>
+                  <option>Warehouse API</option>
+                  <option>Finance DataHub</option>
+                </select>
+              </label>
+              <label class="block text-sm" for="newRisk">Risk
+                <select id="newRisk" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newOwner">Owner
+                <input id="newOwner" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Yasmin Özcan" />
+              </label>
+              <label class="block text-sm" for="newDuration">Window (min)
+                <input id="newDuration" type="number" min="15" step="15" value="60" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+
+            <label class="block text-sm" for="newWindow">Planned UTC window start
+              <input id="newWindow" type="datetime-local" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+
+            <label class="block text-sm" for="newSummary">Impact summary (min 16 chars)
+              <textarea id="newSummary" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Describe customer impact, dependencies, and mitigation."></textarea>
+            </label>
+
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">Create change request</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-44 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const changes = [
+      {
+        id: 'CHG-912',
+        title: 'ERP invoice posting hotfix',
+        system: 'ERP Core',
+        owner: 'Lena Hofmann',
+        risk: 'critical',
+        stage: 'cab_approval',
+        windowStart: '2026-04-04T19:00:00Z',
+        durationMin: 90,
+        rollback: 'Ready',
+        approvalCode: '',
+        summary: 'Patch fixes duplicate invoice IDs created during retry bursts. Requires DB lock window and finance smoke tests.',
+        updatedAt: '2026-04-04T08:12:00Z',
+        audit: [
+          '08:12 UTC — CAB Reviewer requested final sign-off from Change Manager.',
+          '07:46 UTC — Impact review completed with critical risk rating.'
+        ]
+      },
+      {
+        id: 'CHG-905',
+        title: 'Warehouse API timeout tuning',
+        system: 'Warehouse API',
+        owner: 'Marco Silva',
+        risk: 'medium',
+        stage: 'scheduled',
+        windowStart: '2026-04-04T17:30:00Z',
+        durationMin: 45,
+        rollback: 'Ready',
+        approvalCode: 'CAB-APR-870',
+        summary: 'Adjusts connection pool thresholds to reduce timeout spikes during outbound shipment sync.',
+        updatedAt: '2026-04-04T06:44:00Z',
+        audit: [
+          '06:44 UTC — CAB Reviewer scheduled deployment for 17:30 UTC.',
+          '06:12 UTC — Rollback script validated in staging.'
+        ]
+      },
+      {
+        id: 'CHG-899',
+        title: 'Identity token cache invalidation',
+        system: 'Identity Gateway',
+        owner: 'Ariane Krüger',
+        risk: 'high',
+        stage: 'impact_review',
+        windowStart: '2026-04-05T08:00:00Z',
+        durationMin: 60,
+        rollback: 'Partial',
+        approvalCode: '',
+        summary: 'Fixes stale token reuse under rapid tenant switching. Partial rollback due to schema migration dependency.',
+        updatedAt: '2026-04-04T05:31:00Z',
+        audit: [
+          '05:31 UTC — Requester submitted dependency clarification for CAB.',
+          '05:00 UTC — Risk raised from medium to high after migration note.'
+        ]
+      },
+      {
+        id: 'CHG-894',
+        title: 'Finance DataHub archival policy update',
+        system: 'Finance DataHub',
+        owner: 'Jonas Weber',
+        risk: 'low',
+        stage: 'implemented',
+        windowStart: '2026-04-03T20:00:00Z',
+        durationMin: 30,
+        rollback: 'Ready',
+        approvalCode: 'CAB-APR-861',
+        summary: 'Retention policy aligned to quarter-close controls. Completed with no ingestion delays.',
+        updatedAt: '2026-04-03T20:42:00Z',
+        audit: [
+          '20:42 UTC — Change Manager marked implementation successful.',
+          '20:10 UTC — Post-change monitoring stable for 25 minutes.'
+        ]
+      }
+    ];
+
+    const stageLabel = {
+      proposed: 'Proposed',
+      impact_review: 'Impact Review',
+      cab_approval: 'CAB Approval',
+      scheduled: 'Scheduled',
+      implemented: 'Implemented',
+      rolled_back: 'Rolled Back'
+    };
+
+    const riskWeight = { low: 1, medium: 2, high: 3, critical: 4 };
+
+    const state = {
+      role: 'Requester',
+      selectedId: changes[0].id
+    };
+
+    const roleSelect = document.getElementById('roleSelect');
+    const stageFilter = document.getElementById('stageFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const systemFilter = document.getElementById('systemFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const kpis = document.getElementById('kpis');
+    const resultCount = document.getElementById('resultCount');
+    const changeList = document.getElementById('changeList');
+
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailSummary = document.getElementById('detailSummary');
+    const policyText = document.getElementById('policyText');
+
+    const transitionForm = document.getElementById('transitionForm');
+    const nextStage = document.getElementById('nextStage');
+    const rollbackPlan = document.getElementById('rollbackPlan');
+    const approvalCode = document.getElementById('approvalCode');
+    const actionNote = document.getElementById('actionNote');
+    const formError = document.getElementById('formError');
+
+    const newChangeForm = document.getElementById('newChangeForm');
+    const newTitle = document.getElementById('newTitle');
+    const newSystem = document.getElementById('newSystem');
+    const newRisk = document.getElementById('newRisk');
+    const newOwner = document.getElementById('newOwner');
+    const newDuration = document.getElementById('newDuration');
+    const newWindow = document.getElementById('newWindow');
+    const newSummary = document.getElementById('newSummary');
+    const newError = document.getElementById('newError');
+    const auditTrail = document.getElementById('auditTrail');
+
+    function fmtTime(iso) {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+    }
+
+    function selectedChange() {
+      return changes.find(item => item.id === state.selectedId) || null;
+    }
+
+    function matches(item) {
+      if (stageFilter.value !== 'all' && item.stage !== stageFilter.value) return false;
+      if (riskFilter.value !== 'all' && item.risk !== riskFilter.value) return false;
+      if (systemFilter.value !== 'all' && item.system !== systemFilter.value) return false;
+
+      const q = searchInput.value.trim().toLowerCase();
+      if (q) {
+        const text = `${item.id} ${item.title} ${item.system} ${item.owner} ${item.summary}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+
+      return true;
+    }
+
+    function getRows() {
+      const rows = changes.filter(matches);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'risk_desc') return riskWeight[b.risk] - riskWeight[a.risk];
+        if (sortBy.value === 'updated_desc') return new Date(b.updatedAt) - new Date(a.updatedAt);
+        if (sortBy.value === 'duration_desc') return b.durationMin - a.durationMin;
+        return new Date(a.windowStart) - new Date(b.windowStart);
+      });
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const scheduled = rows.filter(r => r.stage === 'scheduled').length;
+      const pendingApproval = rows.filter(r => r.stage === 'cab_approval').length;
+      const critical = rows.filter(r => ['high', 'critical'].includes(r.risk)).length;
+      const totalWindow = rows.reduce((sum, r) => sum + r.durationMin, 0);
+      const rollbackGaps = rows.filter(r => r.rollback !== 'Ready').length;
+
+      const cards = [
+        ['Changes', rows.length],
+        ['CAB Queue', pendingApproval],
+        ['Scheduled', scheduled],
+        ['High/Critical', critical],
+        ['Rollback Gaps', rollbackGaps]
+      ];
+
+      kpis.innerHTML = cards.map(([label, value]) => `
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <p class="text-xs uppercase text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+        </div>
+      `).join('');
+
+      resultCount.textContent = `${rows.length} change${rows.length === 1 ? '' : 's'} · total window ${totalWindow} min`;
+    }
+
+    function stageBadge(stage) {
+      const map = {
+        proposed: 'bg-slate-700 text-slate-100',
+        impact_review: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+        cab_approval: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+        scheduled: 'bg-violet-500/20 text-violet-300 border border-violet-500/40',
+        implemented: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        rolled_back: 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${map[stage] || 'bg-slate-700'}">${stageLabel[stage] || stage}</span>`;
+    }
+
+    function riskDot(risk) {
+      const color = {
+        low: 'bg-emerald-400',
+        medium: 'bg-amber-400',
+        high: 'bg-orange-500',
+        critical: 'bg-rose-500'
+      };
+      return `<span class="inline-block w-2.5 h-2.5 rounded-full ${color[risk] || 'bg-slate-400'}"></span>`;
+    }
+
+    function renderList(rows) {
+      changeList.innerHTML = '';
+      rows.forEach(item => {
+        const selected = item.id === state.selectedId;
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <button type="button" data-id="${item.id}" class="change-btn w-full text-left rounded-xl border ${selected ? 'border-amber-400/70 bg-slate-900/80' : 'border-slate-800 bg-panelSoft'} p-3 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-semibold">${item.title}</p>
+              ${stageBadge(item.stage)}
+            </div>
+            <p class="text-xs text-slate-300 mt-1">${item.id} · ${item.system}</p>
+            <p class="text-xs text-slate-400 mt-1">${riskDot(item.risk)} <span class="ml-1">${item.risk.toUpperCase()} · ${item.owner} · ${fmtTime(item.windowStart)} UTC</span></p>
+          </button>
+        `;
+        changeList.appendChild(li);
+      });
+
+      changeList.querySelectorAll('.change-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function allowedStages(item) {
+      const transitions = {
+        proposed: ['proposed', 'impact_review'],
+        impact_review: ['impact_review', 'cab_approval', 'rolled_back'],
+        cab_approval: ['cab_approval', 'scheduled', 'rolled_back'],
+        scheduled: ['scheduled', 'implemented', 'rolled_back'],
+        implemented: ['implemented'],
+        rolled_back: ['rolled_back', 'impact_review']
+      };
+
+      const base = transitions[item.stage] || Object.keys(stageLabel);
+      if (state.role === 'Requester') return base.filter(s => ['proposed', 'impact_review'].includes(s));
+      if (state.role === 'CAB Reviewer') return base.filter(s => ['impact_review', 'cab_approval', 'scheduled', 'rolled_back'].includes(s));
+      return base;
+    }
+
+    function policyFor(item) {
+      const strict = ['high', 'critical'].includes(item.risk);
+      if (strict) {
+        return 'Strict policy: high/critical changes must have rollback plan READY and a CAB approval code before scheduling or implementation.';
+      }
+      return 'Standard policy: medium/low risk changes can proceed after CAB review; approval code recommended for traceability.';
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        emptyDetail.classList.remove('hidden');
+        detailPanel.classList.add('hidden');
+        auditTrail.innerHTML = '<li>No change selected.</li>';
+        return;
+      }
+
+      emptyDetail.classList.add('hidden');
+      detailPanel.classList.remove('hidden');
+
+      detailTitle.textContent = `${item.title} (${item.id})`;
+      detailMeta.textContent = `${item.system} · ${item.owner} · ${item.risk.toUpperCase()} · ${item.durationMin} min · ${fmtTime(item.windowStart)} UTC`;
+      detailSummary.textContent = item.summary;
+      policyText.textContent = policyFor(item);
+
+      const allowed = allowedStages(item);
+      nextStage.innerHTML = allowed.map(stage => `<option value="${stage}">${stageLabel[stage]}</option>`).join('');
+      nextStage.value = allowed.includes(item.stage) ? item.stage : allowed[0];
+
+      rollbackPlan.value = item.rollback;
+      approvalCode.value = item.approvalCode || '';
+      actionNote.value = '';
+      formError.textContent = '';
+
+      auditTrail.innerHTML = item.audit.map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`).join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'title', 'system', 'owner', 'risk', 'stage', 'windowStart', 'durationMin', 'rollback', 'approvalCode', 'updatedAt', 'summary'];
+      const lines = [headers.join(',')];
+      rows.forEach(item => {
+        lines.push(headers.map(h => `"${String(item[h] ?? '').replaceAll('"', '""')}"`).join(','));
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'change-request-risk-timeline.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = getRows();
+      renderKpis(rows);
+      renderList(rows);
+
+      const current = selectedChange();
+      const fallback = rows[0] || null;
+      const item = current && rows.some(r => r.id === current.id) ? current : fallback;
+      if (item) state.selectedId = item.id;
+
+      renderDetail(item);
+    }
+
+    transitionForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const item = selectedChange();
+      if (!item) return;
+
+      const target = nextStage.value;
+      const rollback = rollbackPlan.value;
+      const code = approvalCode.value.trim();
+      const note = actionNote.value.trim();
+
+      if (note.length < 14) {
+        formError.textContent = 'Action note must be at least 14 characters.';
+        return;
+      }
+
+      if (state.role === 'Requester' && ['scheduled', 'implemented', 'cab_approval', 'rolled_back'].includes(target)) {
+        formError.textContent = 'Requester cannot execute this transition.';
+        return;
+      }
+
+      if (target === 'implemented' && state.role !== 'Change Manager') {
+        formError.textContent = 'Only Change Manager can mark changes as Implemented.';
+        return;
+      }
+
+      const strict = ['high', 'critical'].includes(item.risk);
+      if (strict && ['scheduled', 'implemented'].includes(target)) {
+        if (rollback !== 'Ready') {
+          formError.textContent = 'Rollback plan must be READY for high/critical changes.';
+          return;
+        }
+        if (!code) {
+          formError.textContent = 'Approval code is required for high/critical scheduling or implementation.';
+          return;
+        }
+      }
+
+      item.stage = target;
+      item.rollback = rollback;
+      item.approvalCode = code;
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${fmtTime(item.updatedAt)} UTC — ${state.role}: ${note} (→ ${stageLabel[target]}${code ? `, ${code}` : ''})`);
+
+      formError.textContent = '';
+      render();
+    });
+
+    newChangeForm.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const title = newTitle.value.trim();
+      const system = newSystem.value;
+      const risk = newRisk.value;
+      const owner = newOwner.value.trim();
+      const durationMin = Number(newDuration.value);
+      const windowLocal = newWindow.value;
+      const summary = newSummary.value.trim();
+
+      if (title.length < 6) {
+        newError.textContent = 'Change title must be at least 6 characters.';
+        return;
+      }
+      if (!owner) {
+        newError.textContent = 'Owner is required.';
+        return;
+      }
+      if (!Number.isFinite(durationMin) || durationMin < 15) {
+        newError.textContent = 'Window must be at least 15 minutes.';
+        return;
+      }
+      if (!windowLocal) {
+        newError.textContent = 'Planned window start is required.';
+        return;
+      }
+      if (summary.length < 16) {
+        newError.textContent = 'Impact summary must be at least 16 characters.';
+        return;
+      }
+
+      const maxId = Math.max(...changes.map(c => Number(c.id.split('-')[1])));
+      const id = `CHG-${maxId + 1}`;
+      const iso = new Date(windowLocal).toISOString();
+      const now = new Date().toISOString();
+
+      const entry = {
+        id,
+        title,
+        system,
+        owner,
+        risk,
+        stage: 'proposed',
+        windowStart: iso,
+        durationMin,
+        rollback: 'Partial',
+        approvalCode: '',
+        summary,
+        updatedAt: now,
+        audit: [`${fmtTime(now)} UTC — Change request created by ${state.role}.`]
+      };
+
+      changes.unshift(entry);
+      state.selectedId = id;
+
+      newChangeForm.reset();
+      newDuration.value = 60;
+      newError.textContent = '';
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      state.role = roleSelect.value;
+      render();
+    });
+
+    [stageFilter, riskFilter, systemFilter, sortBy].forEach(el => el.addEventListener('change', render));
+    searchInput.addEventListener('input', render);
+    exportBtn.addEventListener('click', () => exportCsv(getRows()));
+
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    now.setHours(now.getHours() + 8);
+    newWindow.value = now.toISOString().slice(0, 16);
+
+    render();
+  </script>
+</body>
+</html>

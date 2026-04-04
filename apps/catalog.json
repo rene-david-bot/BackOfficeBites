@@ -1403,5 +1403,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 64,
+    "slug": "2026-04-04-change-request-risk-timeline",
+    "name": "Change Request Risk Timeline",
+    "description": "Policy-gated IT change timeline with CAB approvals, rollback checks, and audit-ready transitions.",
+    "category": "IT Ops",
+    "pattern": "Timeline",
+    "tags": [
+      "change requests",
+      "it ops",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
