@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Variance Action Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="space-y-2">
+      <h1 class="text-3xl md:text-4xl font-bold">Budget Variance Action Kanban</h1>
+      <p class="text-slate-300 max-w-3xl">Finance command board to move monthly budget variances from investigation to closure with policy-gated approvals, role-based actions, and audit-ready exports.</p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="space-y-1 xl:col-span-2">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+          <input id="searchInput" type="text" placeholder="Team, owner, cost center..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Department</span>
+          <select id="deptFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Severity</span>
+          <select id="severityFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="all">All severities</option>
+            <option value="low">Low (&lt;5%)</option>
+            <option value="medium">Medium (5–12%)</option>
+            <option value="high">High (&gt;12%)</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+          <select id="sortSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="varianceDesc">Variance % ↓</option>
+            <option value="amountDesc">Variance € ↓</option>
+            <option value="plannedDesc">Planned € ↓</option>
+            <option value="recent">Most recently updated</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Role</span>
+          <select id="roleSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option>Analyst</option>
+            <option>Finance Manager</option>
+            <option>CFO</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4" id="board"></div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <h2 class="text-lg font-semibold">Action Desk</h2>
+        <div id="detailEmpty" class="text-sm text-slate-400">Select a card to inspect variance details and run a workflow action.</div>
+
+        <div id="detailPane" class="hidden space-y-4">
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2" id="detailMeta"></div>
+
+          <form id="actionForm" class="space-y-3">
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Action</span>
+              <select id="actionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+            </label>
+
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Proposed offset (€)</span>
+              <input id="offsetInput" type="number" min="0" step="100" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Required for reforecast / approval" />
+            </label>
+
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Notes</span>
+              <textarea id="noteInput" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Explain decision and policy rationale"></textarea>
+            </label>
+
+            <p id="formError" class="text-sm text-rose-400 hidden"></p>
+            <button class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold rounded-lg px-4 py-2" type="submit">Apply Workflow Action</button>
+          </form>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">Audit Trail</h3>
+            <button id="exportBtn" class="text-xs bg-slate-800 hover:bg-slate-700 rounded px-2 py-1">Export CSV</button>
+          </div>
+          <div id="auditLog" class="space-y-2 max-h-64 overflow-auto pr-1"></div>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <h3 class="font-medium">Variance by Department</h3>
+          <div id="miniChart" class="space-y-2"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const statuses = ["Investigate", "Reforecast", "Approve Offset", "Closed"];
+    const statusColor = {
+      "Investigate": "border-amber-500/40",
+      "Reforecast": "border-sky-500/40",
+      "Approve Offset": "border-purple-500/40",
+      "Closed": "border-emerald-500/40"
+    };
+
+    const records = [
+      { id: "BV-4012", department: "Marketing", owner: "Lina H.", costCenter: "MKT-220", planned: 120000, actual: 148500, status: "Investigate", updatedAt: "2026-04-04T09:20:00Z" },
+      { id: "BV-4013", department: "Customer Success", owner: "Marco T.", costCenter: "CS-110", planned: 86000, actual: 92500, status: "Reforecast", updatedAt: "2026-04-04T10:00:00Z" },
+      { id: "BV-4014", department: "Sales", owner: "Yvonne K.", costCenter: "SAL-300", planned: 145000, actual: 171200, status: "Approve Offset", updatedAt: "2026-04-04T11:35:00Z" },
+      { id: "BV-4015", department: "Engineering", owner: "Ibrahim N.", costCenter: "ENG-440", planned: 210000, actual: 201000, status: "Closed", updatedAt: "2026-04-04T08:45:00Z" },
+      { id: "BV-4016", department: "People Ops", owner: "Sofia R.", costCenter: "HR-070", planned: 54000, actual: 63400, status: "Investigate", updatedAt: "2026-04-04T12:10:00Z" },
+      { id: "BV-4017", department: "IT Ops", owner: "Patrick L.", costCenter: "IT-510", planned: 99000, actual: 117800, status: "Reforecast", updatedAt: "2026-04-04T12:35:00Z" },
+      { id: "BV-4018", department: "Legal", owner: "Asha G.", costCenter: "LEG-120", planned: 68000, actual: 74200, status: "Investigate", updatedAt: "2026-04-04T13:15:00Z" },
+      { id: "BV-4019", department: "Finance", owner: "Daniel M.", costCenter: "FIN-010", planned: 73000, actual: 71500, status: "Closed", updatedAt: "2026-04-04T07:30:00Z" }
+    ].map(r => ({ ...r, varianceAmount: r.actual - r.planned, variancePct: ((r.actual - r.planned) / r.planned) * 100 }));
+
+    const auditTrail = [
+      { time: "2026-04-04T10:04:00Z", text: "Finance Manager moved BV-4013 to Reforecast after vendor price update." },
+      { time: "2026-04-04T11:38:00Z", text: "CFO requested offset reserve check for BV-4014 before closure." },
+      { time: "2026-04-04T12:18:00Z", text: "Analyst attached new payroll baseline to BV-4016 investigation." }
+    ];
+
+    const state = {
+      selectedId: null,
+      role: "Analyst",
+      search: "",
+      dept: "all",
+      severity: "all",
+      sort: "varianceDesc"
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function severityFor(record) {
+      const v = Math.abs(record.variancePct);
+      if (v > 12) return "high";
+      if (v >= 5) return "medium";
+      return "low";
+    }
+
+    function badgeForSeverity(level) {
+      return {
+        low: "bg-emerald-500/20 text-emerald-200",
+        medium: "bg-amber-500/20 text-amber-200",
+        high: "bg-rose-500/20 text-rose-200"
+      }[level];
+    }
+
+    function euro(value) {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function pct(value) {
+      return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+    }
+
+    function filteredRecords() {
+      const q = state.search.trim().toLowerCase();
+      return records
+        .filter(r => state.dept === "all" || r.department === state.dept)
+        .filter(r => state.severity === "all" || severityFor(r) === state.severity)
+        .filter(r => {
+          if (!q) return true;
+          return [r.id, r.department, r.owner, r.costCenter].join(" ").toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          if (state.sort === "varianceDesc") return Math.abs(b.variancePct) - Math.abs(a.variancePct);
+          if (state.sort === "amountDesc") return Math.abs(b.varianceAmount) - Math.abs(a.varianceAmount);
+          if (state.sort === "plannedDesc") return b.planned - a.planned;
+          return new Date(b.updatedAt) - new Date(a.updatedAt);
+        });
+    }
+
+    function renderKpis(items) {
+      const totalPlanned = items.reduce((s, r) => s + r.planned, 0);
+      const totalActual = items.reduce((s, r) => s + r.actual, 0);
+      const overBudget = items.filter(r => r.varianceAmount > 0).length;
+      const pendingApproval = items.filter(r => r.status === "Approve Offset").length;
+
+      const cards = [
+        ["Planned Budget", euro(totalPlanned), "bg-slate-900"],
+        ["Actual Spend", euro(totalActual), "bg-slate-900"],
+        ["Over-Budget Lines", `${overBudget}`, "bg-rose-900/30"],
+        ["Awaiting Approval", `${pendingApproval}`, "bg-purple-900/30"]
+      ];
+
+      $("kpis").innerHTML = cards.map(([label, value, bg]) => `
+        <article class="${bg} border border-slate-800 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold mt-1">${value}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderBoard(items) {
+      const selected = records.find(r => r.id === state.selectedId);
+      const columns = statuses.map(status => {
+        const cards = items.filter(r => r.status === status);
+        return `
+          <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col gap-3 min-h-[360px]">
+            <header class="flex items-center justify-between">
+              <h2 class="font-semibold">${status}</h2>
+              <span class="text-xs bg-slate-800 rounded-full px-2 py-1">${cards.length}</span>
+            </header>
+            ${cards.map(r => {
+              const severity = severityFor(r);
+              const selectedClass = selected?.id === r.id ? "ring-2 ring-emerald-500" : "";
+              return `
+                <button data-id="${r.id}" class="text-left w-full border ${statusColor[r.status]} ${selectedClass} bg-slate-950 hover:bg-slate-900 rounded-lg p-3 space-y-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-medium">${r.id}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${badgeForSeverity(severity)}">${severity}</span>
+                  </div>
+                  <p class="text-sm text-slate-300">${r.department} · ${r.owner}</p>
+                  <p class="text-xs text-slate-400">Variance ${pct(r.variancePct)} (${euro(r.varianceAmount)})</p>
+                </button>
+              `;
+            }).join("") || `<p class="text-sm text-slate-500">No items</p>`}
+          </section>
+        `;
+      });
+
+      $("board").innerHTML = columns.join("");
+      $("board").querySelectorAll("button[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function allowedActions(record) {
+      const role = state.role;
+      const map = {
+        "Investigate": ["Reforecast", "Closed"],
+        "Reforecast": ["Approve Offset", "Investigate"],
+        "Approve Offset": ["Closed", "Investigate"],
+        "Closed": ["Investigate"]
+      };
+
+      let actions = map[record.status] || [];
+      if (role === "Analyst") actions = actions.filter(a => a !== "Closed");
+      if (role !== "CFO" && Math.abs(record.varianceAmount) > 30000) actions = actions.filter(a => a !== "Closed");
+      return actions;
+    }
+
+    function renderDetails() {
+      const record = records.find(r => r.id === state.selectedId);
+      if (!record) {
+        $("detailEmpty").classList.remove("hidden");
+        $("detailPane").classList.add("hidden");
+        return;
+      }
+
+      $("detailEmpty").classList.add("hidden");
+      $("detailPane").classList.remove("hidden");
+
+      $("detailMeta").innerHTML = `
+        <p class="text-xs uppercase tracking-wide text-slate-400">${record.id} · ${record.department}</p>
+        <p class="text-sm text-slate-300">Owner: ${record.owner} · Cost center: ${record.costCenter}</p>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <p>Planned: <strong>${euro(record.planned)}</strong></p>
+          <p>Actual: <strong>${euro(record.actual)}</strong></p>
+          <p>Variance: <strong>${euro(record.varianceAmount)}</strong></p>
+          <p>Status: <strong>${record.status}</strong></p>
+        </div>
+      `;
+
+      const actions = allowedActions(record);
+      $("actionSelect").innerHTML = actions.length
+        ? actions.map(a => `<option value="${a}">${a}</option>`).join("")
+        : `<option value="">No allowed actions for current role/policy</option>`;
+    }
+
+    function renderAudit() {
+      $("auditLog").innerHTML = auditTrail.slice().reverse().map(entry => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <p class="text-xs text-slate-500">${new Date(entry.time).toLocaleString("en-GB", { timeZone: "UTC" })} UTC</p>
+          <p class="text-sm text-slate-300">${entry.text}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderMiniChart(items) {
+      const grouped = items.reduce((acc, r) => {
+        acc[r.department] = (acc[r.department] || 0) + r.varianceAmount;
+        return acc;
+      }, {});
+
+      const entries = Object.entries(grouped).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5);
+      const max = Math.max(1, ...entries.map(([, v]) => Math.abs(v)));
+
+      $("miniChart").innerHTML = entries.map(([dept, value]) => {
+        const width = Math.max(8, Math.round((Math.abs(value) / max) * 100));
+        const color = value >= 0 ? "bg-rose-500" : "bg-emerald-500";
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs text-slate-300"><span>${dept}</span><span>${euro(value)}</span></div>
+            <div class="h-2 bg-slate-800 rounded"><div class="h-2 ${color} rounded" style="width:${width}%"></div></div>
+          </div>
+        `;
+      }).join("") || `<p class="text-sm text-slate-500">No data in current filter.</p>`;
+    }
+
+    function populateDepartmentFilter() {
+      const departments = [...new Set(records.map(r => r.department))].sort();
+      $("deptFilter").innerHTML = `<option value="all">All departments</option>` + departments.map(d => `<option value="${d}">${d}</option>`).join("");
+    }
+
+    function render() {
+      const items = filteredRecords();
+      renderKpis(items);
+      renderBoard(items);
+      renderDetails();
+      renderAudit();
+      renderMiniChart(items);
+    }
+
+    function addAudit(text) {
+      auditTrail.push({ time: new Date().toISOString(), text });
+    }
+
+    function setError(msg = "") {
+      const el = $("formError");
+      if (!msg) {
+        el.classList.add("hidden");
+        el.textContent = "";
+        return;
+      }
+      el.classList.remove("hidden");
+      el.textContent = msg;
+    }
+
+    function submitAction(e) {
+      e.preventDefault();
+      const record = records.find(r => r.id === state.selectedId);
+      if (!record) return;
+
+      const action = $("actionSelect").value;
+      const note = $("noteInput").value.trim();
+      const offset = Number($("offsetInput").value || 0);
+
+      if (!action) return setError("No workflow action is available for this role/policy context.");
+      if (note.length < 12) return setError("Notes must be at least 12 characters for audit traceability.");
+      if (["Reforecast", "Approve Offset"].includes(action) && offset <= 0) return setError("Provide a positive offset amount for reforecast/approval actions.");
+      if (Math.abs(record.varianceAmount) > 30000 && state.role !== "CFO" && action === "Closed") {
+        return setError("Only CFO can close variances above €30k.");
+      }
+      if (action === "Closed" && record.variancePct > 12 && offset < 10000) {
+        return setError("High-severity closures require at least €10k documented offset.");
+      }
+
+      setError("");
+      record.status = action;
+      record.updatedAt = new Date().toISOString();
+      if (offset > 0) {
+        record.actual = Math.max(record.actual - offset, 0);
+        record.varianceAmount = record.actual - record.planned;
+        record.variancePct = (record.varianceAmount / record.planned) * 100;
+      }
+
+      addAudit(`${state.role} moved ${record.id} to ${action}. Note: ${note}`);
+      $("noteInput").value = "";
+      $("offsetInput").value = "";
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredRecords().map(r => ({
+        id: r.id,
+        department: r.department,
+        owner: r.owner,
+        cost_center: r.costCenter,
+        planned_eur: r.planned,
+        actual_eur: r.actual,
+        variance_eur: r.varianceAmount,
+        variance_pct: r.variancePct.toFixed(2),
+        severity: severityFor(r),
+        status: r.status,
+        updated_at: r.updatedAt
+      }));
+
+      const headers = Object.keys(rows[0] || { id: "", status: "" });
+      const csv = [headers.join(","), ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? "")).join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `budget-variance-kanban-${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      addAudit(`${state.role} exported ${rows.length} filtered variance lines to CSV.`);
+      renderAudit();
+    }
+
+    function bindControls() {
+      $("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+      $("deptFilter").addEventListener("change", (e) => { state.dept = e.target.value; render(); });
+      $("severityFilter").addEventListener("change", (e) => { state.severity = e.target.value; render(); });
+      $("sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+      $("roleSelect").addEventListener("change", (e) => { state.role = e.target.value; render(); });
+      $("actionForm").addEventListener("submit", submitAction);
+      $("exportBtn").addEventListener("click", exportCsv);
+    }
+
+    populateDepartmentFilter();
+    bindControls();
+    render();
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Audit Findings Resolution Chatdesk** — legal ops chat workspace to triage audit findings, enforce policy gates, and close remediation with explicit approver sign-off.
+**Budget Variance Action Kanban** — finance workflow board to investigate spend variances, route reforecasts, and close lines with policy-gated approvals.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

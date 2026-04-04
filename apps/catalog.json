@@ -1512,5 +1512,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 69,
+    "slug": "2026-04-04-budget-variance-kanban",
+    "name": "Budget Variance Action Kanban",
+    "description": "Finance kanban workspace for monthly variance triage with policy-gated approvals, audit trail actions, and CSV export.",
+    "category": "Finance",
+    "pattern": "Kanban",
+    "tags": [
+      "budget vs actuals",
+      "finance",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
