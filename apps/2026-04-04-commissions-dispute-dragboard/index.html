@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commissions Dispute Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="space-y-2">
+      <h1 class="text-3xl md:text-4xl font-bold">Commissions Dispute Dragboard</h1>
+      <p class="text-slate-300 max-w-3xl">Sales ops workspace to resolve disputed commissions with drag-and-drop triage, role-aware policy gates, and audit-ready exports.</p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="space-y-1 xl:col-span-2">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+          <input id="searchInput" type="text" placeholder="Case, rep, account, reason..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Region</span>
+          <select id="regionFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Risk</span>
+          <select id="riskFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="all">All risk levels</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+          <select id="sortSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="amountDesc">Dispute amount € ↓</option>
+            <option value="ageDesc">Case age ↓</option>
+            <option value="recent">Most recently updated</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Role</span>
+          <select id="roleSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option>Sales Ops</option>
+            <option>Regional Manager</option>
+            <option>Finance Controller</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4" id="board"></div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <h2 class="text-lg font-semibold">Resolution Desk</h2>
+        <div id="detailEmpty" class="text-sm text-slate-400">Select a dispute to review policy checks and resolve.</div>
+
+        <div id="detailPane" class="hidden space-y-4">
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2" id="detailMeta"></div>
+
+          <form id="resolutionForm" class="space-y-3">
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Resolution decision</span>
+              <select id="decisionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+            </label>
+
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Approved payout adjustment (€)</span>
+              <input id="adjustmentInput" type="number" min="0" step="100" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Required for approve/partial decisions" />
+            </label>
+
+            <label class="space-y-1 block">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Decision notes</span>
+              <textarea id="noteInput" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Document rationale for audit"></textarea>
+            </label>
+
+            <p id="formError" class="text-sm text-rose-400 hidden"></p>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold rounded-lg px-4 py-2">Apply Resolution</button>
+          </form>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">Audit Trail</h3>
+            <button id="exportBtn" class="text-xs bg-slate-800 hover:bg-slate-700 rounded px-2 py-1">Export CSV</button>
+          </div>
+          <div id="auditLog" class="space-y-2 max-h-64 overflow-auto pr-1"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const columns = ["Intake", "Manager Review", "Finance Approval", "Resolved"];
+
+    const disputes = [
+      { id: "COM-771", rep: "Mila M.", region: "DACH", account: "Nordic Rail GmbH", reason: "Split-credit mismatch", amount: 8200, stage: "Intake", ageDays: 3, updatedAt: "2026-04-04T09:25:00Z" },
+      { id: "COM-772", rep: "David P.", region: "UKI", account: "SageBridge Ltd", reason: "Late churn clawback", amount: 14200, stage: "Manager Review", ageDays: 6, updatedAt: "2026-04-04T10:15:00Z" },
+      { id: "COM-773", rep: "Sofia R.", region: "DACH", account: "Helios Med AG", reason: "Renewal uplift dispute", amount: 5600, stage: "Finance Approval", ageDays: 4, updatedAt: "2026-04-04T11:05:00Z" },
+      { id: "COM-774", rep: "Omar K.", region: "France", account: "LatticeBio SAS", reason: "Contract effective date", amount: 3900, stage: "Resolved", ageDays: 2, updatedAt: "2026-04-04T08:40:00Z" },
+      { id: "COM-775", rep: "Lea T.", region: "Nordics", account: "Polar Grid AB", reason: "Territory overlap", amount: 12700, stage: "Intake", ageDays: 8, updatedAt: "2026-04-04T12:25:00Z" },
+      { id: "COM-776", rep: "Noah B.", region: "DACH", account: "OrbitOne GmbH", reason: "Net ARR adjustment", amount: 18800, stage: "Manager Review", ageDays: 10, updatedAt: "2026-04-04T13:10:00Z" },
+      { id: "COM-777", rep: "Lina C.", region: "Iberia", account: "Vela Cloud SL", reason: "Upsell attribution", amount: 4700, stage: "Finance Approval", ageDays: 5, updatedAt: "2026-04-04T14:05:00Z" },
+      { id: "COM-778", rep: "Ethan J.", region: "Benelux", account: "Kitepack BV", reason: "Payment terms exception", amount: 9700, stage: "Intake", ageDays: 1, updatedAt: "2026-04-04T07:55:00Z" }
+    ];
+
+    const auditTrail = [
+      { time: "2026-04-04T10:22:00Z", text: "Regional Manager moved COM-772 to Manager Review after updated territory evidence." },
+      { time: "2026-04-04T11:12:00Z", text: "Finance Controller flagged COM-773 for payout cap policy check." },
+      { time: "2026-04-04T13:38:00Z", text: "Sales Ops exported open disputes for payroll sync." }
+    ];
+
+    const state = {
+      selectedId: null,
+      role: "Sales Ops",
+      search: "",
+      region: "all",
+      risk: "all",
+      sort: "amountDesc"
+    };
+
+    const stageBorder = {
+      "Intake": "border-amber-500/40",
+      "Manager Review": "border-sky-500/40",
+      "Finance Approval": "border-purple-500/40",
+      "Resolved": "border-emerald-500/40"
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function euro(value) {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function riskLevel(item) {
+      if (item.amount >= 15000 || item.ageDays >= 9) return "high";
+      if (item.amount >= 8000 || item.ageDays >= 5) return "medium";
+      return "low";
+    }
+
+    function riskClass(risk) {
+      return {
+        low: "bg-emerald-500/20 text-emerald-200",
+        medium: "bg-amber-500/20 text-amber-200",
+        high: "bg-rose-500/20 text-rose-200"
+      }[risk];
+    }
+
+    function filteredDisputes() {
+      const q = state.search.trim().toLowerCase();
+      return disputes
+        .filter(d => state.region === "all" || d.region === state.region)
+        .filter(d => state.risk === "all" || riskLevel(d) === state.risk)
+        .filter(d => {
+          if (!q) return true;
+          return [d.id, d.rep, d.account, d.reason, d.region].join(" ").toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          if (state.sort === "amountDesc") return b.amount - a.amount;
+          if (state.sort === "ageDesc") return b.ageDays - a.ageDays;
+          return new Date(b.updatedAt) - new Date(a.updatedAt);
+        });
+    }
+
+    function renderKpis(items) {
+      const open = items.filter(i => i.stage !== "Resolved").length;
+      const highRisk = items.filter(i => riskLevel(i) === "high" && i.stage !== "Resolved").length;
+      const totalValue = items.reduce((sum, i) => sum + i.amount, 0);
+      const financeQueue = items.filter(i => i.stage === "Finance Approval").length;
+
+      const cards = [
+        ["Open Disputes", `${open}`, "bg-slate-900"],
+        ["High-Risk Open", `${highRisk}`, "bg-rose-900/30"],
+        ["Disputed Value", euro(totalValue), "bg-slate-900"],
+        ["Awaiting Finance", `${financeQueue}`, "bg-purple-900/30"]
+      ];
+
+      $("kpis").innerHTML = cards.map(([label, value, bg]) => `
+        <article class="${bg} border border-slate-800 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold mt-1">${value}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderBoard(items) {
+      const selected = disputes.find(d => d.id === state.selectedId);
+
+      $("board").innerHTML = columns.map(col => {
+        const cards = items.filter(d => d.stage === col);
+
+        return `
+          <section data-column="${col}" class="dropzone bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col gap-3 min-h-[360px]">
+            <header class="flex items-center justify-between">
+              <h2 class="font-semibold">${col}</h2>
+              <span class="text-xs bg-slate-800 rounded-full px-2 py-1">${cards.length}</span>
+            </header>
+            <div class="space-y-2 flex-1">
+              ${cards.map(card => {
+                const risk = riskLevel(card);
+                const selectedClass = selected?.id === card.id ? "ring-2 ring-emerald-500" : "";
+                return `
+                  <article tabindex="0" draggable="true" data-id="${card.id}" class="dragcard text-left w-full border ${stageBorder[card.stage]} ${selectedClass} bg-slate-950 hover:bg-slate-900 rounded-lg p-3 space-y-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-medium">${card.id}</span>
+                      <span class="text-xs px-2 py-0.5 rounded-full ${riskClass(risk)}">${risk}</span>
+                    </div>
+                    <p class="text-sm text-slate-300">${card.rep} · ${card.region}</p>
+                    <p class="text-xs text-slate-400 truncate">${card.account}</p>
+                    <p class="text-xs text-slate-400">${euro(card.amount)} · ${card.ageDays}d open</p>
+                  </article>
+                `;
+              }).join("") || `<p class="text-sm text-slate-500">No disputes</p>`}
+            </div>
+          </section>
+        `;
+      }).join("");
+
+      attachBoardEvents();
+    }
+
+    function decisionOptions(item) {
+      if (!item) return [];
+
+      const base = {
+        "Intake": ["Move to Manager Review"],
+        "Manager Review": ["Approve in Full", "Approve Partial", "Reject", "Escalate to Finance"],
+        "Finance Approval": ["Approve in Full", "Approve Partial", "Reject", "Return to Manager Review"],
+        "Resolved": ["Reopen"]
+      }[item.stage] || [];
+
+      if (state.role === "Sales Ops") {
+        return base.filter(opt => ["Move to Manager Review", "Escalate to Finance", "Return to Manager Review", "Reopen"].includes(opt));
+      }
+      if (state.role === "Regional Manager") {
+        return base.filter(opt => opt !== "Approve in Full" || item.amount <= 15000);
+      }
+      return base;
+    }
+
+    function renderDetails() {
+      const item = disputes.find(d => d.id === state.selectedId);
+      if (!item) {
+        $("detailEmpty").classList.remove("hidden");
+        $("detailPane").classList.add("hidden");
+        return;
+      }
+
+      $("detailEmpty").classList.add("hidden");
+      $("detailPane").classList.remove("hidden");
+
+      const risk = riskLevel(item);
+      $("detailMeta").innerHTML = `
+        <p class="text-xs uppercase tracking-wide text-slate-400">${item.id} · ${item.region}</p>
+        <p class="text-sm text-slate-300">Rep: ${item.rep} · Account: ${item.account}</p>
+        <p class="text-sm text-slate-300">Reason: ${item.reason}</p>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <p>Amount: <strong>${euro(item.amount)}</strong></p>
+          <p>Risk: <strong class="capitalize">${risk}</strong></p>
+          <p>Stage: <strong>${item.stage}</strong></p>
+          <p>Age: <strong>${item.ageDays} days</strong></p>
+        </div>
+      `;
+
+      const opts = decisionOptions(item);
+      $("decisionSelect").innerHTML = opts.length
+        ? opts.map(opt => `<option value="${opt}">${opt}</option>`).join("")
+        : `<option value="">No available decisions for this role</option>`;
+    }
+
+    function renderAudit() {
+      $("auditLog").innerHTML = auditTrail.slice().reverse().map(entry => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <p class="text-xs text-slate-500">${new Date(entry.time).toLocaleString("en-GB", { timeZone: "UTC" })} UTC</p>
+          <p class="text-sm text-slate-300">${entry.text}</p>
+        </div>
+      `).join("");
+    }
+
+    function addAudit(text) {
+      auditTrail.push({ time: new Date().toISOString(), text });
+      renderAudit();
+    }
+
+    function setError(msg = "") {
+      const el = $("formError");
+      if (!msg) {
+        el.classList.add("hidden");
+        el.textContent = "";
+        return;
+      }
+      el.classList.remove("hidden");
+      el.textContent = msg;
+    }
+
+    function moveCard(item, targetStage, source = "drag") {
+      if (item.stage === targetStage) return;
+
+      const validMoves = {
+        "Intake": ["Manager Review"],
+        "Manager Review": ["Finance Approval", "Resolved", "Intake"],
+        "Finance Approval": ["Resolved", "Manager Review"],
+        "Resolved": ["Manager Review"]
+      };
+
+      if (!(validMoves[item.stage] || []).includes(targetStage)) {
+        return setError(`Cannot move from ${item.stage} to ${targetStage}.`);
+      }
+
+      if (targetStage === "Resolved" && item.amount > 15000 && state.role !== "Finance Controller") {
+        return setError("Only Finance Controller can resolve disputes above €15k.");
+      }
+
+      item.stage = targetStage;
+      item.updatedAt = new Date().toISOString();
+      addAudit(`${state.role} moved ${item.id} to ${targetStage} via ${source}.`);
+      setError("");
+      render();
+    }
+
+    function submitResolution(e) {
+      e.preventDefault();
+      const item = disputes.find(d => d.id === state.selectedId);
+      if (!item) return;
+
+      const decision = $("decisionSelect").value;
+      const notes = $("noteInput").value.trim();
+      const adjustment = Number($("adjustmentInput").value || 0);
+
+      if (!decision) return setError("No decision available for current role and stage.");
+      if (notes.length < 12) return setError("Decision notes must be at least 12 characters.");
+
+      if (["Approve in Full", "Approve Partial"].includes(decision) && adjustment <= 0) {
+        return setError("Provide a positive payout adjustment for approval decisions.");
+      }
+
+      if (decision === "Approve in Full" && adjustment < item.amount) {
+        return setError("Full approval requires adjustment >= disputed amount.");
+      }
+
+      if (decision === "Approve in Full" && item.amount > 15000 && state.role !== "Finance Controller") {
+        return setError("Only Finance Controller can fully approve disputes above €15k.");
+      }
+
+      if (decision === "Move to Manager Review") moveCard(item, "Manager Review", "form");
+      if (decision === "Escalate to Finance") moveCard(item, "Finance Approval", "form");
+      if (decision === "Return to Manager Review") moveCard(item, "Manager Review", "form");
+      if (decision === "Reopen") moveCard(item, "Manager Review", "form");
+      if (decision === "Reject") moveCard(item, "Resolved", "form");
+      if (["Approve in Full", "Approve Partial"].includes(decision)) moveCard(item, "Resolved", "form");
+
+      addAudit(`${state.role} decision on ${item.id}: ${decision} (${euro(adjustment || 0)}). Note: ${notes}`);
+      $("noteInput").value = "";
+      $("adjustmentInput").value = "";
+      setError("");
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredDisputes().map(d => ({
+        id: d.id,
+        rep: d.rep,
+        region: d.region,
+        account: d.account,
+        reason: d.reason,
+        dispute_amount_eur: d.amount,
+        risk: riskLevel(d),
+        stage: d.stage,
+        age_days: d.ageDays,
+        updated_at: d.updatedAt
+      }));
+
+      const headers = Object.keys(rows[0] || { id: "", stage: "" });
+      const csv = [headers.join(","), ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? "")).join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `commissions-disputes-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      addAudit(`${state.role} exported ${rows.length} filtered disputes to CSV.`);
+    }
+
+    function attachBoardEvents() {
+      $("board").querySelectorAll(".dragcard").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedId = card.dataset.id;
+          render();
+        });
+
+        card.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", card.dataset.id);
+          e.dataTransfer.effectAllowed = "move";
+        });
+
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            state.selectedId = card.dataset.id;
+            render();
+          }
+        });
+      });
+
+      $("board").querySelectorAll(".dropzone").forEach(zone => {
+        zone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zone.classList.add("ring-2", "ring-emerald-500/50");
+        });
+
+        zone.addEventListener("dragleave", () => {
+          zone.classList.remove("ring-2", "ring-emerald-500/50");
+        });
+
+        zone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          zone.classList.remove("ring-2", "ring-emerald-500/50");
+          const id = e.dataTransfer.getData("text/plain");
+          const item = disputes.find(d => d.id === id);
+          if (!item) return;
+          moveCard(item, zone.dataset.column, "drag");
+        });
+      });
+    }
+
+    function populateRegionFilter() {
+      const regions = [...new Set(disputes.map(d => d.region))].sort();
+      $("regionFilter").innerHTML = `<option value="all">All regions</option>` + regions.map(r => `<option value="${r}">${r}</option>`).join("");
+    }
+
+    function bindControls() {
+      $("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+      $("regionFilter").addEventListener("change", (e) => { state.region = e.target.value; render(); });
+      $("riskFilter").addEventListener("change", (e) => { state.risk = e.target.value; render(); });
+      $("sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+      $("roleSelect").addEventListener("change", (e) => { state.role = e.target.value; render(); });
+      $("resolutionForm").addEventListener("submit", submitResolution);
+      $("exportBtn").addEventListener("click", exportCsv);
+    }
+
+    function render() {
+      const items = filteredDisputes();
+      renderKpis(items);
+      renderBoard(items);
+      renderDetails();
+      renderAudit();
+    }
+
+    populateRegionFilter();
+    bindControls();
+    render();
+  </script>
+</body>
+</html>

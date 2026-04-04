@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Budget Variance Action Kanban** — finance workflow board to investigate spend variances, route reforecasts, and close lines with policy-gated approvals.
+**Commissions Dispute Dragboard** — sales dispute workflow board to resolve commission claims with drag-and-drop triage, policy gates, and audit-ready decisions.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

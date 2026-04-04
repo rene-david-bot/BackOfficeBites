@@ -1536,5 +1536,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 70,
+    "slug": "2026-04-04-commissions-dispute-dragboard",
+    "name": "Commissions Dispute Dragboard",
+    "description": "Sales drag-and-drop workspace for disputed commission payouts with policy-gated approvals, audit trail actions, and CSV export.",
+    "category": "Sales",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "commissions",
+      "sales",
+      "drag-and-drop",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": "thumb.jpg"
   }
 ]
