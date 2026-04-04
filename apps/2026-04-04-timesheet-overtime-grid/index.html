@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timesheet Overtime Compliance Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="space-y-2">
+      <h1 class="text-3xl md:text-4xl font-bold">Timesheet Overtime Compliance Grid</h1>
+      <p class="text-slate-300 max-w-3xl">HR operations desk for reviewing weekly timesheets with overtime policy validation, role-based approvals, audit-ready state transitions, and CSV export.</p>
+    </header>
+
+    <section id="kpis" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="space-y-1 xl:col-span-2">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+          <input id="searchInput" type="text" placeholder="Employee, cost center, manager..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Department</span>
+          <select id="deptFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+          <select id="sortSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="riskDesc">Policy risk first</option>
+            <option value="hoursDesc">Overtime hours ↓</option>
+            <option value="employeeAsc">Employee A→Z</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Role</span>
+          <select id="roleSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option>Team Lead</option>
+            <option>HR Operations</option>
+            <option>Director HR</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold">Weekly Timesheet Queue</h2>
+          <button id="exportBtn" class="text-xs bg-slate-800 hover:bg-slate-700 rounded px-2 py-1">Export CSV</button>
+        </div>
+
+        <div class="overflow-auto">
+          <table class="min-w-full text-sm">
+            <thead class="text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="text-left py-2 pr-3">Employee</th>
+                <th class="text-left py-2 pr-3">Week</th>
+                <th class="text-left py-2 pr-3">Dept</th>
+                <th class="text-left py-2 pr-3">Overtime</th>
+                <th class="text-left py-2 pr-3">Weekend</th>
+                <th class="text-left py-2 pr-3">Risk</th>
+                <th class="text-left py-2 pr-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <h2 class="text-lg font-semibold">Review Desk</h2>
+        <div id="emptyState" class="text-sm text-slate-400">Select a timesheet row to review policy checks and take action.</div>
+
+        <div id="detailPane" class="hidden space-y-3">
+          <div id="detailMeta" class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1"></div>
+
+          <form id="actionForm" class="space-y-3">
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Workflow Action</span>
+              <select id="actionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+            </label>
+
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Corrected Overtime Hours</span>
+              <input id="overtimeInput" type="number" min="0" max="40" step="0.5" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+            </label>
+
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Audit Note</span>
+              <textarea id="noteInput" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Reason, policy context, escalation details"></textarea>
+            </label>
+
+            <p id="formError" class="hidden text-sm text-rose-400"></p>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold rounded-lg px-4 py-2">Apply Action</button>
+          </form>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <h3 class="font-medium">Audit Trail</h3>
+          <div id="auditLog" class="space-y-2 max-h-72 overflow-auto pr-1"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const entries = [
+      { id: "TS-4101", employee: "Anna Keller", manager: "M. Brandt", week: "2026-W13", dept: "Support", overtime: 4, weekend: 0, status: "Draft", costCenter: "CC-110", submittedAt: "2026-04-01" },
+      { id: "TS-4102", employee: "Jonas Weber", manager: "M. Brandt", week: "2026-W13", dept: "Support", overtime: 9, weekend: 5, status: "Submitted", costCenter: "CC-110", submittedAt: "2026-04-01" },
+      { id: "TS-4103", employee: "Lina Schulz", manager: "K. Hoffmann", week: "2026-W13", dept: "Logistics", overtime: 12, weekend: 2, status: "Manager Review", costCenter: "CC-240", submittedAt: "2026-04-02" },
+      { id: "TS-4104", employee: "Mert Yilmaz", manager: "K. Hoffmann", week: "2026-W13", dept: "Logistics", overtime: 6, weekend: 0, status: "Approved", costCenter: "CC-240", submittedAt: "2026-04-02" },
+      { id: "TS-4105", employee: "Sara Pohl", manager: "R. Engel", week: "2026-W13", dept: "Engineering", overtime: 14, weekend: 9, status: "HR Review", costCenter: "CC-520", submittedAt: "2026-04-02" },
+      { id: "TS-4106", employee: "Dario Koch", manager: "R. Engel", week: "2026-W13", dept: "Engineering", overtime: 3, weekend: 0, status: "Approved", costCenter: "CC-520", submittedAt: "2026-04-03" },
+      { id: "TS-4107", employee: "Nina Vogel", manager: "L. Hartmann", week: "2026-W13", dept: "Finance", overtime: 11, weekend: 0, status: "Submitted", costCenter: "CC-330", submittedAt: "2026-04-03" },
+      { id: "TS-4108", employee: "Paul Richter", manager: "L. Hartmann", week: "2026-W13", dept: "Finance", overtime: 2, weekend: 0, status: "Rejected", costCenter: "CC-330", submittedAt: "2026-04-03" }
+    ];
+
+    const auditTrail = [
+      { time: "2026-04-04T18:04:00Z", text: "HR Operations flagged TS-4105 for weekend overtime above policy threshold." },
+      { time: "2026-04-04T18:16:00Z", text: "Team Lead requested correction for TS-4108 due to missing project code note." },
+      { time: "2026-04-04T18:25:00Z", text: "Director HR approved TS-4103 with temporary staffing exception comment." }
+    ];
+
+    const state = {
+      search: "",
+      dept: "all",
+      status: "all",
+      sort: "riskDesc",
+      role: "Team Lead",
+      selectedId: null
+    };
+
+    const workflow = {
+      Draft: ["Submitted"],
+      Submitted: ["Manager Review", "Rejected"],
+      "Manager Review": ["HR Review", "Rejected"],
+      "HR Review": ["Approved", "Rejected"],
+      Approved: ["Approved"],
+      Rejected: ["Submitted"]
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function riskLevel(item) {
+      if (item.overtime >= 14 || item.weekend >= 8) return "critical";
+      if (item.overtime >= 11 || item.weekend >= 5) return "high";
+      if (item.overtime >= 8) return "medium";
+      return "low";
+    }
+
+    function riskClass(level) {
+      return {
+        low: "bg-emerald-500/20 text-emerald-200",
+        medium: "bg-amber-500/20 text-amber-200",
+        high: "bg-orange-500/20 text-orange-200",
+        critical: "bg-rose-500/20 text-rose-200"
+      }[level];
+    }
+
+    function canApprove(item, nextStatus) {
+      if (nextStatus === "Approved" && state.role === "Team Lead") return false;
+      if (nextStatus === "Approved" && item.overtime > 10 && state.role !== "Director HR") return false;
+      if (nextStatus === "Approved" && item.weekend > 8 && state.role !== "Director HR") return false;
+      if (nextStatus === "HR Review" && state.role === "Team Lead") return false;
+      if (nextStatus === "Manager Review" && state.role === "HR Operations") return false;
+      return true;
+    }
+
+    function allowedActions(item) {
+      const options = workflow[item.status] || [];
+      return options.filter(next => canApprove(item, next));
+    }
+
+    function filteredEntries() {
+      const q = state.search.trim().toLowerCase();
+      return entries
+        .filter(e => state.dept === "all" || e.dept === state.dept)
+        .filter(e => state.status === "all" || e.status === state.status)
+        .filter(e => {
+          if (!q) return true;
+          return [e.id, e.employee, e.manager, e.dept, e.costCenter].join(" ").toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          if (state.sort === "hoursDesc") return b.overtime - a.overtime;
+          if (state.sort === "employeeAsc") return a.employee.localeCompare(b.employee);
+          const rank = { low: 1, medium: 2, high: 3, critical: 4 };
+          return rank[riskLevel(b)] - rank[riskLevel(a)];
+        });
+    }
+
+    function renderKpis(items) {
+      const total = items.length;
+      const review = items.filter(i => ["Submitted", "Manager Review", "HR Review"].includes(i.status)).length;
+      const highRisk = items.filter(i => ["high", "critical"].includes(riskLevel(i))).length;
+      const overtimeHours = items.reduce((sum, i) => sum + i.overtime, 0);
+
+      const cards = [
+        ["Visible Timesheets", String(total), "bg-slate-900"],
+        ["Pending Review", String(review), "bg-amber-900/30"],
+        ["High/Critical Risk", String(highRisk), "bg-rose-900/30"],
+        ["Total Overtime Hours", overtimeHours.toFixed(1), "bg-sky-900/30"]
+      ];
+
+      $("kpis").innerHTML = cards.map(([label, value, bg]) => `
+        <article class="${bg} border border-slate-800 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold mt-1">${value}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderGrid(items) {
+      $("gridBody").innerHTML = items.map(item => {
+        const risk = riskLevel(item);
+        const selected = item.id === state.selectedId ? "ring-2 ring-emerald-500" : "";
+        return `
+          <tr>
+            <td colspan="7" class="py-1">
+              <button data-id="${item.id}" class="w-full text-left border border-slate-800 bg-slate-950 hover:bg-slate-900 rounded-lg px-3 py-2 ${selected} focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <div class="grid grid-cols-7 gap-2 items-center">
+                  <span class="font-medium">${item.employee}<span class="block text-xs text-slate-500">${item.id}</span></span>
+                  <span>${item.week}</span>
+                  <span>${item.dept}</span>
+                  <span>${item.overtime.toFixed(1)}h</span>
+                  <span>${item.weekend.toFixed(1)}h</span>
+                  <span><span class="text-xs px-2 py-0.5 rounded-full ${riskClass(risk)}">${risk}</span></span>
+                  <span>${item.status}</span>
+                </div>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      $("gridBody").querySelectorAll("button[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const item = entries.find(e => e.id === state.selectedId);
+      if (!item) {
+        $("emptyState").classList.remove("hidden");
+        $("detailPane").classList.add("hidden");
+        return;
+      }
+
+      $("emptyState").classList.add("hidden");
+      $("detailPane").classList.remove("hidden");
+
+      const risk = riskLevel(item);
+      $("detailMeta").innerHTML = `
+        <p class="text-xs uppercase tracking-wide text-slate-400">${item.id} · ${item.costCenter}</p>
+        <p class="text-sm text-slate-300">${item.employee} · Manager ${item.manager}</p>
+        <p class="text-sm text-slate-300">Week ${item.week} · Dept ${item.dept}</p>
+        <p class="text-sm text-slate-300">Overtime: <strong>${item.overtime.toFixed(1)}h</strong> · Weekend: <strong>${item.weekend.toFixed(1)}h</strong></p>
+        <p class="text-xs inline-flex px-2 py-1 rounded-full ${riskClass(risk)}">Policy risk: ${risk}</p>
+      `;
+
+      const actions = allowedActions(item);
+      $("actionSelect").innerHTML = actions.length
+        ? actions.map(a => `<option value="${a}">${a}</option>`).join("")
+        : `<option value="">No allowed action for current role/policy</option>`;
+
+      $("overtimeInput").value = String(item.overtime);
+    }
+
+    function renderAudit() {
+      $("auditLog").innerHTML = auditTrail.slice().reverse().map(entry => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <p class="text-xs text-slate-500">${new Date(entry.time).toLocaleString("en-GB", { timeZone: "UTC" })} UTC</p>
+          <p class="text-sm text-slate-300">${entry.text}</p>
+        </div>
+      `).join("");
+    }
+
+    function setError(msg = "") {
+      const el = $("formError");
+      if (!msg) {
+        el.classList.add("hidden");
+        el.textContent = "";
+        return;
+      }
+      el.classList.remove("hidden");
+      el.textContent = msg;
+    }
+
+    function addAudit(text) {
+      auditTrail.push({ time: new Date().toISOString(), text });
+    }
+
+    function submitAction(event) {
+      event.preventDefault();
+      const item = entries.find(e => e.id === state.selectedId);
+      if (!item) return;
+
+      const action = $("actionSelect").value;
+      const note = $("noteInput").value.trim();
+      const corrected = Number($("overtimeInput").value);
+
+      if (!action) return setError("No workflow action available under current role and policy constraints.");
+      if (!Number.isFinite(corrected) || corrected < 0 || corrected > 40) return setError("Corrected overtime must be between 0 and 40 hours.");
+      if (note.length < 14) return setError("Audit note must be at least 14 characters.");
+      if (action === "Approved" && corrected > 10 && state.role !== "Director HR") return setError("Overtime above 10h requires Director HR approval.");
+      if (item.weekend > 8 && action === "Approved" && !note.toLowerCase().includes("exception")) {
+        return setError("Weekend overtime above 8h needs an explicit exception note.");
+      }
+
+      setError("");
+      item.overtime = corrected;
+      item.status = action;
+      addAudit(`${state.role} changed ${item.id} to ${action}. Note: ${note}`);
+      $("noteInput").value = "";
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredEntries().map(item => ({
+        id: item.id,
+        employee: item.employee,
+        manager: item.manager,
+        week: item.week,
+        department: item.dept,
+        cost_center: item.costCenter,
+        overtime_hours: item.overtime,
+        weekend_hours: item.weekend,
+        status: item.status,
+        policy_risk: riskLevel(item)
+      }));
+
+      const headers = Object.keys(rows[0] || { id: "", status: "" });
+      const csv = [headers.join(","), ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? "")).join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `timesheet-overtime-grid-${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      addAudit(`${state.role} exported ${rows.length} visible timesheets to CSV.`);
+      renderAudit();
+    }
+
+    function populateFilters() {
+      const depts = [...new Set(entries.map(e => e.dept))].sort();
+      const statuses = [...new Set(entries.map(e => e.status))];
+      $("deptFilter").innerHTML = `<option value="all">All departments</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join("");
+      $("statusFilter").innerHTML = `<option value="all">All statuses</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join("");
+    }
+
+    function bindControls() {
+      $("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+      $("deptFilter").addEventListener("change", (e) => { state.dept = e.target.value; render(); });
+      $("statusFilter").addEventListener("change", (e) => { state.status = e.target.value; render(); });
+      $("sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+      $("roleSelect").addEventListener("change", (e) => { state.role = e.target.value; renderDetail(); });
+      $("actionForm").addEventListener("submit", submitAction);
+      $("exportBtn").addEventListener("click", exportCsv);
+    }
+
+    function render() {
+      const items = filteredEntries();
+      renderKpis(items);
+      renderGrid(items);
+      renderDetail();
+      renderAudit();
+    }
+
+    populateFilters();
+    bindControls();
+    render();
+  </script>
+</body>
+</html>

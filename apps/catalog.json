@@ -1584,5 +1584,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 72,
+    "slug": "2026-04-04-timesheet-overtime-grid",
+    "name": "Timesheet Overtime Compliance Grid",
+    "description": "HR data-grid workspace for overtime approvals with policy validation, role-based actions, and audit-ready exports.",
+    "category": "HR",
+    "pattern": "Data Grid",
+    "tags": [
+      "timesheet",
+      "hr",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
