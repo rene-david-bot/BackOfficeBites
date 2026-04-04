@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Findings Resolution Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0a0f1c',
+            panel: '#11182b',
+            border: '#253149',
+            muted: '#93a3c7',
+            accent: '#7dd3fc',
+            success: '#34d399',
+            warning: '#fbbf24',
+            danger: '#f87171'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-sm text-accent hover:text-cyan-200 underline underline-offset-2">BackOfficeBites 🍔</a>
+
+    <div class="mt-2 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Audit Findings Resolution Chatdesk</h1>
+        <p class="text-muted mt-1">Legal ops triage desk for audit findings, remediation approvals, and policy-safe closure.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <label for="roleView" class="text-sm text-muted">Role view</label>
+        <select id="roleView" class="bg-panel border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+          <option>Auditor</option>
+          <option>Control Owner</option>
+          <option>Legal Counsel</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-xs text-muted">Open Findings</p>
+        <p id="kpiOpen" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-xs text-muted">Critical Open</p>
+        <p id="kpiCritical" class="text-2xl font-semibold mt-1 text-danger">0</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-xs text-muted">Pending Sign-off</p>
+        <p id="kpiSignoff" class="text-2xl font-semibold mt-1 text-warning">0</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-xs text-muted">Overdue</p>
+        <p id="kpiOverdue" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+    </section>
+
+    <section class="bg-panel border border-border rounded-xl p-4 mt-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="text-xs text-muted">Search finding / owner / entity</label>
+          <input id="searchInput" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent" placeholder="e.g. SOX-2411 or Priya" />
+        </div>
+        <div>
+          <label for="severityFilter" class="text-xs text-muted">Severity</label>
+          <select id="severityFilter" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+            <option value="all">All severities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="text-xs text-muted">Status</label>
+          <select id="statusFilter" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+            <option value="all">All statuses</option>
+            <option>New</option>
+            <option>In Review</option>
+            <option>Remediation</option>
+            <option>Pending Sign-off</option>
+            <option>Closed</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="exportBtn" class="w-full bg-accent text-slate-900 font-semibold rounded-lg py-2 px-3 hover:bg-cyan-300 transition">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
+      <article class="bg-panel border border-border rounded-xl p-4 xl:col-span-2 overflow-x-auto">
+        <h2 class="font-semibold mb-3">Findings Queue</h2>
+        <table class="w-full min-w-[860px] text-sm">
+          <thead>
+            <tr class="text-left text-muted border-b border-border">
+              <th class="py-2 pr-3"><button class="sortBtn hover:text-slate-200" data-sort="id">Finding ↕</button></th>
+              <th class="py-2 pr-3"><button class="sortBtn hover:text-slate-200" data-sort="severity">Severity ↕</button></th>
+              <th class="py-2 pr-3">Control Area</th>
+              <th class="py-2 pr-3">Owner</th>
+              <th class="py-2 pr-3"><button class="sortBtn hover:text-slate-200" data-sort="daysOpen">Days Open ↕</button></th>
+              <th class="py-2 pr-3">Due Date</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2">Select</th>
+            </tr>
+          </thead>
+          <tbody id="findingsBody"></tbody>
+        </table>
+      </article>
+
+      <aside class="bg-panel border border-border rounded-xl p-4">
+        <h2 class="font-semibold">Resolution Chat</h2>
+        <p id="selectedMeta" class="text-xs text-muted mt-1">Select a finding to triage.</p>
+
+        <div id="policyAlert" class="hidden mt-3 rounded-lg border border-danger/60 bg-red-500/10 px-3 py-2 text-xs text-red-200"></div>
+
+        <div class="mt-3 space-y-2 max-h-56 overflow-auto pr-1" id="chatFeed"></div>
+
+        <form id="chatForm" class="mt-3 space-y-2">
+          <label for="chatInput" class="text-xs text-muted">Add update</label>
+          <textarea id="chatInput" rows="2" class="w-full bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm" placeholder="Post a clear action update..."></textarea>
+          <button type="submit" class="w-full bg-slate-700 hover:bg-slate-600 rounded-lg py-2 text-sm">Post Message</button>
+          <p id="chatError" class="text-xs text-danger hidden"></p>
+        </form>
+
+        <div class="mt-4 grid grid-cols-1 gap-2">
+          <button id="btnReview" class="rounded-lg py-2 bg-blue-500/80 hover:bg-blue-400 text-sm font-medium">Move to In Review</button>
+          <button id="btnRemediate" class="rounded-lg py-2 bg-indigo-500/80 hover:bg-indigo-400 text-sm font-medium">Request Remediation</button>
+          <button id="btnSignoff" class="rounded-lg py-2 bg-amber-500/80 hover:bg-amber-400 text-sm font-medium text-slate-900">Submit for Sign-off</button>
+          <div>
+            <label for="approverSelect" class="text-xs text-muted">Approver</label>
+            <select id="approverSelect" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm">
+              <option value="">Select approver for closure</option>
+              <option>GC - M. Tan</option>
+              <option>VP Controls - J. Weber</option>
+              <option>CFO Delegate - S. Hughes</option>
+            </select>
+          </div>
+          <button id="btnClose" class="rounded-lg py-2 bg-emerald-500/90 hover:bg-emerald-400 text-sm font-semibold text-slate-900">Close Finding</button>
+        </div>
+
+        <div class="mt-4">
+          <h3 class="text-sm font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 space-y-2 max-h-44 overflow-auto text-xs text-muted"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const findings = [
+      { id: 'SOX-2411', severity: 'Critical', controlArea: 'Revenue Recognition', owner: 'Priya Nair', entity: 'DE-01', daysOpen: 27, dueDate: '2026-04-08', status: 'Remediation', evidenceCount: 1, policyBreach: true },
+      { id: 'ISO-7782', severity: 'High', controlArea: 'Access Recertification', owner: 'Noah Berger', entity: 'Shared IT', daysOpen: 19, dueDate: '2026-04-12', status: 'In Review', evidenceCount: 2, policyBreach: false },
+      { id: 'GDPR-332', severity: 'Medium', controlArea: 'Data Retention', owner: 'Elena Markov', entity: 'EU Data Hub', daysOpen: 11, dueDate: '2026-04-18', status: 'New', evidenceCount: 0, policyBreach: false },
+      { id: 'ITGC-901', severity: 'Critical', controlArea: 'Privileged Access', owner: 'Luca Rossi', entity: 'ERP Core', daysOpen: 34, dueDate: '2026-04-05', status: 'Pending Sign-off', evidenceCount: 3, policyBreach: true },
+      { id: 'PROC-510', severity: 'High', controlArea: 'Vendor Onboarding', owner: 'Mila Torres', entity: 'Procurement', daysOpen: 8, dueDate: '2026-04-20', status: 'Remediation', evidenceCount: 2, policyBreach: false },
+      { id: 'LEGAL-122', severity: 'Medium', controlArea: 'Contract Archive', owner: 'Jonas Keller', entity: 'Legal Ops', daysOpen: 5, dueDate: '2026-04-25', status: 'Closed', evidenceCount: 2, policyBreach: false }
+    ];
+
+    const chatByFinding = {
+      'SOX-2411': [
+        { by: 'Auditor', text: 'Evidence pack missing approval memo for manual journal entries.' },
+        { by: 'Control Owner', text: 'Team uploaded draft memo; final legal sign-off expected EOD.' }
+      ],
+      'ISO-7782': [
+        { by: 'Auditor', text: 'Sampling showed 2 stale admin roles in APAC tenant.' }
+      ],
+      'GDPR-332': [
+        { by: 'Auditor', text: 'Retention exception list needs legal basis mapping.' }
+      ],
+      'ITGC-901': [
+        { by: 'Legal Counsel', text: 'Waiver withdrawn. Recommend immediate closure after VP Controls sign-off.' }
+      ],
+      'PROC-510': [
+        { by: 'Control Owner', text: 'Dual approval flag now enforced in onboarding workflow.' }
+      ],
+      'LEGAL-122': [
+        { by: 'Auditor', text: 'Closed after complete remediation and trace evidence.' }
+      ]
+    };
+
+    const auditTrail = [
+      { ts: '09:02', msg: 'Auditor opened daily finding queue.' },
+      { ts: '09:14', msg: 'Control Owner posted remediation ETA for SOX-2411.' },
+      { ts: '09:31', msg: 'Policy engine blocked closure attempt without approver.' }
+    ];
+
+    const state = {
+      search: '',
+      severity: 'all',
+      status: 'all',
+      sortBy: 'daysOpen',
+      sortDir: 'desc',
+      selectedId: null
+    };
+
+    const severityOrder = { Critical: 0, High: 1, Medium: 2 };
+    const today = new Date('2026-04-04T12:00:00Z');
+
+    function tsNow() {
+      return new Date().toISOString().slice(11, 16);
+    }
+
+    function toneForSeverity(level) {
+      if (level === 'Critical') return 'bg-red-500/20 text-red-300';
+      if (level === 'High') return 'bg-amber-500/20 text-amber-300';
+      return 'bg-sky-500/20 text-sky-300';
+    }
+
+    function statusTone(status) {
+      return {
+        'New': 'bg-slate-500/20 text-slate-300',
+        'In Review': 'bg-blue-500/20 text-blue-300',
+        'Remediation': 'bg-indigo-500/20 text-indigo-300',
+        'Pending Sign-off': 'bg-amber-500/20 text-amber-300',
+        'Closed': 'bg-emerald-500/20 text-emerald-300'
+      }[status] || 'bg-slate-500/20 text-slate-300';
+    }
+
+    function isOverdue(dueDate) {
+      return new Date(dueDate + 'T00:00:00Z') < today;
+    }
+
+    function filteredFindings() {
+      const q = state.search.trim().toLowerCase();
+      return findings
+        .filter(f => state.severity === 'all' || f.severity === state.severity)
+        .filter(f => state.status === 'all' || f.status === state.status)
+        .filter(f => {
+          if (!q) return true;
+          return [f.id, f.owner, f.entity, f.controlArea].some(v => v.toLowerCase().includes(q));
+        })
+        .sort((a, b) => {
+          const dir = state.sortDir === 'asc' ? 1 : -1;
+          if (state.sortBy === 'severity') return (severityOrder[a.severity] - severityOrder[b.severity]) * dir;
+          if (state.sortBy === 'daysOpen') return (a.daysOpen - b.daysOpen) * dir;
+          return String(a[state.sortBy]).localeCompare(String(b[state.sortBy])) * dir;
+        });
+    }
+
+    function renderKPIs() {
+      const open = findings.filter(f => f.status !== 'Closed');
+      document.getElementById('kpiOpen').textContent = String(open.length);
+      document.getElementById('kpiCritical').textContent = String(open.filter(f => f.severity === 'Critical').length);
+      document.getElementById('kpiSignoff').textContent = String(findings.filter(f => f.status === 'Pending Sign-off').length);
+      document.getElementById('kpiOverdue').textContent = String(open.filter(f => isOverdue(f.dueDate)).length);
+    }
+
+    function renderTable() {
+      const rows = filteredFindings();
+      const body = document.getElementById('findingsBody');
+      body.innerHTML = rows.map(f => {
+        const selected = state.selectedId === f.id;
+        const overdue = isOverdue(f.dueDate) && f.status !== 'Closed';
+        return `
+          <tr class="border-b border-border/70 ${selected ? 'bg-cyan-500/10' : 'hover:bg-slate-900/50'}">
+            <td class="py-2 pr-3 font-medium">${f.id}</td>
+            <td class="py-2 pr-3"><span class="px-2 py-1 rounded text-xs ${toneForSeverity(f.severity)}">${f.severity}</span></td>
+            <td class="py-2 pr-3">${f.controlArea}</td>
+            <td class="py-2 pr-3">${f.owner}</td>
+            <td class="py-2 pr-3">${f.daysOpen}</td>
+            <td class="py-2 pr-3 ${overdue ? 'text-danger font-semibold' : 'text-slate-300'}">${f.dueDate}</td>
+            <td class="py-2 pr-3"><span class="px-2 py-1 rounded text-xs ${statusTone(f.status)}">${f.status}</span></td>
+            <td class="py-2"><button class="text-accent hover:text-cyan-200" data-pick="${f.id}">Open</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      body.querySelectorAll('button[data-pick]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.pick;
+          renderAll();
+          logAudit(`Selected ${state.selectedId} for triage.`);
+        });
+      });
+    }
+
+    function renderChat() {
+      const feed = document.getElementById('chatFeed');
+      const meta = document.getElementById('selectedMeta');
+      const selected = findings.find(f => f.id === state.selectedId);
+      if (!selected) {
+        meta.textContent = 'Select a finding to triage.';
+        feed.innerHTML = '<p class="text-xs text-muted">No finding selected.</p>';
+        updateActionButtons();
+        return;
+      }
+      meta.textContent = `${selected.id} • ${selected.controlArea} • ${selected.status} • Evidence: ${selected.evidenceCount}`;
+      const messages = chatByFinding[selected.id] || [];
+      feed.innerHTML = messages.map(m => `
+        <article class="rounded-lg border border-border bg-slate-900/70 p-2">
+          <p class="text-xs text-muted">${m.by}</p>
+          <p class="text-sm mt-1 leading-snug">${m.text}</p>
+        </article>
+      `).join('');
+      updateActionButtons();
+    }
+
+    function updateActionButtons() {
+      const selected = findings.find(f => f.id === state.selectedId);
+      const role = document.getElementById('roleView').value;
+      const disabled = !selected;
+
+      const btnReview = document.getElementById('btnReview');
+      const btnRemediate = document.getElementById('btnRemediate');
+      const btnSignoff = document.getElementById('btnSignoff');
+      const btnClose = document.getElementById('btnClose');
+
+      [btnReview, btnRemediate, btnSignoff, btnClose].forEach(btn => {
+        btn.disabled = disabled;
+        btn.classList.toggle('opacity-40', disabled);
+        btn.classList.toggle('cursor-not-allowed', disabled);
+      });
+
+      if (!selected) return;
+
+      const isAuditor = role === 'Auditor';
+      const isOwner = role === 'Control Owner';
+      const isLegal = role === 'Legal Counsel';
+
+      btnReview.disabled = !(selected.status === 'New' && (isAuditor || isOwner));
+      btnRemediate.disabled = !(selected.status === 'In Review' && (isAuditor || isOwner));
+      btnSignoff.disabled = !(selected.status === 'Remediation' && (isAuditor || isOwner || isLegal));
+      btnClose.disabled = !(selected.status === 'Pending Sign-off' && (isAuditor || isLegal));
+
+      [btnReview, btnRemediate, btnSignoff, btnClose].forEach(btn => {
+        btn.classList.toggle('opacity-40', btn.disabled);
+        btn.classList.toggle('cursor-not-allowed', btn.disabled);
+      });
+    }
+
+    function logAudit(msg) {
+      auditTrail.push({ ts: tsNow(), msg });
+      renderAudit();
+    }
+
+    function renderAudit() {
+      const list = document.getElementById('auditTrail');
+      list.innerHTML = auditTrail.slice(-10).reverse().map(a => `<li><span class="text-slate-400">${a.ts}</span> — ${a.msg}</li>`).join('');
+    }
+
+    function showPolicy(msg) {
+      const el = document.getElementById('policyAlert');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function clearPolicy() {
+      const el = document.getElementById('policyAlert');
+      el.classList.add('hidden');
+      el.textContent = '';
+    }
+
+    function setStatus(targetStatus) {
+      const selected = findings.find(f => f.id === state.selectedId);
+      if (!selected) return;
+
+      const role = document.getElementById('roleView').value;
+      const approver = document.getElementById('approverSelect').value;
+      clearPolicy();
+
+      if (targetStatus === 'Pending Sign-off' && selected.severity === 'Critical' && selected.evidenceCount < 2) {
+        showPolicy('Policy check failed: Critical findings need at least 2 evidence artifacts before sign-off.');
+        logAudit(`Policy blocked sign-off for ${selected.id} (insufficient evidence).`);
+        return;
+      }
+
+      if (targetStatus === 'Closed' && !approver) {
+        showPolicy('Closure blocked: choose an approver before closing this finding.');
+        logAudit(`Policy blocked closure for ${selected.id} (missing approver).`);
+        return;
+      }
+
+      const from = selected.status;
+      selected.status = targetStatus;
+      if (targetStatus === 'Remediation') selected.evidenceCount = Math.max(selected.evidenceCount, 1);
+      if (targetStatus === 'Pending Sign-off') selected.evidenceCount = Math.max(selected.evidenceCount, 2);
+      if (targetStatus === 'Closed') selected.evidenceCount = Math.max(selected.evidenceCount, 3);
+
+      (chatByFinding[selected.id] ||= []).push({ by: role, text: `Status updated from ${from} → ${targetStatus}.` });
+      logAudit(`${role} moved ${selected.id} from ${from} to ${targetStatus}${approver ? ` (approver: ${approver})` : ''}.`);
+      renderAll();
+    }
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const col = btn.dataset.sort;
+        if (state.sortBy === col) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortBy = col;
+          state.sortDir = 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', e => {
+      state.search = e.target.value;
+      renderTable();
+    });
+
+    document.getElementById('severityFilter').addEventListener('change', e => {
+      state.severity = e.target.value;
+      renderTable();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', e => {
+      state.status = e.target.value;
+      renderTable();
+    });
+
+    document.getElementById('roleView').addEventListener('change', e => {
+      logAudit(`Role view changed to ${e.target.value}.`);
+      updateActionButtons();
+    });
+
+    document.getElementById('chatForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const selected = findings.find(f => f.id === state.selectedId);
+      const err = document.getElementById('chatError');
+      if (!selected) {
+        err.textContent = 'Select a finding before posting a message.';
+        err.classList.remove('hidden');
+        return;
+      }
+      const text = document.getElementById('chatInput').value.trim();
+      if (text.length < 12) {
+        err.textContent = 'Message must be at least 12 characters.';
+        err.classList.remove('hidden');
+        return;
+      }
+      err.classList.add('hidden');
+      const role = document.getElementById('roleView').value;
+      (chatByFinding[selected.id] ||= []).push({ by: role, text });
+      document.getElementById('chatInput').value = '';
+      logAudit(`${role} posted update on ${selected.id}.`);
+      renderChat();
+    });
+
+    document.getElementById('btnReview').addEventListener('click', () => setStatus('In Review'));
+    document.getElementById('btnRemediate').addEventListener('click', () => setStatus('Remediation'));
+    document.getElementById('btnSignoff').addEventListener('click', () => setStatus('Pending Sign-off'));
+    document.getElementById('btnClose').addEventListener('click', () => setStatus('Closed'));
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = filteredFindings();
+      const header = ['Finding','Severity','ControlArea','Owner','Entity','DaysOpen','DueDate','Status','EvidenceCount'];
+      const csv = [
+        header.join(','),
+        ...rows.map(r => [r.id, r.severity, r.controlArea, r.owner, r.entity, r.daysOpen, r.dueDate, r.status, r.evidenceCount]
+          .map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'audit-findings-filtered.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      logAudit(`CSV export completed (${rows.length} rows).`);
+    });
+
+    function renderAll() {
+      renderKPIs();
+      renderTable();
+      renderChat();
+      renderAudit();
+    }
+
+    state.selectedId = findings[0].id;
+    renderAll();
+  </script>
+</body>
+</html>

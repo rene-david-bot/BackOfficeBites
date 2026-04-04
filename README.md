@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Skills Matrix Gap Dashboard** — HR capability cockpit to track skill coverage, surface critical gaps, route training requests through approval, and maintain an audit-ready action trail.
+**Audit Findings Resolution Chatdesk** — legal ops chat workspace to triage audit findings, enforce policy gates, and close remediation with explicit approver sign-off.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
