@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RACI Builder Review Desk — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">RACI Builder Review Desk</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Planning teams define and approve ownership models for major initiatives with policy checks, role-based review, audit trails, and export-ready handoff.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Viewer role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>PMO Analyst</option>
+          <option>Portfolio Manager</option>
+          <option>Executive Sponsor</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Workflow state</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All states</option>
+          <option value="Draft">Draft</option>
+          <option value="In Review">In Review</option>
+          <option value="Approved">Approved</option>
+          <option value="Needs Rework">Needs Rework</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="riskFilter" class="text-xs uppercase text-slate-400">Risk</label>
+        <select id="riskFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All risks</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+          <option value="Critical">Critical</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortSelect" class="text-xs uppercase text-slate-400">Sort by</label>
+        <select id="sortSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="updated">Last updated</option>
+          <option value="due">Nearest due date</option>
+          <option value="risk">Highest risk</option>
+          <option value="name">Initiative name</option>
+        </select>
+      </div>
+      <div class="bg-panel border border-slate-800 rounded-xl p-4 xl:col-span-2">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="initiative, stream, accountable..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Portfolio ownership pulse</p>
+        <div class="flex items-center gap-2">
+          <button id="exportBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section class="xl:col-span-4 bg-panel border border-slate-800 rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Initiative Queue</h2>
+        <p class="text-sm text-slate-400 mt-1">Select a stream to review assignments, policy checks, and workflow actions.</p>
+        <ul id="initiativeList" class="mt-4 space-y-3 max-h-[38rem] overflow-auto"></ul>
+      </section>
+
+      <aside class="xl:col-span-8 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">RACI Review</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">No initiative selected.</p>
+
+          <div id="detailPanel" class="hidden mt-3 space-y-4">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailDesc" class="text-sm text-slate-200 mt-2"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy validation</h4>
+              <ul id="policyList" class="text-sm mt-2 space-y-1"></ul>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <div class="flex items-center justify-between gap-2">
+                <h4 class="text-sm font-semibold">RACI matrix</h4>
+                <button id="validateBtn" type="button" class="px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-700 text-xs">Run policy check</button>
+              </div>
+              <div class="overflow-x-auto mt-3">
+                <table class="w-full text-sm min-w-[28rem]">
+                  <thead class="text-slate-400">
+                    <tr class="border-b border-slate-700">
+                      <th class="text-left py-2">Role</th>
+                      <th class="py-2">R</th>
+                      <th class="py-2">A</th>
+                      <th class="py-2">C</th>
+                      <th class="py-2">I</th>
+                      <th class="py-2">None</th>
+                    </tr>
+                  </thead>
+                  <tbody id="matrixBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Workflow actions</h4>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <button id="saveDraftBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-700 text-sm">Save draft</button>
+                <button id="submitBtn" type="button" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Submit for review</button>
+                <button id="approveBtn" type="button" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Approve</button>
+                <button id="reworkBtn" type="button" class="px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-900 font-semibold text-sm">Request rework</button>
+              </div>
+              <p id="actionHint" class="text-xs text-slate-400 mt-3"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+            <h3 class="text-lg font-semibold">Create initiative</h3>
+            <p class="text-sm text-slate-400 mt-1">Add a new workstream and start ownership drafting.</p>
+            <form id="createForm" class="space-y-3 mt-4">
+              <div>
+                <label for="titleInput" class="text-xs uppercase text-slate-400">Initiative name</label>
+                <input id="titleInput" required minlength="6" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. ERP Hypercare Exit Plan" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="streamInput" class="text-xs uppercase text-slate-400">Stream</label>
+                  <input id="streamInput" required class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Operations" />
+                </div>
+                <div>
+                  <label for="dueInput" class="text-xs uppercase text-slate-400">Due date</label>
+                  <input id="dueInput" required type="date" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="riskInput" class="text-xs uppercase text-slate-400">Risk</label>
+                  <select id="riskInput" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                    <option>Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="ownerInput" class="text-xs uppercase text-slate-400">Owner</label>
+                  <input id="ownerInput" required class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="PMO Lead" />
+                </div>
+              </div>
+              <button type="submit" class="w-full rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold py-2">Create draft</button>
+            </form>
+            <p id="formMsg" class="text-sm text-slate-300 mt-3"></p>
+          </div>
+
+          <div class="bg-panel border border-slate-800 rounded-2xl p-4">
+            <h3 class="text-lg font-semibold">Audit trail</h3>
+            <p class="text-sm text-slate-400 mt-1">Latest actions across assignments, approvals, and policy checks.</p>
+            <ul id="auditList" class="mt-4 space-y-2 text-sm max-h-[18rem] overflow-auto"></ul>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const searchInput = document.getElementById('searchInput');
+    const initiativeList = document.getElementById('initiativeList');
+    const resultCount = document.getElementById('resultCount');
+    const kpis = document.getElementById('kpis');
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailDesc = document.getElementById('detailDesc');
+    const policyList = document.getElementById('policyList');
+    const matrixBody = document.getElementById('matrixBody');
+    const auditList = document.getElementById('auditList');
+    const actionHint = document.getElementById('actionHint');
+    const formMsg = document.getElementById('formMsg');
+
+    const participants = [
+      'Program Manager',
+      'Workstream Lead',
+      'Enterprise Architect',
+      'Finance Controller',
+      'HR Partner',
+      'Security Lead'
+    ];
+
+    const riskRank = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      activeId: 'RACI-4012',
+      initiatives: [
+        {
+          id: 'RACI-4012',
+          title: 'Global Payroll Cutover',
+          stream: 'HR Transformation',
+          owner: 'Nina Vogel',
+          due: '2026-04-16',
+          risk: 'Critical',
+          status: 'In Review',
+          updated: '2026-04-04T08:40:00Z',
+          summary: 'Finalize ownership matrix for payroll handover, legal sign-off, and hypercare exit criteria.',
+          raci: {
+            'Program Manager': 'A',
+            'Workstream Lead': 'R',
+            'Enterprise Architect': 'C',
+            'Finance Controller': 'I',
+            'HR Partner': 'R',
+            'Security Lead': 'C'
+          }
+        },
+        {
+          id: 'RACI-4017',
+          title: 'Procurement Workflow Consolidation',
+          stream: 'Source-to-Pay',
+          owner: 'Rafael Mohr',
+          due: '2026-04-22',
+          risk: 'High',
+          status: 'Draft',
+          updated: '2026-04-04T07:25:00Z',
+          summary: 'Define accountable owners for policy exceptions, contract routing, and vendor onboarding controls.',
+          raci: {
+            'Program Manager': 'A',
+            'Workstream Lead': 'R',
+            'Enterprise Architect': 'C',
+            'Finance Controller': 'R',
+            'HR Partner': 'I',
+            'Security Lead': 'I'
+          }
+        },
+        {
+          id: 'RACI-4021',
+          title: 'Manufacturing KPI Data Mart',
+          stream: 'Planning Analytics',
+          owner: 'Leonie Kraft',
+          due: '2026-04-29',
+          risk: 'Medium',
+          status: 'Approved',
+          updated: '2026-04-03T15:18:00Z',
+          summary: 'RACI model for KPI semantics, publication governance, and data quality exception handling.',
+          raci: {
+            'Program Manager': 'I',
+            'Workstream Lead': 'R',
+            'Enterprise Architect': 'A',
+            'Finance Controller': 'C',
+            'HR Partner': 'I',
+            'Security Lead': 'C'
+          }
+        },
+        {
+          id: 'RACI-4025',
+          title: 'Customer Master Data Remediation',
+          stream: 'Data Governance',
+          owner: 'Daria Weitz',
+          due: '2026-04-11',
+          risk: 'High',
+          status: 'Needs Rework',
+          updated: '2026-04-04T09:02:00Z',
+          summary: 'Clarify accountable authority for duplicate resolution and cross-region stewardship escalations.',
+          raci: {
+            'Program Manager': 'A',
+            'Workstream Lead': 'R',
+            'Enterprise Architect': 'R',
+            'Finance Controller': 'I',
+            'HR Partner': 'I',
+            'Security Lead': 'I'
+          }
+        }
+      ],
+      audit: [
+        { ts: '2026-04-04 09:03', text: 'Portfolio Manager requested rework on RACI-4025 (missing consulted role for security controls).' },
+        { ts: '2026-04-04 08:42', text: 'Policy validation passed on RACI-4012. Submission package shared with Executive Sponsor.' },
+        { ts: '2026-04-04 07:28', text: 'Draft initialized for RACI-4017 by PMO Analyst with baseline ownership template.' }
+      ]
+    };
+
+    function scoreStatus(status) {
+      return { 'Draft': 1, 'Needs Rework': 2, 'In Review': 3, 'Approved': 4 }[status] || 0;
+    }
+
+    function fmtDate(dateStr) {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function fmtTs(iso) {
+      return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getFiltered() {
+      const term = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const risk = riskFilter.value;
+      const sort = sortSelect.value;
+
+      const filtered = state.initiatives.filter(item => {
+        const hay = [item.id, item.title, item.stream, item.owner].join(' ').toLowerCase();
+        const statusOk = status === 'all' || item.status === status;
+        const riskOk = risk === 'all' || item.risk === risk;
+        const searchOk = term.length === 0 || hay.includes(term);
+        return statusOk && riskOk && searchOk;
+      });
+
+      filtered.sort((a, b) => {
+        if (sort === 'due') return new Date(a.due) - new Date(b.due);
+        if (sort === 'risk') return riskRank[b.risk] - riskRank[a.risk] || new Date(a.due) - new Date(b.due);
+        if (sort === 'name') return a.title.localeCompare(b.title);
+        return new Date(b.updated) - new Date(a.updated);
+      });
+
+      return filtered;
+    }
+
+    function renderKpis(items) {
+      const total = items.length;
+      const inReview = items.filter(x => x.status === 'In Review').length;
+      const needsRework = items.filter(x => x.status === 'Needs Rework').length;
+      const highRisk = items.filter(x => x.risk === 'High' || x.risk === 'Critical').length;
+      const approved = items.filter(x => x.status === 'Approved').length;
+
+      const cards = [
+        ['Visible initiatives', total, 'text-cyan-300'],
+        ['In review', inReview, 'text-amber-300'],
+        ['Needs rework', needsRework, 'text-rose-300'],
+        ['High/Critical risk', highRisk, 'text-orange-300'],
+        ['Approved', approved, 'text-emerald-300']
+      ];
+
+      kpis.innerHTML = cards.map(([label, value, color]) => `
+        <div class="rounded-lg border border-slate-700 bg-panelSoft p-3">
+          <p class="text-xs text-slate-400 uppercase">${label}</p>
+          <p class="text-2xl font-bold mt-1 ${color}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderQueue() {
+      const items = getFiltered();
+      resultCount.textContent = `${items.length} result${items.length === 1 ? '' : 's'}`;
+      renderKpis(items);
+
+      if (!items.some(item => item.id === state.activeId)) {
+        state.activeId = items[0]?.id || null;
+      }
+
+      if (!items.length) {
+        initiativeList.innerHTML = '<li class="text-sm text-slate-400">No initiatives match current filters.</li>';
+        renderDetail();
+        return;
+      }
+
+      initiativeList.innerHTML = items.map(item => {
+        const active = item.id === state.activeId;
+        const border = active ? 'border-cyan-400' : 'border-slate-700';
+        const riskClass = item.risk === 'Critical' ? 'text-rose-300' : item.risk === 'High' ? 'text-orange-300' : 'text-slate-300';
+        return `
+          <li>
+            <button data-id="${item.id}" class="w-full text-left rounded-xl border ${border} bg-panelSoft p-3 hover:border-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-semibold">${item.title}</p>
+                  <p class="text-xs text-slate-400 mt-1">${item.id} · ${item.stream}</p>
+                </div>
+                <span class="text-xs ${riskClass}">${item.risk}</span>
+              </div>
+              <div class="flex items-center justify-between mt-2 text-xs text-slate-300">
+                <span>${item.status}</span>
+                <span>Due ${fmtDate(item.due)}</span>
+              </div>
+            </button>
+          </li>
+        `;
+      }).join('');
+
+      initiativeList.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.activeId = btn.dataset.id;
+          renderQueue();
+          renderDetail();
+        });
+      });
+
+      renderDetail();
+    }
+
+    function runPolicyChecks(item) {
+      const roles = Object.values(item.raci);
+      const accountables = roles.filter(v => v === 'A').length;
+      const responsibles = roles.filter(v => v === 'R').length;
+      const consulted = roles.filter(v => v === 'C').length;
+      const dueDays = Math.ceil((new Date(item.due) - new Date()) / (1000 * 60 * 60 * 24));
+
+      const checks = [
+        {
+          ok: accountables === 1,
+          text: accountables === 1 ? 'Exactly one accountable role assigned.' : `Need exactly one accountable role (currently ${accountables}).`
+        },
+        {
+          ok: responsibles >= 1,
+          text: responsibles >= 1 ? 'At least one responsible role assigned.' : 'At least one responsible role is required.'
+        },
+        {
+          ok: !(item.risk === 'Critical' && dueDays < 5),
+          text: !(item.risk === 'Critical' && dueDays < 5) ? 'Critical initiative has sufficient lead time.' : 'Critical initiative due date must be at least 5 days away.'
+        },
+        {
+          ok: !(item.risk === 'High' || item.risk === 'Critical') || consulted >= 1,
+          text: !(item.risk === 'High' || item.risk === 'Critical') || consulted >= 1
+            ? 'Risk initiatives include consulted governance role.'
+            : 'High/Critical initiatives require at least one consulted role.'
+        }
+      ];
+
+      return checks;
+    }
+
+    function renderPolicy(item, checks) {
+      policyList.innerHTML = checks.map(check => `
+        <li class="${check.ok ? 'text-emerald-300' : 'text-rose-300'}">
+          ${check.ok ? '✓' : '✕'} ${check.text}
+        </li>
+      `).join('');
+    }
+
+    function renderMatrix(item) {
+      matrixBody.innerHTML = participants.map(person => {
+        const current = item.raci[person] || '-';
+        const options = ['R', 'A', 'C', 'I', '-'];
+        return `
+          <tr class="border-b border-slate-700">
+            <td class="py-2 text-slate-200">${person}</td>
+            ${options.map(opt => `
+              <td class="text-center py-2">
+                <input type="radio" class="accent-cyan-400" name="${person}" value="${opt}" ${current === opt ? 'checked' : ''} aria-label="${person} ${opt}" />
+              </td>
+            `).join('')}
+          </tr>
+        `;
+      }).join('');
+
+      participants.forEach(person => {
+        matrixBody.querySelectorAll(`input[name="${person}"]`).forEach(input => {
+          input.addEventListener('change', () => {
+            item.raci[person] = input.value;
+            item.updated = new Date().toISOString();
+          });
+        });
+      });
+    }
+
+    function updateActionButtons(item, checks) {
+      const role = roleSelect.value;
+      const pass = checks.every(c => c.ok);
+
+      const canApprove = ['Portfolio Manager', 'Executive Sponsor'].includes(role) && item.status === 'In Review';
+      const canSubmit = ['PMO Analyst', 'Portfolio Manager'].includes(role) && ['Draft', 'Needs Rework'].includes(item.status);
+
+      document.getElementById('approveBtn').disabled = !canApprove;
+      document.getElementById('reworkBtn').disabled = !canApprove;
+      document.getElementById('submitBtn').disabled = !(canSubmit && pass);
+
+      actionHint.textContent = `Role: ${role}. Submit allowed when policy checks pass. Approval actions require In Review state.`;
+
+      ['approveBtn', 'reworkBtn', 'submitBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn.disabled) {
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      });
+    }
+
+    function addAudit(text) {
+      const stamp = new Date();
+      const ts = stamp.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      state.audit.unshift({ ts, text });
+      state.audit = state.audit.slice(0, 40);
+      renderAudit();
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = state.audit.map(entry => `
+        <li class="rounded-lg border border-slate-700 bg-panelSoft p-2">
+          <p class="text-xs text-slate-400">${entry.ts}</p>
+          <p class="text-slate-200 mt-1">${entry.text}</p>
+        </li>
+      `).join('');
+    }
+
+    function renderDetail() {
+      const item = state.initiatives.find(x => x.id === state.activeId);
+      if (!item) {
+        emptyDetail.classList.remove('hidden');
+        detailPanel.classList.add('hidden');
+        return;
+      }
+
+      emptyDetail.classList.add('hidden');
+      detailPanel.classList.remove('hidden');
+
+      detailTitle.textContent = `${item.title} (${item.id})`;
+      detailMeta.textContent = `${item.stream} · Owner: ${item.owner} · Due ${fmtDate(item.due)} · Updated ${fmtTs(item.updated)}`;
+      detailDesc.textContent = item.summary;
+
+      const checks = runPolicyChecks(item);
+      renderPolicy(item, checks);
+      renderMatrix(item);
+      updateActionButtons(item, checks);
+    }
+
+    function exportCsv() {
+      const rows = getFiltered();
+      const header = ['id', 'title', 'stream', 'owner', 'due', 'risk', 'status', 'updated', 'accountable', 'responsible_count'];
+      const lines = rows.map(item => {
+        const accountable = Object.entries(item.raci).find(([, v]) => v === 'A')?.[0] || '';
+        const responsibleCount = Object.values(item.raci).filter(v => v === 'R').length;
+        return [
+          item.id,
+          item.title,
+          item.stream,
+          item.owner,
+          item.due,
+          item.risk,
+          item.status,
+          item.updated,
+          accountable,
+          responsibleCount
+        ].map(v => `"${String(v).replaceAll('"', '""')}"`).join(',');
+      });
+
+      const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'raci-review-desk.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('Exported filtered initiative view to CSV.');
+    }
+
+    function wireActions() {
+      document.getElementById('validateBtn').addEventListener('click', () => {
+        const item = state.initiatives.find(x => x.id === state.activeId);
+        if (!item) return;
+        const checks = runPolicyChecks(item);
+        renderPolicy(item, checks);
+        const pass = checks.every(c => c.ok);
+        addAudit(`${item.id}: Policy validation ${pass ? 'passed' : 'failed'}.`);
+        renderDetail();
+      });
+
+      document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        const item = state.initiatives.find(x => x.id === state.activeId);
+        if (!item) return;
+        item.status = 'Draft';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: Draft saved by ${roleSelect.value}.`);
+        renderQueue();
+      });
+
+      document.getElementById('submitBtn').addEventListener('click', () => {
+        const item = state.initiatives.find(x => x.id === state.activeId);
+        if (!item) return;
+        const checks = runPolicyChecks(item);
+        if (!checks.every(c => c.ok)) {
+          addAudit(`${item.id}: Submit blocked — policy check failed.`);
+          renderDetail();
+          return;
+        }
+        item.status = 'In Review';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: Submitted for review by ${roleSelect.value}.`);
+        renderQueue();
+      });
+
+      document.getElementById('approveBtn').addEventListener('click', () => {
+        const item = state.initiatives.find(x => x.id === state.activeId);
+        if (!item) return;
+        item.status = 'Approved';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: Approved by ${roleSelect.value}.`);
+        renderQueue();
+      });
+
+      document.getElementById('reworkBtn').addEventListener('click', () => {
+        const item = state.initiatives.find(x => x.id === state.activeId);
+        if (!item) return;
+        item.status = 'Needs Rework';
+        item.updated = new Date().toISOString();
+        addAudit(`${item.id}: Rework requested by ${roleSelect.value}.`);
+        renderQueue();
+      });
+
+      document.getElementById('createForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const title = document.getElementById('titleInput').value.trim();
+        const stream = document.getElementById('streamInput').value.trim();
+        const due = document.getElementById('dueInput').value;
+        const risk = document.getElementById('riskInput').value;
+        const owner = document.getElementById('ownerInput').value.trim();
+
+        if (title.length < 6) {
+          formMsg.textContent = 'Initiative name must be at least 6 characters.';
+          formMsg.className = 'text-sm text-rose-300 mt-3';
+          return;
+        }
+        const daysAhead = Math.ceil((new Date(due) - new Date()) / (1000 * 60 * 60 * 24));
+        if (!due || (risk === 'Critical' && daysAhead < 5)) {
+          formMsg.textContent = 'Critical initiatives require a due date at least 5 days in the future.';
+          formMsg.className = 'text-sm text-rose-300 mt-3';
+          return;
+        }
+
+        const nextNum = 4030 + state.initiatives.length;
+        const id = `RACI-${nextNum}`;
+        const draft = {
+          id,
+          title,
+          stream,
+          owner,
+          due,
+          risk,
+          status: 'Draft',
+          updated: new Date().toISOString(),
+          summary: 'New initiative draft. Complete the ownership matrix and run policy validation before review.',
+          raci: Object.fromEntries(participants.map(person => [person, person === 'Program Manager' ? 'A' : person === 'Workstream Lead' ? 'R' : '-']))
+        };
+
+        state.initiatives.unshift(draft);
+        state.activeId = id;
+        formMsg.textContent = `Draft ${id} created.`;
+        formMsg.className = 'text-sm text-emerald-300 mt-3';
+        addAudit(`${id}: New initiative draft created by ${roleSelect.value}.`);
+        event.target.reset();
+        renderQueue();
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', exportCsv);
+    }
+
+    [roleSelect, statusFilter, riskFilter, sortSelect].forEach(el => el.addEventListener('change', renderQueue));
+    searchInput.addEventListener('input', renderQueue);
+
+    renderAudit();
+    wireActions();
+    renderQueue();
+  </script>
+</body>
+</html>

@@ -1427,5 +1427,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 65,
+    "slug": "2026-04-04-raci-builder-review-desk",
+    "name": "RACI Builder Review Desk",
+    "description": "Master-detail planning workspace to define and approve RACI ownership with policy checks, role-based actions, and audit-ready exports.",
+    "category": "Planning",
+    "pattern": "Master-Detail",
+    "tags": [
+      "raci builder",
+      "planning",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
