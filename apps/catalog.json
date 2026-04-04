@@ -1469,5 +1469,24 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-04-04",
+    "day": 67,
+    "slug": "2026-04-04-skills-matrix-gap-dashboard",
+    "name": "Skills Matrix Gap Dashboard",
+    "description": "HR capability dashboard with team coverage charts, approval-routed training requests, role-based actions, audit trail, and CSV export.",
+    "category": "HR",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "skills matrix",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "audit trail",
+      "role-based views",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]

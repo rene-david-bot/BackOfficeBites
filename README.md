@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Legal Hold Notice Tracker Grid** — Data-grid legal ops workspace to triage hold notices, enforce policy checks, route counsel approvals, and keep audit-ready evidence logs.
+**Skills Matrix Gap Dashboard** — HR capability cockpit to track skill coverage, surface critical gaps, route training requests through approval, and maintain an audit-ready action trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills Matrix Gap Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0b1220',
+            panel: '#111a2e',
+            border: '#26324d',
+            muted: '#93a3c7',
+            good: '#22c55e',
+            warn: '#f59e0b',
+            bad: '#ef4444',
+            accent: '#60a5fa'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-sm text-accent hover:text-blue-300 underline underline-offset-2">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Skills Matrix Gap Dashboard</h1>
+        <p class="text-muted mt-1">HR capability cockpit for role coverage, approval workflow, and training gap actions.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <label for="roleView" class="text-sm text-muted">Role view</label>
+        <select id="roleView" class="bg-panel border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+          <option>HRBP</option>
+          <option>Team Lead</option>
+          <option>L&D</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-muted text-sm">Coverage ≥ 3/5</p>
+        <p id="coverageKpi" class="text-2xl font-semibold mt-1">0%</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-muted text-sm">Critical Gaps (≤2)</p>
+        <p id="criticalKpi" class="text-2xl font-semibold mt-1 text-bad">0</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-muted text-sm">Open Training Requests</p>
+        <p id="requestKpi" class="text-2xl font-semibold mt-1 text-warn">0</p>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <p class="text-muted text-sm">Expiring Certifications (45d)</p>
+        <p id="expiryKpi" class="text-2xl font-semibold mt-1">0</p>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
+      <article class="bg-panel border border-border rounded-xl p-4 xl:col-span-2">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Skill Coverage by Team</h2>
+          <p class="text-xs text-muted">Target line at 80%</p>
+        </div>
+        <canvas id="teamChart" height="180" class="w-full mt-3"></canvas>
+      </article>
+      <article class="bg-panel border border-border rounded-xl p-4">
+        <h2 class="font-semibold">Gap Severity Mix</h2>
+        <canvas id="severityChart" height="180" class="w-full mt-3"></canvas>
+      </article>
+    </section>
+
+    <section class="bg-panel border border-border rounded-xl p-4 mt-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div class="md:col-span-2">
+          <label class="text-xs text-muted" for="searchInput">Search employee or role</label>
+          <input id="searchInput" placeholder="e.g., Priya or Payroll" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+        </div>
+        <div>
+          <label class="text-xs text-muted" for="teamFilter">Team</label>
+          <select id="teamFilter" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+            <option value="all">All teams</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-muted" for="gapFilter">Max skill score</label>
+          <select id="gapFilter" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent">
+            <option value="5">Any score</option>
+            <option value="4">4 or below</option>
+            <option value="3">3 or below</option>
+            <option value="2">2 or below</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="exportBtn" class="w-full bg-accent text-slate-900 font-semibold rounded-lg py-2 px-3 hover:bg-blue-400 transition">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
+      <article class="bg-panel border border-border rounded-xl p-4 xl:col-span-2 overflow-x-auto">
+        <h2 class="font-semibold mb-3">Skills Matrix</h2>
+        <table class="w-full text-sm min-w-[780px]">
+          <thead>
+            <tr class="text-left text-muted border-b border-border">
+              <th class="py-2 pr-3"><button data-sort="employee" class="sortBtn hover:text-slate-200">Employee ↕</button></th>
+              <th class="py-2 pr-3"><button data-sort="team" class="sortBtn hover:text-slate-200">Team ↕</button></th>
+              <th class="py-2 pr-3"><button data-sort="role" class="sortBtn hover:text-slate-200">Role ↕</button></th>
+              <th class="py-2 pr-3"><button data-sort="score" class="sortBtn hover:text-slate-200">Core Score ↕</button></th>
+              <th class="py-2 pr-3">Cert Expiry</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2">Action</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </article>
+
+      <aside class="bg-panel border border-border rounded-xl p-4">
+        <h2 class="font-semibold">Training Request</h2>
+        <p class="text-xs text-muted mt-1">Validated request enters manager approval workflow.</p>
+        <form id="requestForm" class="mt-3 space-y-3">
+          <div>
+            <label class="text-xs text-muted" for="reqEmployee">Employee</label>
+            <input id="reqEmployee" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-muted" for="reqSkill">Skill</label>
+            <input id="reqSkill" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-muted" for="reqReason">Business reason</label>
+            <textarea id="reqReason" rows="2" class="w-full mt-1 bg-slate-900 border border-border rounded-lg px-3 py-2 text-sm" placeholder="Why now?"></textarea>
+          </div>
+          <button type="submit" class="w-full bg-emerald-500 text-slate-900 font-semibold rounded-lg py-2 px-3 hover:bg-emerald-400 transition">Submit for Approval</button>
+          <p id="formError" class="text-xs text-bad hidden"></p>
+        </form>
+
+        <div class="mt-4">
+          <h3 class="text-sm font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="text-xs text-muted mt-2 space-y-2 max-h-52 overflow-auto"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const matrix = [
+      { employee: 'Priya Nair', team: 'Finance Ops', role: 'Payroll Specialist', score: 2, certExpiry: '2026-05-10', status: 'Gap: Payroll Rules' },
+      { employee: 'Jonas Keller', team: 'Finance Ops', role: 'AP Analyst', score: 4, certExpiry: '2026-09-18', status: 'Healthy' },
+      { employee: 'Mila Torres', team: 'People Ops', role: 'HR Generalist', score: 3, certExpiry: '2026-06-01', status: 'Monitor' },
+      { employee: 'Luca Rossi', team: 'People Ops', role: 'Recruiter', score: 2, certExpiry: '2026-04-28', status: 'Gap: Interview Compliance' },
+      { employee: 'Aylin Demir', team: 'IT Service', role: 'Service Desk Lead', score: 5, certExpiry: '2027-01-15', status: 'Healthy' },
+      { employee: 'Noah Berger', team: 'IT Service', role: 'IAM Engineer', score: 3, certExpiry: '2026-05-03', status: 'Monitor' },
+      { employee: 'Elena Markov', team: 'Supply Ops', role: 'Demand Planner', score: 4, certExpiry: '2026-08-09', status: 'Healthy' },
+      { employee: 'Tariq Hussain', team: 'Supply Ops', role: 'Inventory Controller', score: 2, certExpiry: '2026-05-20', status: 'Gap: Cycle Count' }
+    ];
+
+    const requests = [];
+    const auditTrail = [
+      { ts: '09:02', msg: 'HRBP switched to Q2 capability plan.' },
+      { ts: '09:17', msg: 'Policy check flagged 2 unqualified payroll backups.' },
+      { ts: '09:45', msg: 'L&D completed SAP refresher cohort review.' }
+    ];
+
+    const state = {
+      sortBy: 'employee',
+      sortDir: 'asc',
+      search: '',
+      team: 'all',
+      gapMax: 5
+    };
+
+    const teamFilter = document.getElementById('teamFilter');
+    [...new Set(matrix.map(r => r.team))].sort().forEach(team => {
+      const opt = document.createElement('option');
+      opt.value = team;
+      opt.textContent = team;
+      teamFilter.appendChild(opt);
+    });
+
+    function daysUntil(dateStr) {
+      const now = new Date('2026-04-04T12:00:00Z');
+      const target = new Date(dateStr + 'T00:00:00Z');
+      return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function filteredRows() {
+      return matrix
+        .filter(r => (state.team === 'all' || r.team === state.team))
+        .filter(r => r.score <= state.gapMax)
+        .filter(r => {
+          const q = state.search.trim().toLowerCase();
+          if (!q) return true;
+          return [r.employee, r.role, r.team, r.status].some(v => v.toLowerCase().includes(q));
+        })
+        .sort((a, b) => {
+          const dir = state.sortDir === 'asc' ? 1 : -1;
+          const av = a[state.sortBy];
+          const bv = b[state.sortBy];
+          if (typeof av === 'number') return (av - bv) * dir;
+          return String(av).localeCompare(String(bv)) * dir;
+        });
+    }
+
+    function badge(score) {
+      if (score >= 4) return 'bg-emerald-500/20 text-emerald-300';
+      if (score === 3) return 'bg-amber-500/20 text-amber-300';
+      return 'bg-red-500/20 text-red-300';
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      const roleView = document.getElementById('roleView').value;
+      const body = document.getElementById('matrixBody');
+      body.innerHTML = rows.map(row => {
+        const days = daysUntil(row.certExpiry);
+        const expiryTone = days <= 45 ? 'text-amber-300' : 'text-slate-300';
+        const actionLabel = roleView === 'L&D' ? 'Assign Cohort' : roleView === 'Team Lead' ? 'Approve Plan' : 'Review Gap';
+        return `
+          <tr class="border-b border-border/60 hover:bg-slate-900/50">
+            <td class="py-2 pr-3">${row.employee}</td>
+            <td class="py-2 pr-3">${row.team}</td>
+            <td class="py-2 pr-3">${row.role}</td>
+            <td class="py-2 pr-3"><span class="px-2 py-1 rounded text-xs font-medium ${badge(row.score)}">${row.score}/5</span></td>
+            <td class="py-2 pr-3 ${expiryTone}">${row.certExpiry} (${days}d)</td>
+            <td class="py-2 pr-3">${row.status}</td>
+            <td class="py-2"><button class="text-accent hover:text-blue-300" onclick="logAction('${actionLabel} opened for ${row.employee}')">${actionLabel}</button></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function drawTeamChart() {
+      const ctx = document.getElementById('teamChart').getContext('2d');
+      const byTeam = [...new Set(matrix.map(r => r.team))].map(team => {
+        const teamRows = matrix.filter(r => r.team === team);
+        const covered = teamRows.filter(r => r.score >= 3).length;
+        return { team, pct: Math.round((covered / teamRows.length) * 100) };
+      });
+
+      const w = ctx.canvas.width = ctx.canvas.clientWidth * devicePixelRatio;
+      const h = ctx.canvas.height = ctx.canvas.clientHeight * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      const cw = ctx.canvas.clientWidth;
+      const ch = ctx.canvas.clientHeight;
+
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.fillStyle = '#93a3c7';
+      ctx.font = '12px sans-serif';
+
+      const barW = 72;
+      const gap = 28;
+      const startX = 20;
+      const maxH = ch - 50;
+
+      byTeam.forEach((item, i) => {
+        const x = startX + i * (barW + gap);
+        const bh = (item.pct / 100) * maxH;
+        ctx.fillStyle = item.pct >= 80 ? '#22c55e' : '#f59e0b';
+        ctx.fillRect(x, ch - 28 - bh, barW, bh);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(item.pct + '%', x + 18, ch - 34 - bh);
+        ctx.fillStyle = '#93a3c7';
+        ctx.fillText(item.team, x, ch - 10);
+      });
+
+      ctx.strokeStyle = '#60a5fa';
+      ctx.setLineDash([4, 4]);
+      const targetY = ch - 28 - (0.8 * maxH);
+      ctx.beginPath();
+      ctx.moveTo(8, targetY);
+      ctx.lineTo(cw - 8, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawSeverityChart() {
+      const ctx = document.getElementById('severityChart').getContext('2d');
+      const levels = {
+        Critical: matrix.filter(r => r.score <= 2).length,
+        Moderate: matrix.filter(r => r.score === 3).length,
+        Healthy: matrix.filter(r => r.score >= 4).length,
+      };
+
+      const values = Object.values(levels);
+      const total = values.reduce((a, b) => a + b, 0);
+      const colors = ['#ef4444', '#f59e0b', '#22c55e'];
+
+      const w = ctx.canvas.width = ctx.canvas.clientWidth * devicePixelRatio;
+      const h = ctx.canvas.height = ctx.canvas.clientHeight * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      const cw = ctx.canvas.clientWidth;
+      const ch = ctx.canvas.clientHeight;
+
+      ctx.clearRect(0, 0, cw, ch);
+      let start = -Math.PI / 2;
+      values.forEach((value, i) => {
+        const angle = (value / total) * (Math.PI * 2);
+        ctx.beginPath();
+        ctx.moveTo(cw / 2, ch / 2);
+        ctx.arc(cw / 2, ch / 2, 68, start, start + angle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        start += angle;
+      });
+
+      ctx.fillStyle = '#0b1220';
+      ctx.beginPath();
+      ctx.arc(cw / 2, ch / 2, 36, 0, Math.PI * 2);
+      ctx.fill();
+
+      let y = ch - 38;
+      Object.keys(levels).forEach((label, i) => {
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(16, y - 10, 10, 10);
+        ctx.fillStyle = '#cbd5e1';
+        const pct = Math.round((levels[label] / total) * 100);
+        ctx.fillText(`${label}: ${pct}%`, 32, y);
+        y += 16;
+      });
+    }
+
+    function renderKPIs() {
+      const covered = matrix.filter(r => r.score >= 3).length;
+      const coverage = Math.round((covered / matrix.length) * 100);
+      const critical = matrix.filter(r => r.score <= 2).length;
+      const expiring = matrix.filter(r => daysUntil(r.certExpiry) <= 45).length;
+
+      document.getElementById('coverageKpi').textContent = coverage + '%';
+      document.getElementById('criticalKpi').textContent = String(critical);
+      document.getElementById('requestKpi').textContent = String(requests.length);
+      document.getElementById('expiryKpi').textContent = String(expiring);
+    }
+
+    function renderAudit() {
+      const list = document.getElementById('auditTrail');
+      list.innerHTML = auditTrail.slice(-8).reverse().map(item => `<li><span class="text-slate-400">${item.ts}</span> — ${item.msg}</li>`).join('');
+    }
+
+    function logAction(msg) {
+      const ts = new Date().toISOString().slice(11, 16);
+      auditTrail.push({ ts, msg });
+      renderAudit();
+    }
+    window.logAction = logAction;
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const col = btn.dataset.sort;
+        if (state.sortBy === col) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortBy = col;
+          state.sortDir = 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', e => {
+      state.search = e.target.value;
+      renderTable();
+    });
+
+    document.getElementById('teamFilter').addEventListener('change', e => {
+      state.team = e.target.value;
+      renderTable();
+    });
+
+    document.getElementById('gapFilter').addEventListener('change', e => {
+      state.gapMax = Number(e.target.value);
+      renderTable();
+    });
+
+    document.getElementById('roleView').addEventListener('change', () => {
+      renderTable();
+      logAction(`Role view changed to ${document.getElementById('roleView').value}.`);
+    });
+
+    document.getElementById('requestForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const employee = document.getElementById('reqEmployee').value.trim();
+      const skill = document.getElementById('reqSkill').value.trim();
+      const reason = document.getElementById('reqReason').value.trim();
+      const err = document.getElementById('formError');
+      if (!employee || !skill || reason.length < 10) {
+        err.textContent = 'Provide employee, skill, and a reason with at least 10 characters.';
+        err.classList.remove('hidden');
+        return;
+      }
+      err.classList.add('hidden');
+      requests.push({ employee, skill, reason, status: 'Pending Manager Approval' });
+      renderKPIs();
+      logAction(`Training request submitted for ${employee} (${skill}) — Pending Manager Approval.`);
+      e.target.reset();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = filteredRows();
+      const header = ['Employee','Team','Role','CoreScore','CertExpiry','Status'];
+      const csv = [header.join(','), ...rows.map(r => [r.employee, r.team, r.role, r.score, r.certExpiry, r.status].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'skills-matrix-filtered.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      logAction(`CSV export completed (${rows.length} records).`);
+    });
+
+    function renderAll() {
+      renderTable();
+      renderKPIs();
+      renderAudit();
+      drawTeamChart();
+      drawSeverityChart();
+    }
+
+    window.addEventListener('resize', () => {
+      drawTeamChart();
+      drawSeverityChart();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
