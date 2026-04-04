@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Commissions Dispute Dragboard** — sales dispute workflow board to resolve commission claims with drag-and-drop triage, policy gates, and audit-ready decisions.
+**Commissions Payout Calendar** — sales operations calendar to schedule commission runs, route approvals by role, and enforce payout policy checks with an audit trail.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

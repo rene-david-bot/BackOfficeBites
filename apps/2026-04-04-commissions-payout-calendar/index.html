@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commissions Payout Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="space-y-2">
+      <h1 class="text-3xl md:text-4xl font-bold">Commissions Payout Calendar</h1>
+      <p class="text-slate-300 max-w-3xl">Sales-finance planning board for monthly commission payouts with role-based approval controls, policy validation, audit-ready logging, and exportable payout runs.</p>
+    </header>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <label class="space-y-1 xl:col-span-2">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+          <input id="searchInput" type="text" placeholder="Rep, account, territory..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Region</span>
+          <select id="regionFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+          <select id="sortSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option value="dateAsc">Payout date ↑</option>
+            <option value="amountDesc">Amount € ↓</option>
+            <option value="riskDesc">Policy risk first</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Role</span>
+          <select id="roleSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            <option>Sales Ops</option>
+            <option>Finance Controller</option>
+            <option>CFO</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-3 space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold" id="calendarTitle">Payout Calendar</h2>
+            <div class="flex items-center gap-2">
+              <button id="prevMonth" class="bg-slate-800 hover:bg-slate-700 text-sm rounded-lg px-3 py-1.5">← Prev</button>
+              <button id="nextMonth" class="bg-slate-800 hover:bg-slate-700 text-sm rounded-lg px-3 py-1.5">Next →</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-7 gap-2 text-xs uppercase tracking-wide text-slate-400 mb-2">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+          <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Selected Day Payouts</h2>
+            <span id="selectedDateBadge" class="text-xs bg-slate-800 rounded-full px-2 py-1">No date selected</span>
+          </div>
+          <div id="dayList" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <aside class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <h2 class="text-lg font-semibold">Approval Desk</h2>
+        <div id="detailEmpty" class="text-sm text-slate-400">Pick a payout card to inspect details and apply a workflow action.</div>
+
+        <div id="detailPane" class="hidden space-y-3">
+          <div id="detailMeta" class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1"></div>
+
+          <form id="actionForm" class="space-y-3">
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Workflow Action</span>
+              <select id="actionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+            </label>
+
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Payout Date</span>
+              <input id="payoutDateInput" type="date" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+            </label>
+
+            <label class="block space-y-1">
+              <span class="text-xs uppercase tracking-wide text-slate-400">Notes</span>
+              <textarea id="noteInput" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Reason for update, policy rationale, approver context"></textarea>
+            </label>
+
+            <p id="formError" class="hidden text-sm text-rose-400"></p>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold rounded-lg px-4 py-2">Apply Action</button>
+          </form>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">Audit Trail</h3>
+            <button id="exportBtn" class="text-xs bg-slate-800 hover:bg-slate-700 rounded px-2 py-1">Export CSV</button>
+          </div>
+          <div id="auditLog" class="space-y-2 max-h-64 overflow-auto pr-1"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const payouts = [
+      { id: "COM-2201", rep: "Nora P.", account: "Aster Retail", region: "DACH", amount: 18250, status: "Draft", payoutDate: "2026-04-08", closeDate: "2026-03-31", plan: "Mid-Market" },
+      { id: "COM-2202", rep: "Elias F.", account: "Nexora Cloud", region: "DACH", amount: 42500, status: "Submitted", payoutDate: "2026-04-10", closeDate: "2026-03-30", plan: "Enterprise" },
+      { id: "COM-2203", rep: "Lena K.", account: "Polar Freight", region: "Nordics", amount: 61200, status: "Finance Review", payoutDate: "2026-04-11", closeDate: "2026-03-29", plan: "Enterprise" },
+      { id: "COM-2204", rep: "Markus T.", account: "Helio Energy", region: "UKI", amount: 36750, status: "Approved", payoutDate: "2026-04-15", closeDate: "2026-03-28", plan: "Strategic" },
+      { id: "COM-2205", rep: "Sophie B.", account: "Cobalt Pharma", region: "France", amount: 54800, status: "Submitted", payoutDate: "2026-04-17", closeDate: "2026-03-30", plan: "Enterprise" },
+      { id: "COM-2206", rep: "Jonas R.", account: "Delta Mobility", region: "DACH", amount: 15900, status: "Paid", payoutDate: "2026-04-03", closeDate: "2026-03-25", plan: "SMB" },
+      { id: "COM-2207", rep: "Iva M.", account: "Orbit Media", region: "Benelux", amount: 29800, status: "Finance Review", payoutDate: "2026-04-18", closeDate: "2026-03-31", plan: "Mid-Market" },
+      { id: "COM-2208", rep: "Noah S.", account: "Vertex Dynamics", region: "Nordics", amount: 73500, status: "Approved", payoutDate: "2026-04-22", closeDate: "2026-03-31", plan: "Strategic" },
+      { id: "COM-2209", rep: "Tina H.", account: "GreenGrid", region: "DACH", amount: 24400, status: "Draft", payoutDate: "2026-04-26", closeDate: "2026-03-31", plan: "Mid-Market" }
+    ];
+
+    const auditTrail = [
+      { time: "2026-04-04T17:05:00Z", text: "Finance Controller requested contract addendum proof for COM-2203." },
+      { time: "2026-04-04T17:18:00Z", text: "Sales Ops adjusted payout date for COM-2205 due to tax calendar overlap." },
+      { time: "2026-04-04T17:42:00Z", text: "CFO approved COM-2208 with policy override note for strategic account." }
+    ];
+
+    const state = {
+      role: "Sales Ops",
+      search: "",
+      region: "all",
+      status: "all",
+      sort: "dateAsc",
+      selectedId: null,
+      month: 3,
+      year: 2026,
+      selectedDate: null
+    };
+
+    const workflow = {
+      Draft: ["Submitted"],
+      Submitted: ["Finance Review", "Draft"],
+      "Finance Review": ["Approved", "Submitted"],
+      Approved: ["Paid", "Finance Review"],
+      Paid: ["Approved"]
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function euro(value) {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function dateLabel(value) {
+      return new Date(value + "T00:00:00Z").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+    }
+
+    function riskLevel(item) {
+      if (item.amount >= 70000) return "critical";
+      if (item.amount >= 50000) return "high";
+      if (item.amount >= 30000) return "medium";
+      return "low";
+    }
+
+    function riskClass(level) {
+      return {
+        low: "bg-emerald-500/20 text-emerald-200",
+        medium: "bg-amber-500/20 text-amber-200",
+        high: "bg-orange-500/20 text-orange-200",
+        critical: "bg-rose-500/20 text-rose-200"
+      }[level];
+    }
+
+    function filteredPayouts() {
+      const q = state.search.trim().toLowerCase();
+      return payouts
+        .filter(p => state.region === "all" || p.region === state.region)
+        .filter(p => state.status === "all" || p.status === state.status)
+        .filter(p => {
+          if (!q) return true;
+          return [p.id, p.rep, p.account, p.region, p.plan].join(" ").toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          if (state.sort === "amountDesc") return b.amount - a.amount;
+          if (state.sort === "riskDesc") {
+            const rank = { low: 1, medium: 2, high: 3, critical: 4 };
+            return rank[riskLevel(b)] - rank[riskLevel(a)];
+          }
+          return new Date(a.payoutDate) - new Date(b.payoutDate);
+        });
+    }
+
+    function renderKpis(items) {
+      const total = items.reduce((sum, i) => sum + i.amount, 0);
+      const pending = items.filter(i => ["Submitted", "Finance Review"].includes(i.status)).length;
+      const approved = items.filter(i => i.status === "Approved").length;
+      const highRisk = items.filter(i => ["high", "critical"].includes(riskLevel(i))).length;
+
+      const cards = [
+        ["Total Visible Payout", euro(total), "bg-slate-900"],
+        ["Pending Reviews", String(pending), "bg-amber-900/30"],
+        ["Approved Awaiting Payment", String(approved), "bg-sky-900/30"],
+        ["High/Critical Policy Risk", String(highRisk), "bg-rose-900/30"]
+      ];
+
+      $("kpis").innerHTML = cards.map(([label, value, bg]) => `
+        <article class="${bg} border border-slate-800 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold mt-1">${value}</p>
+        </article>
+      `).join("");
+    }
+
+    function monthMatrix(year, month) {
+      const first = new Date(Date.UTC(year, month, 1));
+      const startDay = (first.getUTCDay() + 6) % 7;
+      const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      const prevDays = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      const cells = [];
+
+      for (let i = 0; i < startDay; i++) {
+        cells.push({ day: prevDays - startDay + 1 + i, inMonth: false, date: null });
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        cells.push({ day: d, inMonth: true, date: iso });
+      }
+      while (cells.length % 7 !== 0) {
+        cells.push({ day: cells.length, inMonth: false, date: null });
+      }
+      return cells;
+    }
+
+    function renderCalendar(items) {
+      const monthName = new Date(Date.UTC(state.year, state.month, 1)).toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+      $("calendarTitle").textContent = `${monthName} · Payout Calendar`;
+
+      const perDay = items.reduce((acc, item) => {
+        acc[item.payoutDate] = acc[item.payoutDate] || [];
+        acc[item.payoutDate].push(item);
+        return acc;
+      }, {});
+
+      const cells = monthMatrix(state.year, state.month);
+      $("calendarGrid").innerHTML = cells.map(cell => {
+        if (!cell.inMonth) {
+          return `<div class="h-24 rounded-lg border border-slate-900 bg-slate-900/30"></div>`;
+        }
+
+        const dayItems = perDay[cell.date] || [];
+        const amount = dayItems.reduce((sum, i) => sum + i.amount, 0);
+        const selected = state.selectedDate === cell.date;
+        const todayStyle = selected ? "ring-2 ring-emerald-500" : "";
+
+        return `
+          <button data-date="${cell.date}" class="h-24 text-left rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-900 p-2 ${todayStyle} focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-300">${cell.day}</span>
+              <span class="${dayItems.length ? "text-emerald-300" : "text-slate-600"}">${dayItems.length ? dayItems.length + " runs" : "-"}</span>
+            </div>
+            <p class="text-[11px] mt-2 ${dayItems.length ? "text-slate-200" : "text-slate-600"}">${dayItems.length ? euro(amount) : "No payouts"}</p>
+          </button>
+        `;
+      }).join("");
+
+      $("calendarGrid").querySelectorAll("button[data-date]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedDate = btn.dataset.date;
+          state.selectedId = null;
+          render();
+        });
+      });
+    }
+
+    function renderDayList(items) {
+      if (!state.selectedDate) {
+        $("selectedDateBadge").textContent = "No date selected";
+        $("dayList").innerHTML = `<p class="text-sm text-slate-400">Select a day in the calendar to inspect payout runs.</p>`;
+        return;
+      }
+
+      $("selectedDateBadge").textContent = dateLabel(state.selectedDate);
+      const dayItems = items.filter(i => i.payoutDate === state.selectedDate);
+
+      if (!dayItems.length) {
+        $("dayList").innerHTML = `<p class="text-sm text-slate-400">No payouts scheduled for this day with current filters.</p>`;
+        return;
+      }
+
+      $("dayList").innerHTML = dayItems.map(item => {
+        const risk = riskLevel(item);
+        const selected = item.id === state.selectedId ? "ring-2 ring-emerald-500" : "";
+        return `
+          <button data-id="${item.id}" class="w-full text-left bg-slate-950 border border-slate-800 hover:bg-slate-900 rounded-lg p-3 ${selected} focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium">${item.id} · ${item.rep}</p>
+              <span class="text-xs px-2 py-0.5 rounded-full ${riskClass(risk)}">${risk}</span>
+            </div>
+            <p class="text-sm text-slate-300">${item.account} · ${item.region} · ${item.status}</p>
+            <p class="text-xs text-slate-400">${euro(item.amount)} · Plan ${item.plan}</p>
+          </button>
+        `;
+      }).join("");
+
+      $("dayList").querySelectorAll("button[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedId = btn.dataset.id;
+          renderDetail();
+          renderDayList(filteredPayouts());
+        });
+      });
+    }
+
+    function allowedActions(item) {
+      let actions = workflow[item.status] || [];
+
+      if (state.role === "Sales Ops") {
+        actions = actions.filter(a => a !== "Paid" && a !== "Approved");
+      }
+
+      if (state.role === "Finance Controller") {
+        if (item.amount > 50000) actions = actions.filter(a => a !== "Approved");
+      }
+
+      if (state.role !== "CFO" && item.amount > 70000) {
+        actions = actions.filter(a => a !== "Paid" && a !== "Approved");
+      }
+
+      return actions;
+    }
+
+    function renderDetail() {
+      const item = payouts.find(p => p.id === state.selectedId);
+      if (!item) {
+        $("detailEmpty").classList.remove("hidden");
+        $("detailPane").classList.add("hidden");
+        return;
+      }
+
+      $("detailEmpty").classList.add("hidden");
+      $("detailPane").classList.remove("hidden");
+
+      const risk = riskLevel(item);
+      $("detailMeta").innerHTML = `
+        <p class="text-xs uppercase tracking-wide text-slate-400">${item.id} · ${item.account}</p>
+        <p class="text-sm text-slate-300">Rep: ${item.rep} · Region: ${item.region}</p>
+        <p class="text-sm text-slate-300">Amount: <strong>${euro(item.amount)}</strong> · Status: <strong>${item.status}</strong></p>
+        <p class="text-sm text-slate-300">Close: ${dateLabel(item.closeDate)} · Payout: ${dateLabel(item.payoutDate)}</p>
+        <p class="text-xs inline-flex px-2 py-1 rounded-full ${riskClass(risk)}">Policy risk: ${risk}</p>
+      `;
+
+      const actions = allowedActions(item);
+      $("actionSelect").innerHTML = actions.length
+        ? actions.map(a => `<option value="${a}">${a}</option>`).join("")
+        : `<option value="">No allowed actions for this role/policy context</option>`;
+
+      $("payoutDateInput").value = item.payoutDate;
+    }
+
+    function renderAudit() {
+      $("auditLog").innerHTML = auditTrail.slice().reverse().map(entry => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2">
+          <p class="text-xs text-slate-500">${new Date(entry.time).toLocaleString("en-GB", { timeZone: "UTC" })} UTC</p>
+          <p class="text-sm text-slate-300">${entry.text}</p>
+        </div>
+      `).join("");
+    }
+
+    function addAudit(text) {
+      auditTrail.push({ time: new Date().toISOString(), text });
+      renderAudit();
+    }
+
+    function setError(msg = "") {
+      const el = $("formError");
+      if (!msg) {
+        el.classList.add("hidden");
+        el.textContent = "";
+        return;
+      }
+      el.classList.remove("hidden");
+      el.textContent = msg;
+    }
+
+    function submitAction(event) {
+      event.preventDefault();
+      const item = payouts.find(p => p.id === state.selectedId);
+      if (!item) return;
+
+      const action = $("actionSelect").value;
+      const note = $("noteInput").value.trim();
+      const payoutDate = $("payoutDateInput").value;
+
+      if (!action) return setError("No action available for your role and policy constraints.");
+      if (!note || note.length < 14) return setError("Notes must be at least 14 characters for audit traceability.");
+      if (!payoutDate) return setError("Payout date is required.");
+      if (action === "Paid" && item.status !== "Approved") return setError("Only approved runs can be marked paid.");
+      if (action === "Approved" && item.amount > 50000 && state.role !== "CFO") {
+        return setError("Payouts above €50k require CFO approval.");
+      }
+      if (action === "Paid" && item.amount > 70000 && state.role !== "CFO") {
+        return setError("Critical payouts above €70k can only be paid by CFO.");
+      }
+
+      setError("");
+      item.status = action;
+      item.payoutDate = payoutDate;
+      state.selectedDate = payoutDate;
+      addAudit(`${state.role} moved ${item.id} to ${action}. Note: ${note}`);
+      $("noteInput").value = "";
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredPayouts().map(item => ({
+        id: item.id,
+        rep: item.rep,
+        account: item.account,
+        region: item.region,
+        amount_eur: item.amount,
+        status: item.status,
+        payout_date: item.payoutDate,
+        close_date: item.closeDate,
+        policy_risk: riskLevel(item)
+      }));
+
+      const headers = Object.keys(rows[0] || { id: "", status: "" });
+      const csv = [headers.join(","), ...rows.map(row => headers.map(h => JSON.stringify(row[h] ?? "")).join(","))].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `commissions-payout-calendar-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      addAudit(`${state.role} exported ${rows.length} payout runs to CSV.`);
+    }
+
+    function populateFilters() {
+      const regions = [...new Set(payouts.map(p => p.region))].sort();
+      $("regionFilter").innerHTML = `<option value="all">All regions</option>` + regions.map(r => `<option value="${r}">${r}</option>`).join("");
+
+      const statuses = [...new Set(payouts.map(p => p.status))];
+      $("statusFilter").innerHTML = `<option value="all">All statuses</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join("");
+    }
+
+    function bindControls() {
+      $("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+      $("regionFilter").addEventListener("change", (e) => { state.region = e.target.value; render(); });
+      $("statusFilter").addEventListener("change", (e) => { state.status = e.target.value; render(); });
+      $("sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+      $("roleSelect").addEventListener("change", (e) => { state.role = e.target.value; render(); });
+      $("actionForm").addEventListener("submit", submitAction);
+      $("exportBtn").addEventListener("click", exportCsv);
+
+      $("prevMonth").addEventListener("click", () => {
+        state.month -= 1;
+        if (state.month < 0) { state.month = 11; state.year -= 1; }
+        state.selectedDate = null;
+        state.selectedId = null;
+        render();
+      });
+
+      $("nextMonth").addEventListener("click", () => {
+        state.month += 1;
+        if (state.month > 11) { state.month = 0; state.year += 1; }
+        state.selectedDate = null;
+        state.selectedId = null;
+        render();
+      });
+    }
+
+    function render() {
+      const items = filteredPayouts();
+      renderKpis(items);
+      renderCalendar(items);
+      renderDayList(items);
+      renderDetail();
+      renderAudit();
+    }
+
+    populateFilters();
+    bindControls();
+    render();
+  </script>
+</body>
+</html>

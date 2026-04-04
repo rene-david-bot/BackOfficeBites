@@ -1560,5 +1560,29 @@
       "state machine"
     ],
     "thumb": "thumb.jpg"
+  },
+  {
+    "date": "2026-04-04",
+    "day": 71,
+    "slug": "2026-04-04-commissions-payout-calendar",
+    "name": "Commissions Payout Calendar",
+    "description": "Sales calendar workspace to schedule commission payouts, enforce approval policies, and track audit-ready payout runs.",
+    "category": "Sales",
+    "pattern": "Calendar",
+    "tags": [
+      "commissions",
+      "sales ops",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
