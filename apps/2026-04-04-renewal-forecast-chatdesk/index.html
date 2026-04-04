@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Renewal Forecast Negotiation Chatdesk — BackOfficeBites</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            panel: '#0f172a',
+            panelSoft: '#1e293b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-amber-400 hover:text-amber-300 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Renewal Forecast Negotiation Chatdesk</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Sales teams coordinate renewal-risk negotiations in a structured chat workspace with forecast states, discount policy gates, and audit-ready approvals.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mt-6">
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="roleSelect" class="text-xs uppercase text-slate-400">Role</label>
+        <select id="roleSelect" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option>Account Executive</option>
+          <option>RevOps Analyst</option>
+          <option>Sales Director</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="statusFilter" class="text-xs uppercase text-slate-400">Status</label>
+        <select id="statusFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="at_risk">At Risk</option>
+          <option value="negotiation">Negotiation</option>
+          <option value="pending_approval">Pending Approval</option>
+          <option value="committed">Committed</option>
+          <option value="slipped">Slipped</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="regionFilter" class="text-xs uppercase text-slate-400">Region</label>
+        <select id="regionFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All regions</option>
+          <option>DACH</option>
+          <option>Benelux</option>
+          <option>Nordics</option>
+          <option>UKI</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="riskFilter" class="text-xs uppercase text-slate-400">Risk Tier</label>
+        <select id="riskFilter" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="all">All tiers</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="searchInput" class="text-xs uppercase text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="account, owner, note..." class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+      </div>
+
+      <div class="bg-panel border border-slate-800 rounded-xl p-4">
+        <label for="sortBy" class="text-xs uppercase text-slate-400">Sort</label>
+        <select id="sortBy" class="mt-2 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+          <option value="arr_desc">ARR high to low</option>
+          <option value="renewal_asc">Nearest renewal date</option>
+          <option value="updated_desc">Recently updated</option>
+          <option value="discount_desc">Highest discount ask</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-slate-800 rounded-xl p-4 mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-300">Forecast pulse</p>
+        <div class="flex items-center gap-2">
+          <button id="exportBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-sm">CSV (filtered)</button>
+          <p id="resultCount" class="text-sm text-slate-400"></p>
+        </div>
+      </div>
+      <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section class="xl:col-span-3 bg-panel border border-slate-800 rounded-2xl p-4">
+        <h2 class="text-xl font-semibold">Renewal Inbox</h2>
+        <p class="text-sm text-slate-400 mt-1">Select an account to review conversation, policy checks, and forecast transitions.</p>
+        <ul id="dealList" class="mt-4 space-y-2 max-h-[38rem] overflow-auto"></ul>
+      </section>
+
+      <section class="xl:col-span-5 bg-panel border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[38rem]">
+        <h2 class="text-xl font-semibold">Negotiation Thread</h2>
+        <p id="threadMeta" class="text-sm text-slate-400 mt-1">Select a renewal from the inbox.</p>
+
+        <div id="chatThread" class="mt-4 flex-1 overflow-auto space-y-3 pr-1"></div>
+
+        <form id="chatForm" class="mt-4 space-y-2" novalidate>
+          <label for="chatInput" class="text-sm">Add update</label>
+          <textarea id="chatInput" rows="3" class="w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Write a negotiation update (min 6 chars)..."></textarea>
+          <div class="flex items-center justify-between gap-2">
+            <p id="chatError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm">Post to thread</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="xl:col-span-4 space-y-4">
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Renewal Detail</h2>
+          <p id="emptyDetail" class="text-sm text-slate-400 mt-2">No renewal selected.</p>
+
+          <div id="detailPanel" class="hidden space-y-3 mt-3">
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h3 id="detailTitle" class="font-semibold"></h3>
+              <p id="detailMeta" class="text-xs text-slate-300 mt-1"></p>
+              <p id="detailSummary" class="text-sm text-slate-200 mt-3"></p>
+            </div>
+
+            <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+              <h4 class="text-sm font-semibold">Policy Validation</h4>
+              <p id="policyText" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+
+            <form id="transitionForm" class="bg-panelSoft border border-slate-700 rounded-lg p-3 space-y-3" novalidate>
+              <h4 class="text-sm font-semibold">Forecast Action</h4>
+              <label class="block text-sm" for="nextStatus">Next status
+                <select id="nextStatus" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></select>
+              </label>
+
+              <label class="block text-sm" for="newDiscount">Discount ask (%)
+                <input id="newDiscount" type="number" min="0" max="40" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+
+              <label class="block text-sm" for="approvalToken">Approval token (required for high-concession commit)
+                <input id="approvalToken" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. SD-APR-204" />
+              </label>
+
+              <label class="block text-sm" for="actionNote">Action note (min 12 chars)
+                <textarea id="actionNote" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+              </label>
+
+              <p id="formError" class="text-sm text-rose-400"></p>
+              <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm">Apply update</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Create Renewal</h2>
+          <form id="newDealForm" class="space-y-3 mt-3" novalidate>
+            <label class="block text-sm" for="newAccount">Account name
+              <input id="newAccount" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. NordicGrid AS" />
+            </label>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newRegion">Region
+                <select id="newRegion" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option>DACH</option>
+                  <option>Benelux</option>
+                  <option>Nordics</option>
+                  <option>UKI</option>
+                </select>
+              </label>
+              <label class="block text-sm" for="newRisk">Risk tier
+                <select id="newRisk" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block text-sm" for="newArr">ARR (€)
+                <input id="newArr" type="number" min="10000" step="5000" value="90000" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+              <label class="block text-sm" for="newDiscountInput">Discount ask (%)
+                <input id="newDiscountInput" type="number" min="0" max="40" value="8" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" />
+              </label>
+            </div>
+
+            <label class="block text-sm" for="newOwner">Owner
+              <input id="newOwner" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="e.g. Sarah Klein" />
+            </label>
+
+            <label class="block text-sm" for="newSummary">Context (min 14 chars)
+              <textarea id="newSummary" rows="3" class="mt-1 w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2" placeholder="Explain churn risk, expansion option, or procurement blockers."></textarea>
+            </label>
+
+            <p id="newError" class="text-sm text-rose-400"></p>
+            <button type="submit" class="w-full px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold text-sm">Create renewal</button>
+          </form>
+        </section>
+
+        <section class="bg-panel border border-slate-800 rounded-2xl p-4">
+          <h2 class="text-lg font-semibold">Audit Trail</h2>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-44 overflow-auto"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const renewals = [
+      {
+        id: 'RF-481',
+        account: 'HelioLogistics GmbH',
+        owner: 'Sarah Klein',
+        region: 'DACH',
+        risk: 'high',
+        arr: 240000,
+        discount: 22,
+        renewalDate: '2026-04-21',
+        status: 'pending_approval',
+        updatedAt: '2026-04-04T06:58:00Z',
+        summary: 'Procurement requests 24-month lock with 22% concession. Expansion add-on possible if legal terms close by week 16.',
+        approvalToken: '',
+        thread: [
+          { by: 'Account Executive', at: '2026-04-04T06:20:00Z', text: 'Client confirmed they will shortlist us if we align on multi-year discount.' },
+          { by: 'RevOps Analyst', at: '2026-04-04T06:58:00Z', text: 'Concession above 20% threshold. Routed to Sales Director approval.' }
+        ],
+        audit: [
+          '06:58 UTC — RevOps Analyst moved renewal to Pending Approval.',
+          '06:20 UTC — Account Executive logged client concession demand.'
+        ]
+      },
+      {
+        id: 'RF-473',
+        account: 'Northlane Retail BV',
+        owner: 'Tom Becker',
+        region: 'Benelux',
+        risk: 'medium',
+        arr: 125000,
+        discount: 12,
+        renewalDate: '2026-04-16',
+        status: 'negotiation',
+        updatedAt: '2026-04-03T15:12:00Z',
+        summary: 'Customer asks for phased rollout clause. Legal redlines resolved, finance still reviewing ramp schedule.',
+        approvalToken: '',
+        thread: [
+          { by: 'Account Executive', at: '2026-04-03T14:40:00Z', text: 'Procurement accepted liability wording; requesting pricing bridge for Q2 rollout.' },
+          { by: 'RevOps Analyst', at: '2026-04-03T15:12:00Z', text: 'Modelled gross-margin impact at current discount ask. Still inside policy range.' }
+        ],
+        audit: [
+          '15:12 UTC — RevOps Analyst refreshed margin scenario.',
+          '14:40 UTC — Account Executive updated negotiation status.'
+        ]
+      },
+      {
+        id: 'RF-466',
+        account: 'PolarPlant AS',
+        owner: 'Mina Larsen',
+        region: 'Nordics',
+        risk: 'low',
+        arr: 78000,
+        discount: 6,
+        renewalDate: '2026-05-02',
+        status: 'committed',
+        updatedAt: '2026-04-02T11:34:00Z',
+        summary: 'Renewal verbally confirmed with small concession and support uplift. Paperwork queued for signature.',
+        approvalToken: 'SD-APR-188',
+        thread: [
+          { by: 'Sales Director', at: '2026-04-02T11:34:00Z', text: 'Approved as committed. Minimal concession and healthy expansion probability.' }
+        ],
+        audit: [
+          '11:34 UTC — Sales Director committed renewal with token SD-APR-188.'
+        ]
+      },
+      {
+        id: 'RF-459',
+        account: 'Bridgeport Media PLC',
+        owner: 'Ethan Hall',
+        region: 'UKI',
+        risk: 'high',
+        arr: 198000,
+        discount: 18,
+        renewalDate: '2026-04-11',
+        status: 'at_risk',
+        updatedAt: '2026-04-03T09:04:00Z',
+        summary: 'Executive sponsor changed. Competitor offering migration credits; stakeholder map needs rebuild this week.',
+        approvalToken: '',
+        thread: [
+          { by: 'Account Executive', at: '2026-04-03T09:04:00Z', text: 'Risk increased after sponsor departure. Scheduling exec alignment call.' }
+        ],
+        audit: [
+          '09:04 UTC — Account Executive marked renewal At Risk.'
+        ]
+      }
+    ];
+
+    const statusLabel = {
+      draft: 'Draft',
+      at_risk: 'At Risk',
+      negotiation: 'Negotiation',
+      pending_approval: 'Pending Approval',
+      committed: 'Committed',
+      slipped: 'Slipped'
+    };
+
+    const state = {
+      role: 'Account Executive',
+      selectedId: renewals[0].id
+    };
+
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const regionFilter = document.getElementById('regionFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const searchInput = document.getElementById('searchInput');
+    const sortBy = document.getElementById('sortBy');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const kpis = document.getElementById('kpis');
+    const resultCount = document.getElementById('resultCount');
+    const dealList = document.getElementById('dealList');
+    const threadMeta = document.getElementById('threadMeta');
+    const chatThread = document.getElementById('chatThread');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatError = document.getElementById('chatError');
+
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailMeta = document.getElementById('detailMeta');
+    const detailSummary = document.getElementById('detailSummary');
+    const policyText = document.getElementById('policyText');
+    const nextStatus = document.getElementById('nextStatus');
+    const newDiscount = document.getElementById('newDiscount');
+    const approvalToken = document.getElementById('approvalToken');
+    const actionNote = document.getElementById('actionNote');
+    const formError = document.getElementById('formError');
+    const transitionForm = document.getElementById('transitionForm');
+
+    const newDealForm = document.getElementById('newDealForm');
+    const newAccount = document.getElementById('newAccount');
+    const newRegion = document.getElementById('newRegion');
+    const newRisk = document.getElementById('newRisk');
+    const newArr = document.getElementById('newArr');
+    const newDiscountInput = document.getElementById('newDiscountInput');
+    const newOwner = document.getElementById('newOwner');
+    const newSummary = document.getElementById('newSummary');
+    const newError = document.getElementById('newError');
+    const auditTrail = document.getElementById('auditTrail');
+
+    function badge(status) {
+      const map = {
+        draft: 'bg-slate-700 text-slate-100',
+        at_risk: 'bg-rose-500/20 text-rose-300 border border-rose-500/40',
+        negotiation: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40',
+        pending_approval: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+        committed: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+        slipped: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${map[status] || 'bg-slate-700'}">${statusLabel[status] || status}</span>`;
+    }
+
+    function fmtTime(iso) {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+      });
+    }
+
+    function selectedRenewal() {
+      return renewals.find(r => r.id === state.selectedId) || null;
+    }
+
+    function matches(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+      if (regionFilter.value !== 'all' && item.region !== regionFilter.value) return false;
+      if (riskFilter.value !== 'all' && item.risk !== riskFilter.value) return false;
+      if (q) {
+        const corpus = `${item.id} ${item.account} ${item.owner} ${item.summary}`.toLowerCase();
+        if (!corpus.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function getRows() {
+      const rows = renewals.filter(matches);
+      rows.sort((a, b) => {
+        if (sortBy.value === 'renewal_asc') return new Date(a.renewalDate) - new Date(b.renewalDate);
+        if (sortBy.value === 'updated_desc') return new Date(b.updatedAt) - new Date(a.updatedAt);
+        if (sortBy.value === 'discount_desc') return b.discount - a.discount;
+        return b.arr - a.arr;
+      });
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const committed = rows.filter(r => r.status === 'committed').length;
+      const pending = rows.filter(r => r.status === 'pending_approval').length;
+      const atRisk = rows.filter(r => ['at_risk', 'slipped'].includes(r.status)).length;
+      const pipeline = rows.reduce((sum, r) => sum + r.arr, 0);
+      const weighted = rows.reduce((sum, r) => {
+        const factor = r.status === 'committed' ? 1 : r.status === 'pending_approval' ? 0.75 : r.status === 'negotiation' ? 0.6 : r.status === 'at_risk' ? 0.4 : 0.5;
+        return sum + (r.arr * factor);
+      }, 0);
+
+      const cards = [
+        ['Renewals', rows.length],
+        ['Committed', committed],
+        ['Pending Approval', pending],
+        ['At Risk + Slipped', atRisk],
+        ['Weighted ARR (€)', Math.round(weighted).toLocaleString('en-GB')]
+      ];
+
+      kpis.innerHTML = cards.map(([label, value]) => `
+        <div class="bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <p class="text-xs uppercase text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+        </div>
+      `).join('');
+
+      resultCount.textContent = `${rows.length} renewal${rows.length === 1 ? '' : 's'} · ARR €${pipeline.toLocaleString('en-GB')}`;
+    }
+
+    function renderList(rows) {
+      dealList.innerHTML = '';
+
+      rows.forEach(item => {
+        const selected = state.selectedId === item.id;
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <button type="button" data-id="${item.id}" class="deal-btn w-full text-left rounded-xl border ${selected ? 'border-amber-400/70 bg-slate-900/80' : 'border-slate-800 bg-panelSoft'} p-3 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-semibold">${item.account}</p>
+              ${badge(item.status)}
+            </div>
+            <p class="text-xs text-slate-300 mt-1">${item.id} · ${item.region} · ${item.risk.toUpperCase()}</p>
+            <p class="text-xs text-slate-400 mt-1">${item.owner} · ARR €${item.arr.toLocaleString('en-GB')} · ${item.discount}% ask</p>
+          </button>
+        `;
+        dealList.appendChild(li);
+      });
+
+      dealList.querySelectorAll('.deal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderThread(item) {
+      if (!item) {
+        threadMeta.textContent = 'Select a renewal from the inbox.';
+        chatThread.innerHTML = '<p class="text-sm text-slate-400">No thread to show.</p>';
+        return;
+      }
+
+      threadMeta.textContent = `${item.id} · Renewal ${item.renewalDate} · Updated ${fmtTime(item.updatedAt)} UTC`;
+      chatThread.innerHTML = item.thread.map(msg => {
+        const mine = msg.by === state.role;
+        return `
+          <article class="${mine ? 'ml-8' : 'mr-8'}">
+            <div class="rounded-xl border ${mine ? 'border-amber-500/40 bg-amber-500/10' : 'border-slate-700 bg-panelSoft'} p-3">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-semibold">${msg.by}</p>
+                <p class="text-xs text-slate-400">${fmtTime(msg.at)} UTC</p>
+              </div>
+              <p class="text-sm text-slate-200 mt-2">${msg.text}</p>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      chatThread.scrollTop = chatThread.scrollHeight;
+    }
+
+    function allowedStatuses(item) {
+      const transitions = {
+        draft: ['draft', 'at_risk', 'negotiation'],
+        at_risk: ['at_risk', 'negotiation', 'pending_approval', 'slipped'],
+        negotiation: ['negotiation', 'pending_approval', 'committed', 'slipped'],
+        pending_approval: ['pending_approval', 'committed', 'slipped'],
+        committed: ['committed'],
+        slipped: ['slipped', 'negotiation']
+      };
+
+      const base = transitions[item.status] || Object.keys(statusLabel);
+      const role = state.role;
+
+      if (role === 'Account Executive') {
+        return base.filter(s => ['draft', 'at_risk', 'negotiation'].includes(s));
+      }
+      if (role === 'RevOps Analyst') {
+        return base.filter(s => ['at_risk', 'negotiation', 'pending_approval', 'slipped'].includes(s));
+      }
+      return base;
+    }
+
+    function policyFor(item) {
+      const strict = item.discount > 20 || item.arr >= 200000 || item.risk === 'high';
+      if (strict) {
+        return 'Strict policy: discount >20%, ARR ≥ €200k, or high-risk accounts require Sales Director approval token before committed status.';
+      }
+      return 'Standard policy: AE/RevOps can move through negotiation. Sales Director finalizes committed/slipped decisions.';
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        emptyDetail.classList.remove('hidden');
+        detailPanel.classList.add('hidden');
+        auditTrail.innerHTML = '<li>No renewal selected.</li>';
+        return;
+      }
+
+      emptyDetail.classList.add('hidden');
+      detailPanel.classList.remove('hidden');
+
+      detailTitle.textContent = `${item.account} (${item.id})`;
+      detailMeta.textContent = `${item.region} · ${item.owner} · ARR €${item.arr.toLocaleString('en-GB')} · Renewal ${item.renewalDate}`;
+      detailSummary.textContent = item.summary;
+      policyText.textContent = policyFor(item);
+
+      const allowed = allowedStatuses(item);
+      nextStatus.innerHTML = allowed.map(s => `<option value="${s}">${statusLabel[s]}</option>`).join('');
+      nextStatus.value = allowed.includes(item.status) ? item.status : allowed[0];
+      newDiscount.value = item.discount;
+      approvalToken.value = item.approvalToken || '';
+      actionNote.value = '';
+      formError.textContent = '';
+
+      auditTrail.innerHTML = item.audit.map(line => `<li class="border-b border-slate-800 pb-2">${line}</li>`).join('');
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id', 'account', 'owner', 'region', 'risk', 'arr', 'discount', 'renewalDate', 'status', 'updatedAt', 'approvalToken', 'summary'];
+      const lines = [headers.join(',')];
+      rows.forEach(item => lines.push(headers.map(h => `"${String(item[h] ?? '').replaceAll('"', '""')}"`).join(',')));
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'renewal-forecast-chatdesk.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const rows = getRows();
+      renderKpis(rows);
+      renderList(rows);
+
+      const current = selectedRenewal();
+      const fallback = rows[0] || null;
+      const item = current && rows.some(r => r.id === current.id) ? current : fallback;
+      if (item) state.selectedId = item.id;
+
+      renderThread(item);
+      renderDetail(item);
+    }
+
+    chatForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const item = selectedRenewal();
+      if (!item) return;
+
+      const note = chatInput.value.trim();
+      if (note.length < 6) {
+        chatError.textContent = 'Please enter at least 6 characters.';
+        return;
+      }
+
+      item.thread.push({ by: state.role, at: new Date().toISOString(), text: note });
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${fmtTime(item.updatedAt)} UTC — ${state.role} posted negotiation update.`);
+      chatInput.value = '';
+      chatError.textContent = '';
+      render();
+    });
+
+    transitionForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const item = selectedRenewal();
+      if (!item) return;
+
+      const target = nextStatus.value;
+      const discount = Number(newDiscount.value);
+      const token = approvalToken.value.trim();
+      const note = actionNote.value.trim();
+      const role = state.role;
+
+      if (!Number.isFinite(discount) || discount < 0 || discount > 40) {
+        formError.textContent = 'Discount must be between 0% and 40%.';
+        return;
+      }
+      if (note.length < 12) {
+        formError.textContent = 'Action note must be at least 12 characters.';
+        return;
+      }
+      if ((target === 'committed' || target === 'slipped') && role !== 'Sales Director') {
+        formError.textContent = 'Only Sales Director can set Committed or Slipped.';
+        return;
+      }
+      if (target === 'pending_approval' && role === 'Account Executive') {
+        formError.textContent = 'Account Executive cannot route directly to Pending Approval.';
+        return;
+      }
+
+      const strict = discount > 20 || item.arr >= 200000 || item.risk === 'high';
+      if (target === 'committed' && strict && !token) {
+        formError.textContent = 'Approval token is required to commit strict-policy renewals.';
+        return;
+      }
+
+      item.discount = discount;
+      item.status = target;
+      item.approvalToken = token;
+      item.updatedAt = new Date().toISOString();
+      item.audit.unshift(`${fmtTime(item.updatedAt)} UTC — ${role}: ${note} (→ ${statusLabel[target]}${token ? `, ${token}` : ''})`);
+      item.thread.push({
+        by: role,
+        at: item.updatedAt,
+        text: `Forecast updated to ${statusLabel[target]} at ${discount}% concession${token ? ` with token ${token}` : ''}. ${note}`
+      });
+
+      formError.textContent = '';
+      render();
+    });
+
+    newDealForm.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const account = newAccount.value.trim();
+      const region = newRegion.value;
+      const risk = newRisk.value;
+      const arr = Number(newArr.value);
+      const discount = Number(newDiscountInput.value);
+      const owner = newOwner.value.trim();
+      const summary = newSummary.value.trim();
+
+      if (account.length < 3) {
+        newError.textContent = 'Account name must be at least 3 characters.';
+        return;
+      }
+      if (!owner) {
+        newError.textContent = 'Owner is required.';
+        return;
+      }
+      if (!Number.isFinite(arr) || arr < 10000) {
+        newError.textContent = 'ARR must be at least €10,000.';
+        return;
+      }
+      if (!Number.isFinite(discount) || discount < 0 || discount > 40) {
+        newError.textContent = 'Discount ask must be between 0% and 40%.';
+        return;
+      }
+      if (summary.length < 14) {
+        newError.textContent = 'Context must be at least 14 characters.';
+        return;
+      }
+
+      const maxId = Math.max(...renewals.map(r => Number(r.id.split('-')[1])));
+      const id = `RF-${maxId + 1}`;
+      const now = new Date().toISOString();
+      const renewalDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 21).toISOString().slice(0, 10);
+
+      const entry = {
+        id,
+        account,
+        owner,
+        region,
+        risk,
+        arr,
+        discount,
+        renewalDate,
+        status: 'draft',
+        updatedAt: now,
+        summary,
+        approvalToken: '',
+        thread: [{ by: state.role, at: now, text: summary }],
+        audit: [`${fmtTime(now)} UTC — Renewal created by ${state.role}.`]
+      };
+
+      renewals.unshift(entry);
+      state.selectedId = id;
+
+      newDealForm.reset();
+      newArr.value = 90000;
+      newDiscountInput.value = 8;
+      newError.textContent = '';
+      render();
+    });
+
+    roleSelect.addEventListener('change', () => {
+      state.role = roleSelect.value;
+      render();
+    });
+
+    [statusFilter, regionFilter, riskFilter, sortBy].forEach(el => el.addEventListener('change', render));
+    searchInput.addEventListener('input', render);
+    exportBtn.addEventListener('click', () => exportCsv(getRows()));
+
+    render();
+  </script>
+</body>
+</html>

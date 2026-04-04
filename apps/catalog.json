@@ -1379,5 +1379,29 @@
       "sort"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-04",
+    "day": 63,
+    "slug": "2026-04-04-renewal-forecast-chatdesk",
+    "name": "Renewal Forecast Negotiation Chatdesk",
+    "description": "Chat-first sales renewal workspace with discount policy gates, approval routing, and audit-ready forecast transitions.",
+    "category": "Sales",
+    "pattern": "Chat UI",
+    "tags": [
+      "renewal forecast",
+      "sales",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
