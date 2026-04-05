@@ -1680,5 +1680,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-05",
+    "day": 76,
+    "slug": "2026-04-05-capacity-freeze-calendar",
+    "name": "Capacity Freeze Calendar",
+    "description": "Planning calendar workspace for capacity-freeze approvals with policy gates, role-based routing, audit trails, and CSV export.",
+    "category": "Planning",
+    "pattern": "Calendar",
+    "tags": [
+      "capacity planning",
+      "planning",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

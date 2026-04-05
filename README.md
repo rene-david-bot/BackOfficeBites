@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Policy Acknowledgment Exception Kanban** — Legal kanban workspace for overdue policy acknowledgments with role-based routing, policy validation gates, audit trail, and CSV export.
+**Capacity Freeze Calendar** — Planning calendar workspace for capacity-freeze approvals with policy gates, role-based routing, audit trails, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

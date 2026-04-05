@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capacity Freeze Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <a href="../../index.html" class="text-sm text-emerald-300 underline underline-offset-4 hover:text-emerald-200">BackOfficeBites 🍔</a>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight">Capacity Freeze Calendar</h1>
+        <p class="mt-1 max-w-3xl text-sm text-slate-300">Planning calendar to stage capacity-freeze windows, enforce approval policy gates, and keep an audit-ready trail across portfolio squads.</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6 lg:px-8">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Visible Requests</p>
+          <p id="kpiTotal" class="mt-2 text-xl font-semibold text-cyan-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Pending Approval</p>
+          <p id="kpiPending" class="mt-2 text-xl font-semibold text-amber-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Overbooked (&gt;85%)</p>
+          <p id="kpiOverbooked" class="mt-2 text-xl font-semibold text-rose-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Avg Utilization</p>
+          <p id="kpiAvgUtil" class="mt-2 text-xl font-semibold text-violet-300">0%</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 lg:col-span-2">
+          <label for="roleView" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+          <select id="roleView" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option>Capacity Planner</option>
+            <option>Team Lead</option>
+            <option>Finance Controller</option>
+            <option>Portfolio Director</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-4">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label class="text-xs text-slate-400" for="searchInput">Search
+                <input id="searchInput" type="text" placeholder="Team, initiative, owner..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="text-xs text-slate-400" for="statusFilter">Status
+                <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All statuses</option>
+                  <option>Draft</option>
+                  <option>Team Review</option>
+                  <option>Finance Check</option>
+                  <option>Approved</option>
+                  <option>Rejected</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="teamFilter">Team
+                <select id="teamFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All teams</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="sortBy">Sort
+                <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="start">Start date (earliest)</option>
+                  <option value="utilization">Utilization (high-low)</option>
+                  <option value="impact">Impact (high-low)</option>
+                  <option value="team">Team (A-Z)</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="resetFilters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800">Reset</button>
+              <button id="exportCsv" class="rounded-lg border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Create Freeze Window</h2>
+            <form id="freezeForm" class="mt-2 space-y-2" novalidate>
+              <label class="block text-xs text-slate-400" for="teamInput">Team
+                <input id="teamInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="block text-xs text-slate-400" for="initiativeInput">Initiative
+                <input id="initiativeInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="startInput">Start
+                  <input id="startInput" type="date" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+                <label class="block text-xs text-slate-400" for="endInput">End
+                  <input id="endInput" type="date" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="utilInput">Utilization %
+                  <input id="utilInput" type="number" min="20" max="100" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+                <label class="block text-xs text-slate-400" for="impactInput">Impact €
+                  <input id="impactInput" type="number" min="5000" step="1000" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+              </div>
+              <label class="block text-xs text-slate-400" for="noteInput">Planner note (min 12 chars)
+                <input id="noteInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <button type="submit" class="w-full rounded-lg border border-violet-600/60 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20">Add Freeze Request</button>
+              <p id="formMsg" class="text-xs text-slate-400" role="status" aria-live="polite">Validation and policy routing hints appear here.</p>
+            </form>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Audit Trail</h2>
+              <button id="clearAudit" class="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">Clear</button>
+            </div>
+            <ul id="auditList" class="mt-2 max-h-64 space-y-2 overflow-auto text-xs text-slate-300"></ul>
+          </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-8">
+          <div id="policyHint" class="rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-3 text-xs text-cyan-200">Policy gate: requests above 85% utilization or €60k impact must pass Finance Check before approval.</div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">April 2026 Freeze Calendar</h2>
+              <p id="selectedDateLabel" class="text-xs text-slate-400">Selected: Apr 06, 2026</p>
+            </div>
+            <div id="calendar" class="mt-3 grid grid-cols-7 gap-2 text-xs" aria-label="Capacity freeze monthly calendar"></div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Weekly Utilization Snapshot</h2>
+            <div id="weekBars" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Requests on Selected Date</h2>
+            <div id="dayList" class="mt-2 space-y-2"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const statuses = ['Draft', 'Team Review', 'Finance Check', 'Approved', 'Rejected'];
+    const statusStyles = {
+      Draft: 'border-slate-600/60 bg-slate-500/10 text-slate-200',
+      'Team Review': 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+      'Finance Check': 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+      Approved: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+      Rejected: 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+    };
+
+    let selectedDate = '2026-04-06';
+
+    let requests = [
+      {
+        id: 'FR-3101',
+        team: 'Payments Platform',
+        initiative: 'Ledger latency hardening',
+        owner: 'Mika Adler',
+        start: '2026-04-06',
+        end: '2026-04-10',
+        utilization: 88,
+        impact: 78000,
+        status: 'Finance Check',
+        note: 'Critical release freeze before Q2 close.',
+        rejectionReason: ''
+      },
+      {
+        id: 'FR-3102',
+        team: 'Warehouse Intelligence',
+        initiative: 'Slotting predictor rollout',
+        owner: 'Yasmin Graf',
+        start: '2026-04-08',
+        end: '2026-04-14',
+        utilization: 74,
+        impact: 42000,
+        status: 'Team Review',
+        note: 'Needs temporary analyst pairing to stabilize KPIs.',
+        rejectionReason: ''
+      },
+      {
+        id: 'FR-3103',
+        team: 'People Analytics',
+        initiative: 'Attrition model retraining',
+        owner: 'Nils Hartmann',
+        start: '2026-04-13',
+        end: '2026-04-17',
+        utilization: 67,
+        impact: 26000,
+        status: 'Approved',
+        note: 'Board-approved talent risk recalibration sprint.',
+        rejectionReason: ''
+      },
+      {
+        id: 'FR-3104',
+        team: 'Partner Integrations',
+        initiative: 'EDI migration fallback lane',
+        owner: 'Carla Mendes',
+        start: '2026-04-15',
+        end: '2026-04-22',
+        utilization: 91,
+        impact: 95000,
+        status: 'Team Review',
+        note: 'External dependency risk requires controlled freeze.',
+        rejectionReason: ''
+      },
+      {
+        id: 'FR-3105',
+        team: 'Revenue Operations',
+        initiative: 'CPQ ruleset cleanup',
+        owner: 'Tarek Jansen',
+        start: '2026-04-20',
+        end: '2026-04-24',
+        utilization: 62,
+        impact: 18000,
+        status: 'Draft',
+        note: 'Planner draft for post-quarter commission cycle.',
+        rejectionReason: ''
+      },
+      {
+        id: 'FR-3106',
+        team: 'Risk Engineering',
+        initiative: 'Fraud model threshold reset',
+        owner: 'Leonie Richter',
+        start: '2026-04-27',
+        end: '2026-05-01',
+        utilization: 86,
+        impact: 64000,
+        status: 'Rejected',
+        note: 'Shifted after payment rail incident response.',
+        rejectionReason: 'Need revised mitigation plan from platform owner.'
+      }
+    ];
+
+    const auditTrail = [
+      `${timestamp()} FR-3103 approved by Finance Controller`,
+      `${timestamp()} FR-3106 rejected with mitigation gap`,
+      `${timestamp()} FR-3102 moved to Team Review by Capacity Planner`
+    ];
+
+    const roleView = document.getElementById('roleView');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const teamFilter = document.getElementById('teamFilter');
+    const sortBy = document.getElementById('sortBy');
+    const selectedDateLabel = document.getElementById('selectedDateLabel');
+    const dayList = document.getElementById('dayList');
+    const policyHint = document.getElementById('policyHint');
+    const weekBars = document.getElementById('weekBars');
+
+    const freezeForm = document.getElementById('freezeForm');
+    const formMsg = document.getElementById('formMsg');
+
+    const kpiTotal = document.getElementById('kpiTotal');
+    const kpiPending = document.getElementById('kpiPending');
+    const kpiOverbooked = document.getElementById('kpiOverbooked');
+    const kpiAvgUtil = document.getElementById('kpiAvgUtil');
+
+    const auditList = document.getElementById('auditList');
+
+    function timestamp() {
+      return new Date().toLocaleString('en-GB', { hour12: false });
+    }
+
+    function toDate(value) {
+      const d = new Date(value + 'T00:00:00');
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDate(value) {
+      return toDate(value)?.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) ?? value;
+    }
+
+    function inRange(date, start, end) {
+      const d = toDate(date);
+      const s = toDate(start);
+      const e = toDate(end);
+      return d && s && e && d >= s && d <= e;
+    }
+
+    function weekKey(dateValue) {
+      const d = toDate(dateValue);
+      if (!d) return 'Unknown';
+      const first = new Date('2026-03-30T00:00:00');
+      const diffDays = Math.floor((d - first) / (1000 * 60 * 60 * 24));
+      const week = Math.floor(diffDays / 7) + 1;
+      return `W${week}`;
+    }
+
+    function currentRole() {
+      return roleView.value;
+    }
+
+    function needsFinance(item) {
+      return item.utilization > 85 || item.impact > 60000;
+    }
+
+    function canAdvance(item) {
+      const role = currentRole();
+      if (role === 'Auditor') return false;
+
+      if (item.status === 'Draft') return role === 'Capacity Planner';
+      if (item.status === 'Team Review') {
+        if (role === 'Team Lead') return true;
+        if (role === 'Portfolio Director') return !needsFinance(item);
+        return false;
+      }
+      if (item.status === 'Finance Check') return role === 'Finance Controller' || role === 'Portfolio Director';
+
+      return false;
+    }
+
+    function nextStatus(item) {
+      if (item.status === 'Draft') return 'Team Review';
+      if (item.status === 'Team Review') return needsFinance(item) ? 'Finance Check' : 'Approved';
+      if (item.status === 'Finance Check') return 'Approved';
+      return item.status;
+    }
+
+    function canReject(item) {
+      const role = currentRole();
+      return ['Team Lead', 'Finance Controller', 'Portfolio Director'].includes(role) && !['Approved', 'Rejected'].includes(item.status);
+    }
+
+    function filteredRequests() {
+      const term = searchInput.value.trim().toLowerCase();
+      const statusVal = statusFilter.value;
+      const teamVal = teamFilter.value;
+      const sortVal = sortBy.value;
+
+      const list = requests.filter((item) => {
+        const matchesTerm = !term || [item.team, item.initiative, item.owner, item.id].join(' ').toLowerCase().includes(term);
+        const matchesStatus = statusVal === 'all' || item.status === statusVal;
+        const matchesTeam = teamVal === 'all' || item.team === teamVal;
+        return matchesTerm && matchesStatus && matchesTeam;
+      });
+
+      list.sort((a, b) => {
+        if (sortVal === 'utilization') return b.utilization - a.utilization;
+        if (sortVal === 'impact') return b.impact - a.impact;
+        if (sortVal === 'team') return a.team.localeCompare(b.team);
+        return a.start.localeCompare(b.start);
+      });
+
+      return list;
+    }
+
+    function updateTeamFilter() {
+      const teams = [...new Set(requests.map((r) => r.team))].sort((a, b) => a.localeCompare(b));
+      const current = teamFilter.value;
+      teamFilter.innerHTML = '<option value="all">All teams</option>' + teams.map((team) => `<option>${team}</option>`).join('');
+      if ([...teamFilter.options].some((o) => o.value === current)) teamFilter.value = current;
+    }
+
+    function renderKPIs(list) {
+      kpiTotal.textContent = String(list.length);
+      kpiPending.textContent = String(list.filter((item) => !['Approved', 'Rejected'].includes(item.status)).length);
+      kpiOverbooked.textContent = String(list.filter((item) => item.utilization > 85).length);
+      const avg = list.length ? Math.round(list.reduce((sum, item) => sum + item.utilization, 0) / list.length) : 0;
+      kpiAvgUtil.textContent = `${avg}%`;
+    }
+
+    function renderCalendar(list) {
+      const calendar = document.getElementById('calendar');
+      const days = [];
+      for (let d = 1; d <= 30; d += 1) {
+        const dateStr = `2026-04-${String(d).padStart(2, '0')}`;
+        const active = list.filter((item) => inRange(dateStr, item.start, item.end));
+        days.push({ dateStr, count: active.length, overbooked: active.some((item) => item.utilization > 85) });
+      }
+
+      const headers = dayNames.map((name) => `<div class="rounded bg-slate-800/80 px-2 py-1 text-center text-[11px] text-slate-300">${name}</div>`).join('');
+      const leading = '<div></div><div></div>';
+      const cells = days.map((day) => {
+        const selected = selectedDate === day.dateStr;
+        const tone = day.count === 0 ? 'border-slate-800 bg-slate-950 text-slate-500' : day.overbooked ? 'border-rose-500/40 bg-rose-500/10 text-rose-200' : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-200';
+        const selectedClass = selected ? 'ring-1 ring-emerald-500 border-emerald-500/60' : '';
+        return `<button data-date="${day.dateStr}" class="day-cell min-h-[68px] rounded-lg border px-2 py-2 text-left ${tone} ${selectedClass}" aria-label="${day.dateStr}, ${day.count} active requests">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px]">${day.dateStr.slice(-2)}</span>
+            <span class="text-[11px]">${day.count}</span>
+          </div>
+          <div class="mt-2 h-1 rounded bg-slate-800">
+            <div class="h-1 rounded ${day.count === 0 ? 'bg-slate-700' : day.overbooked ? 'bg-rose-400' : 'bg-cyan-400'}" style="width:${Math.min(100, day.count * 28)}%"></div>
+          </div>
+        </button>`;
+      }).join('');
+
+      calendar.innerHTML = headers + leading + cells;
+
+      calendar.querySelectorAll('.day-cell').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectedDate = btn.dataset.date;
+          render();
+        });
+      });
+    }
+
+    function renderWeekBars(list) {
+      const weeks = {};
+      list.forEach((item) => {
+        const wk = weekKey(item.start);
+        if (!weeks[wk]) weeks[wk] = [];
+        weeks[wk].push(item.utilization);
+      });
+
+      const order = ['W1', 'W2', 'W3', 'W4', 'W5'];
+      weekBars.innerHTML = order.map((wk) => {
+        const values = weeks[wk] || [];
+        const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
+        const tone = avg > 85 ? 'bg-rose-400' : avg > 70 ? 'bg-amber-300' : 'bg-emerald-300';
+        return `<div class="rounded-lg border border-slate-800 bg-slate-950 p-2">
+          <div class="flex justify-between text-xs text-slate-300"><span>${wk}</span><span>${avg}%</span></div>
+          <div class="mt-1 h-2 rounded bg-slate-800"><div class="h-2 rounded ${tone}" style="width:${avg}%"></div></div>
+        </div>`;
+      }).join('');
+    }
+
+    function requestCard(item) {
+      const financeFlag = needsFinance(item) ? '<span class="rounded border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-200">Finance required</span>' : '';
+      const rejectNote = item.rejectionReason ? `<p class="mt-1 text-[11px] text-rose-300">Reason: ${item.rejectionReason}</p>` : '';
+      const policyNote = needsFinance(item) && item.status === 'Team Review' ? '<p class="mt-1 text-[11px] text-violet-200">Policy: cannot approve from Team Review. Route to Finance Check first.</p>' : '';
+
+      return `<article class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <h3 class="text-sm font-semibold">${item.id} • ${item.initiative}</h3>
+          <span class="rounded border px-2 py-0.5 text-[10px] ${statusStyles[item.status] || 'border-slate-600 text-slate-200'}">${item.status}</span>
+          ${financeFlag}
+        </div>
+        <p class="mt-1 text-xs text-slate-300">${item.team} • ${item.owner}</p>
+        <p class="mt-1 text-xs text-slate-400">${formatDate(item.start)} → ${formatDate(item.end)} • ${item.utilization}% utilization • €${item.impact.toLocaleString('en-US')}</p>
+        <p class="mt-2 text-xs text-slate-300">${item.note}</p>
+        ${policyNote}
+        ${rejectNote}
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button data-advance="${item.id}" class="rounded border border-emerald-600/50 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40" ${canAdvance(item) ? '' : 'disabled'}>Advance</button>
+          <button data-reject="${item.id}" class="rounded border border-rose-600/50 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40" ${canReject(item) ? '' : 'disabled'}>Reject</button>
+        </div>
+      </article>`;
+    }
+
+    function renderDayList(list) {
+      selectedDateLabel.textContent = `Selected: ${formatDate(selectedDate)}`;
+      const dayItems = list.filter((item) => inRange(selectedDate, item.start, item.end));
+
+      if (!dayItems.length) {
+        dayList.innerHTML = '<p class="rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-slate-400">No freeze requests overlap this date.</p>';
+        return;
+      }
+
+      dayList.innerHTML = dayItems.map(requestCard).join('');
+
+      dayList.querySelectorAll('[data-advance]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const item = requests.find((r) => r.id === btn.dataset.advance);
+          if (!item) return;
+          if (!canAdvance(item)) return;
+
+          const from = item.status;
+          item.status = nextStatus(item);
+          item.rejectionReason = '';
+          auditTrail.unshift(`${timestamp()} ${item.id} ${from} → ${item.status} by ${currentRole()}`);
+          render();
+        });
+      });
+
+      dayList.querySelectorAll('[data-reject]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const item = requests.find((r) => r.id === btn.dataset.reject);
+          if (!item || !canReject(item)) return;
+
+          const reason = prompt('Rejection reason (min 10 chars):', 'Missing mitigation details for freeze risk.');
+          if (!reason || reason.trim().length < 10) return;
+          const from = item.status;
+          item.status = 'Rejected';
+          item.rejectionReason = reason.trim();
+          auditTrail.unshift(`${timestamp()} ${item.id} ${from} → Rejected by ${currentRole()}`);
+          render();
+        });
+      });
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = auditTrail.slice(0, 40).map((line) => `<li class="rounded border border-slate-800 bg-slate-950 p-2">${line}</li>`).join('');
+      if (!auditTrail.length) {
+        auditList.innerHTML = '<li class="rounded border border-slate-800 bg-slate-950 p-2 text-slate-500">No audit events logged.</li>';
+      }
+    }
+
+    function renderPolicyHint() {
+      const role = currentRole();
+      const map = {
+        'Capacity Planner': 'You can move Draft requests into Team Review and log planning notes.',
+        'Team Lead': 'You can route Team Review requests to Finance Check or reject with rationale.',
+        'Finance Controller': 'You can approve or reject requests in Finance Check.',
+        'Portfolio Director': 'You can approve low-risk Team Review requests and close Finance Check items.',
+        Auditor: 'Read-only mode with full visibility and export access.'
+      };
+      policyHint.textContent = `Policy gate: requests above 85% utilization or €60k impact must pass Finance Check before approval. ${map[role]}`;
+    }
+
+    function render() {
+      updateTeamFilter();
+      const list = filteredRequests();
+      renderKPIs(list);
+      renderCalendar(list);
+      renderWeekBars(list);
+      renderDayList(list);
+      renderAudit();
+      renderPolicyHint();
+    }
+
+    [roleView, searchInput, statusFilter, teamFilter, sortBy].forEach((el) => el.addEventListener('input', render));
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchInput.value = '';
+      statusFilter.value = 'all';
+      teamFilter.value = 'all';
+      sortBy.value = 'start';
+      render();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const rows = filteredRequests().map((item) => [
+        item.id,
+        item.team,
+        item.initiative,
+        item.owner,
+        item.start,
+        item.end,
+        item.utilization,
+        item.impact,
+        item.status,
+        item.note.replace(/,/g, ';')
+      ]);
+      const csv = [['id', 'team', 'initiative', 'owner', 'start', 'end', 'utilization', 'impact_eur', 'status', 'note'], ...rows]
+        .map((row) => row.join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'capacity-freeze-calendar.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      auditTrail.unshift(`${timestamp()} CSV export by ${currentRole()} (${rows.length} rows)`);
+      renderAudit();
+    });
+
+    freezeForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const team = document.getElementById('teamInput').value.trim();
+      const initiative = document.getElementById('initiativeInput').value.trim();
+      const start = document.getElementById('startInput').value;
+      const end = document.getElementById('endInput').value;
+      const util = Number(document.getElementById('utilInput').value);
+      const impact = Number(document.getElementById('impactInput').value);
+      const note = document.getElementById('noteInput').value.trim();
+
+      if (!team || team.length < 3) {
+        formMsg.textContent = 'Team is required (min 3 chars).';
+        return;
+      }
+      if (!initiative || initiative.length < 5) {
+        formMsg.textContent = 'Initiative is required (min 5 chars).';
+        return;
+      }
+      if (!start || !end || start > end) {
+        formMsg.textContent = 'Provide a valid date range where end is not before start.';
+        return;
+      }
+      if (!Number.isFinite(util) || util < 20 || util > 100) {
+        formMsg.textContent = 'Utilization must be between 20 and 100.';
+        return;
+      }
+      if (!Number.isFinite(impact) || impact < 5000) {
+        formMsg.textContent = 'Impact must be at least €5,000.';
+        return;
+      }
+      if (note.length < 12) {
+        formMsg.textContent = 'Planner note must have at least 12 characters.';
+        return;
+      }
+
+      const newId = `FR-${Math.max(...requests.map((r) => Number(r.id.split('-')[1]))) + 1}`;
+      const item = {
+        id: newId,
+        team,
+        initiative,
+        owner: currentRole(),
+        start,
+        end,
+        utilization: util,
+        impact,
+        status: 'Draft',
+        note,
+        rejectionReason: ''
+      };
+
+      requests.unshift(item);
+      selectedDate = start;
+      formMsg.textContent = needsFinance(item)
+        ? `${newId} added as Draft. It will require Finance Check before approval.`
+        : `${newId} added as Draft. Team Review can directly approve if risk stays low.`;
+
+      auditTrail.unshift(`${timestamp()} ${newId} created by ${currentRole()}`);
+      freezeForm.reset();
+      render();
+    });
+
+    document.getElementById('clearAudit').addEventListener('click', () => {
+      auditTrail.length = 0;
+      renderAudit();
+    });
+
+    render();
+  </script>
+</body>
+</html>
