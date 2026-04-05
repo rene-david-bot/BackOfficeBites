@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visitor Log Intake Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Visitor Log Intake Wizard</h1>
+        <p class="text-slate-300 mt-2 max-w-3xl">IT Ops visitor governance desk for pre-registration, policy checks, and security approvals with an auditable front-desk workflow.</p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs min-w-[18rem]">
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Today's Visits</span><span id="kpiToday" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Pending Approval</span><span id="kpiPending" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">High Risk</span><span id="kpiRisk" class="text-lg font-semibold">0</span></div>
+        <div class="bg-slate-900 border border-slate-800 rounded p-2"><span class="text-slate-400 block">Checked In</span><span id="kpiIn" class="text-lg font-semibold">0</span></div>
+      </div>
+    </div>
+
+    <section class="mt-6 grid xl:grid-cols-3 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 xl:col-span-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs uppercase tracking-wider text-slate-400">Queue controls</span>
+          <label class="sr-only" for="searchInput">Search visitors</label>
+          <input id="searchInput" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Search visitor, company, host, purpose" />
+
+          <label class="sr-only" for="statusFilter">Status filter</label>
+          <select id="statusFilter" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All statuses</option>
+            <option>Draft</option>
+            <option>Pending Approval</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>Checked In</option>
+            <option>Checked Out</option>
+          </select>
+
+          <label class="sr-only" for="riskFilter">Risk filter</label>
+          <select id="riskFilter" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All risk levels</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+
+          <label class="sr-only" for="roleView">Role view</label>
+          <select id="roleView" class="bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>Front Desk</option>
+            <option>Security Officer</option>
+            <option>Facilities Manager</option>
+          </select>
+
+          <button id="exportBtn" class="ml-auto bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-3 py-2 rounded">Export CSV</button>
+        </div>
+
+        <div class="overflow-x-auto mt-4 rounded-lg border border-slate-800">
+          <table class="w-full text-sm" aria-label="Visitor queue table">
+            <thead class="bg-slate-950 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2"><button data-sort="id" class="sortBtn hover:underline underline-offset-4">Visit ID</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="visitor" class="sortBtn hover:underline underline-offset-4">Visitor</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="company" class="sortBtn hover:underline underline-offset-4">Company</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="host" class="sortBtn hover:underline underline-offset-4">Host</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="arrival" class="sortBtn hover:underline underline-offset-4">Arrival</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="risk" class="sortBtn hover:underline underline-offset-4">Risk</button></th>
+                <th class="text-left px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody id="queueBody" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold text-lg">New Visit Wizard</h2>
+        <p class="text-sm text-slate-400 mt-1">Guided pre-registration with policy validation before badge issue.</p>
+
+        <div id="stepper" class="mt-4 flex flex-wrap gap-2 text-xs">
+          <span data-step="1" class="px-2 py-1 rounded bg-emerald-700/30 text-emerald-300">1 Visitor</span>
+          <span data-step="2" class="px-2 py-1 rounded bg-slate-800 text-slate-300">2 Visit</span>
+          <span data-step="3" class="px-2 py-1 rounded bg-slate-800 text-slate-300">3 Compliance</span>
+          <span data-step="4" class="px-2 py-1 rounded bg-slate-800 text-slate-300">4 Route</span>
+        </div>
+
+        <form id="wizardForm" class="mt-4 space-y-3" novalidate>
+          <div data-step="1" class="wizard-step space-y-3">
+            <div>
+              <label for="fVisitor" class="text-sm block mb-1">Visitor name</label>
+              <input id="fVisitor" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <div>
+              <label for="fCompany" class="text-sm block mb-1">Company</label>
+              <input id="fCompany" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <div>
+              <label for="fIdType" class="text-sm block mb-1">ID type</label>
+              <select id="fIdType" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+                <option>EU Passport</option>
+                <option>National ID</option>
+                <option>Driver License</option>
+                <option>Foreign Passport</option>
+              </select>
+            </div>
+          </div>
+
+          <div data-step="2" class="wizard-step space-y-3 hidden">
+            <div>
+              <label for="fHost" class="text-sm block mb-1">Host employee</label>
+              <input id="fHost" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+            <div>
+              <label for="fPurpose" class="text-sm block mb-1">Purpose</label>
+              <select id="fPurpose" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+                <option>Vendor Maintenance</option>
+                <option>Client Meeting</option>
+                <option>Audit Visit</option>
+                <option>Interview</option>
+              </select>
+            </div>
+            <div>
+              <label for="fArrival" class="text-sm block mb-1">Arrival hour (24h)</label>
+              <input id="fArrival" type="number" min="0" max="23" required class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+            </div>
+          </div>
+
+          <div data-step="3" class="wizard-step space-y-3 hidden">
+            <fieldset>
+              <legend class="text-sm mb-2">Compliance checks</legend>
+              <label class="flex items-center gap-2 text-sm"><input id="fNda" type="checkbox" class="accent-emerald-500" checked /> NDA signed</label>
+              <label class="flex items-center gap-2 text-sm mt-2"><input id="fBackground" type="checkbox" class="accent-emerald-500" checked /> Background pre-check complete</label>
+              <label class="flex items-center gap-2 text-sm mt-2"><input id="fRestricted" type="checkbox" class="accent-emerald-500" /> Needs restricted lab access</label>
+            </fieldset>
+            <p id="policyHint" class="text-xs text-slate-400">Policy preview appears here.</p>
+          </div>
+
+          <div data-step="4" class="wizard-step space-y-3 hidden">
+            <div>
+              <label for="fEscort" class="text-sm block mb-1">Escort required</label>
+              <select id="fEscort" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+            <div>
+              <label for="fNote" class="text-sm block mb-1">Front-desk note</label>
+              <textarea id="fNote" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2"></textarea>
+            </div>
+          </div>
+
+          <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+
+          <div class="flex gap-2 pt-2">
+            <button type="button" id="prevBtn" disabled class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-50">Back</button>
+            <button type="button" id="nextBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 ml-auto">Next</button>
+            <button type="submit" id="submitBtn" class="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 hidden">Create Visit</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold">Audit Trail</h2>
+        <button id="clearAudit" class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Clear</button>
+      </div>
+      <ul id="auditTrail" class="mt-3 space-y-2 text-sm"></ul>
+    </section>
+  </div>
+
+  <script>
+    const visits = [
+      { id: 'VIS-8821', visitor: 'Marta Kepler', company: 'Nordline HVAC', host: 'L. Reimann', arrival: 9, risk: 'Low', status: 'Approved', purpose: 'Vendor Maintenance' },
+      { id: 'VIS-8822', visitor: 'Jonas Ekholm', company: 'Crediforge Audit', host: 'T. Schäfer', arrival: 7, risk: 'High', status: 'Pending Approval', purpose: 'Audit Visit' },
+      { id: 'VIS-8823', visitor: 'Lea Novak', company: 'Sera Labs', host: 'A. Werner', arrival: 11, risk: 'Medium', status: 'Checked In', purpose: 'Client Meeting' },
+      { id: 'VIS-8824', visitor: 'Priya Menon', company: 'Axiom Dynamics', host: 'M. Koch', arrival: 19, risk: 'High', status: 'Pending Approval', purpose: 'Vendor Maintenance' },
+      { id: 'VIS-8825', visitor: 'Oskar Möller', company: 'TalentBridge', host: 'C. Lang', arrival: 14, risk: 'Low', status: 'Checked Out', purpose: 'Interview' }
+    ];
+
+    const roleStateAccess = {
+      'Front Desk': ['Draft', 'Pending Approval', 'Approved', 'Checked In', 'Checked Out'],
+      'Security Officer': ['Pending Approval', 'Approved', 'Rejected', 'Checked In'],
+      'Facilities Manager': ['Approved', 'Checked In', 'Checked Out']
+    };
+
+    let sortState = { key: 'arrival', dir: 'asc' };
+    let step = 1;
+
+    const queueBody = document.getElementById('queueBody');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const roleView = document.getElementById('roleView');
+    const auditTrail = document.getElementById('auditTrail');
+    const policyHint = document.getElementById('policyHint');
+    const formError = document.getElementById('formError');
+    const form = document.getElementById('wizardForm');
+
+    function addAudit(message) {
+      const li = document.createElement('li');
+      li.className = 'border border-slate-800 rounded px-3 py-2 bg-slate-950 text-slate-300';
+      li.textContent = `${new Date().toLocaleTimeString('en-GB', { hour12: false })} — ${message}`;
+      auditTrail.prepend(li);
+      while (auditTrail.children.length > 12) auditTrail.removeChild(auditTrail.lastChild);
+    }
+
+    function riskBadge(risk) {
+      const styles = {
+        High: 'bg-rose-900/60 text-rose-200',
+        Medium: 'bg-amber-900/60 text-amber-200',
+        Low: 'bg-emerald-900/60 text-emerald-200'
+      };
+      return `<span class="px-2 py-1 rounded text-xs ${styles[risk] || 'bg-slate-800'}">${risk}</span>`;
+    }
+
+    function statusBadge(status) {
+      const styles = {
+        Draft: 'bg-slate-800 text-slate-200',
+        'Pending Approval': 'bg-violet-900/60 text-violet-200',
+        Approved: 'bg-emerald-900/60 text-emerald-200',
+        Rejected: 'bg-rose-900/60 text-rose-200',
+        'Checked In': 'bg-sky-900/60 text-sky-200',
+        'Checked Out': 'bg-slate-700 text-slate-100'
+      };
+      return `<span class="px-2 py-1 rounded text-xs ${styles[status] || 'bg-slate-800'}">${status}</span>`;
+    }
+
+    function filteredRows() {
+      const q = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const risk = riskFilter.value;
+      const role = roleView.value;
+
+      return visits
+        .filter(v => roleStateAccess[role].includes(v.status))
+        .filter(v => status === 'all' || v.status === status)
+        .filter(v => risk === 'all' || v.risk === risk)
+        .filter(v => !q || `${v.id} ${v.visitor} ${v.company} ${v.host} ${v.purpose}`.toLowerCase().includes(q))
+        .sort((a, b) => {
+          const av = a[sortState.key];
+          const bv = b[sortState.key];
+          if (typeof av === 'number') return sortState.dir === 'asc' ? av - bv : bv - av;
+          return sortState.dir === 'asc'
+            ? String(av).localeCompare(String(bv))
+            : String(bv).localeCompare(String(av));
+        });
+    }
+
+    function renderKpis() {
+      const todayRows = visits.filter(v => v.arrival >= 0);
+      document.getElementById('kpiToday').textContent = todayRows.length;
+      document.getElementById('kpiPending').textContent = visits.filter(v => v.status === 'Pending Approval').length;
+      document.getElementById('kpiRisk').textContent = visits.filter(v => v.risk === 'High').length;
+      document.getElementById('kpiIn').textContent = visits.filter(v => v.status === 'Checked In').length;
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      if (!rows.length) {
+        queueBody.innerHTML = '<tr><td colspan="7" class="px-3 py-4 text-slate-400">No visits match this view.</td></tr>';
+      } else {
+        queueBody.innerHTML = rows.map(v => `
+          <tr class="hover:bg-slate-800/60">
+            <td class="px-3 py-2 font-mono">${v.id}</td>
+            <td class="px-3 py-2">${v.visitor}</td>
+            <td class="px-3 py-2">${v.company}</td>
+            <td class="px-3 py-2">${v.host}</td>
+            <td class="px-3 py-2">${String(v.arrival).padStart(2, '0')}:00</td>
+            <td class="px-3 py-2">${riskBadge(v.risk)}</td>
+            <td class="px-3 py-2">${statusBadge(v.status)}</td>
+          </tr>
+        `).join('');
+      }
+      renderKpis();
+    }
+
+    function updatePolicyHint() {
+      const idType = document.getElementById('fIdType').value;
+      const arrival = Number(document.getElementById('fArrival').value || 0);
+      const nda = document.getElementById('fNda').checked;
+      const restricted = document.getElementById('fRestricted').checked;
+
+      const conditions = [];
+      if (idType === 'Foreign Passport') conditions.push('foreign ID');
+      if (arrival < 8 || arrival > 18) conditions.push('after-hours arrival');
+      if (!nda) conditions.push('missing NDA');
+      if (restricted) conditions.push('restricted area access');
+
+      if (conditions.length) {
+        policyHint.textContent = `Policy gate: ${conditions.join(', ')} → Security Officer approval is mandatory.`;
+      } else {
+        policyHint.textContent = 'Policy gate: standard visit can auto-route to Approved for front-desk check-in.';
+      }
+    }
+
+    function showStep() {
+      form.querySelectorAll('.wizard-step').forEach(el => {
+        el.classList.toggle('hidden', Number(el.dataset.step) !== step);
+      });
+      document.querySelectorAll('#stepper span').forEach(el => {
+        const active = Number(el.dataset.step) === step;
+        el.className = `px-2 py-1 rounded ${active ? 'bg-emerald-700/30 text-emerald-300' : 'bg-slate-800 text-slate-300'}`;
+      });
+      document.getElementById('prevBtn').disabled = step === 1;
+      document.getElementById('nextBtn').classList.toggle('hidden', step === 4);
+      document.getElementById('submitBtn').classList.toggle('hidden', step !== 4);
+      formError.classList.add('hidden');
+      updatePolicyHint();
+    }
+
+    function validateStep() {
+      const required = {
+        1: ['fVisitor', 'fCompany'],
+        2: ['fHost', 'fArrival']
+      };
+      for (const id of (required[step] || [])) {
+        const el = document.getElementById(id);
+        const num = Number(el.value);
+        const invalidNumber = id === 'fArrival' && (Number.isNaN(num) || num < 0 || num > 23);
+        if (!el.value || invalidNumber) {
+          formError.textContent = id === 'fArrival'
+            ? 'Arrival hour must be between 0 and 23.'
+            : 'Please complete all required fields before continuing.';
+          formError.classList.remove('hidden');
+          el.focus();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function policyDecision() {
+      const idType = document.getElementById('fIdType').value;
+      const arrival = Number(document.getElementById('fArrival').value || 0);
+      const nda = document.getElementById('fNda').checked;
+      const restricted = document.getElementById('fRestricted').checked;
+      const background = document.getElementById('fBackground').checked;
+
+      const highRisk = idType === 'Foreign Passport' || arrival < 8 || arrival > 18 || !nda || restricted;
+      const mediumRisk = !highRisk && !background;
+
+      return {
+        risk: highRisk ? 'High' : (mediumRisk ? 'Medium' : 'Low'),
+        status: highRisk ? 'Pending Approval' : 'Approved',
+        needsApproval: highRisk
+      };
+    }
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort;
+        if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+        else sortState = { key, dir: 'asc' };
+        addAudit(`Queue sorted by ${key} (${sortState.dir}).`);
+        renderTable();
+      });
+    });
+
+    [searchInput, statusFilter, riskFilter, roleView].forEach(el => {
+      el.addEventListener('input', renderTable);
+      el.addEventListener('change', renderTable);
+    });
+    roleView.addEventListener('change', () => addAudit(`Role view switched to ${roleView.value}.`));
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = filteredRows();
+      const columns = ['id', 'visitor', 'company', 'host', 'arrival', 'risk', 'status', 'purpose'];
+      const csv = [columns.join(','), ...rows.map(r => columns.map(c => `"${String(r[c]).replaceAll('"', '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'visitor-queue-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      addAudit(`CSV export generated (${rows.length} rows).`);
+    });
+
+    document.getElementById('clearAudit').addEventListener('click', () => {
+      auditTrail.innerHTML = '';
+      addAudit('Audit trail cleared by operator.');
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (!validateStep()) return;
+      step = Math.min(step + 1, 4);
+      showStep();
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      step = Math.max(step - 1, 1);
+      showStep();
+    });
+
+    ['fIdType', 'fArrival', 'fNda', 'fRestricted', 'fBackground'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updatePolicyHint);
+      document.getElementById(id).addEventListener('change', updatePolicyHint);
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!validateStep()) return;
+
+      const decision = policyDecision();
+      const nextNumber = 8826 + visits.length;
+      const visitId = `VIS-${nextNumber}`;
+
+      const entry = {
+        id: visitId,
+        visitor: document.getElementById('fVisitor').value.trim(),
+        company: document.getElementById('fCompany').value.trim(),
+        host: document.getElementById('fHost').value.trim(),
+        arrival: Number(document.getElementById('fArrival').value),
+        risk: decision.risk,
+        status: decision.status,
+        purpose: document.getElementById('fPurpose').value
+      };
+
+      visits.unshift(entry);
+
+      addAudit(`${visitId} created. ${decision.needsApproval ? 'Security approval required before check-in.' : 'Auto-approved for front desk badge issue.'}`);
+
+      if (decision.needsApproval) {
+        addAudit(`${visitId} policy gate matched: SEC_VISITOR_HIGH_RISK_v3.`);
+      }
+
+      form.reset();
+      document.getElementById('fNda').checked = true;
+      document.getElementById('fBackground').checked = true;
+      step = 1;
+      showStep();
+      renderTable();
+    });
+
+    addAudit('Visitor queue synced from FACILITY_EU_CAMPUS feed.');
+    addAudit('Policy engine loaded: SEC_VISITOR_HIGH_RISK_v3.');
+    showStep();
+    renderTable();
+  </script>
+</body>
+</html>

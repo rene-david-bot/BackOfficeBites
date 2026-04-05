@@ -1608,5 +1608,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-05",
+    "day": 73,
+    "slug": "2026-04-05-visitor-log-intake-wizard",
+    "name": "Visitor Log Intake Wizard",
+    "description": "IT Ops visitor governance wizard for pre-registration, policy checks, security approvals, and audit-ready check-in flow.",
+    "category": "IT Ops",
+    "pattern": "Wizard",
+    "tags": [
+      "visitor logs",
+      "it ops",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
