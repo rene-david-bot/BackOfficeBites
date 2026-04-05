@@ -1656,5 +1656,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-05",
+    "day": 75,
+    "slug": "2026-04-05-policy-ack-exception-kanban",
+    "name": "Policy Acknowledgment Exception Kanban",
+    "description": "Legal kanban workspace for overdue policy acknowledgments with role-based routing, policy validation gates, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Kanban",
+    "tags": [
+      "policy acknowledgments",
+      "legal",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

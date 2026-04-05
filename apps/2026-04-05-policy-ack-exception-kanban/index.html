@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Policy Acknowledgment Exception Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight">Policy Acknowledgment Exception Kanban</h1>
+        <p class="mt-1 max-w-3xl text-sm text-slate-300">Legal workspace for triaging overdue policy acknowledgments with role-based routing, policy validation gates, audit trail logging, and CSV export.</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6 lg:px-8">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Open Exceptions</p>
+          <p id="kpiOpen" class="mt-2 text-xl font-semibold text-rose-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Critical</p>
+          <p id="kpiCritical" class="mt-2 text-xl font-semibold text-amber-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">EU DPO Required</p>
+          <p id="kpiDpo" class="mt-2 text-xl font-semibold text-violet-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Avg Days Overdue</p>
+          <p id="kpiOverdue" class="mt-2 text-xl font-semibold text-cyan-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 lg:col-span-2">
+          <label for="roleView" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+          <select id="roleView" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option>HR Analyst</option>
+            <option>Team Manager</option>
+            <option>Legal Counsel</option>
+            <option>DPO</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-4">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label class="text-xs text-slate-400" for="searchInput">Search
+                <input id="searchInput" type="text" placeholder="Employee, policy, team..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="text-xs text-slate-400" for="policyFilter">Policy
+                <select id="policyFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All policies</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="severityFilter">Severity
+                <select id="severityFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All severities</option>
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                  <option>Critical</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="regionFilter">Region
+                <select id="regionFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All regions</option>
+                  <option>EU</option>
+                  <option>US</option>
+                  <option>APAC</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400 md:col-span-2" for="sortBy">Sort
+                <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="daysOverdue">Days overdue (high-low)</option>
+                  <option value="severity">Severity (critical-low)</option>
+                  <option value="employee">Employee (A-Z)</option>
+                  <option value="policy">Policy (A-Z)</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="resetFilters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800">Reset</button>
+              <button id="exportCsv" class="rounded-lg border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Create Exception</h2>
+            <form id="exceptionForm" class="mt-2 space-y-2" novalidate>
+              <label class="block text-xs text-slate-400" for="employeeInput">Employee
+                <input id="employeeInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="block text-xs text-slate-400" for="policyInput">Policy
+                <select id="policyInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option>AI Acceptable Use 2026</option>
+                  <option>Data Retention Standard</option>
+                  <option>Remote Access Baseline</option>
+                  <option>Vendor Security Code</option>
+                  <option>Code of Conduct 2026</option>
+                </select>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="teamInput">Team
+                  <input id="teamInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+                <label class="block text-xs text-slate-400" for="regionInput">Region
+                  <select id="regionInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option>EU</option>
+                    <option>US</option>
+                    <option>APAC</option>
+                  </select>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="daysInput">Days overdue
+                  <input id="daysInput" type="number" min="1" max="120" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+                <label class="block text-xs text-slate-400" for="severityInput">Severity
+                  <select id="severityInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                    <option>Critical</option>
+                  </select>
+                </label>
+              </div>
+              <label class="block text-xs text-slate-400" for="reasonInput">Reason (min 12 chars)
+                <input id="reasonInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <button type="submit" class="w-full rounded-lg border border-violet-600/60 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20">Add Exception</button>
+              <p id="formMsg" class="text-xs text-slate-400" role="status" aria-live="polite">Validation and routing hints appear here.</p>
+            </form>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Audit Trail</h2>
+              <button id="clearAudit" class="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">Clear</button>
+            </div>
+            <ul id="auditList" class="mt-2 max-h-64 space-y-2 overflow-auto text-xs text-slate-300"></ul>
+          </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-8">
+          <div id="policyHint" class="rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-3 text-xs text-cyan-200">Policy hint: Critical cases require Legal stage; EU AI Acceptable Use exceptions in Legal stage need DPO closure.</div>
+
+          <section id="board" class="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4" aria-label="Policy exception kanban board"></section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const statuses = ['New Exception', 'Manager Review', 'Legal Approval', 'Closed'];
+
+    const statusStyles = {
+      'New Exception': 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+      'Manager Review': 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+      'Legal Approval': 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+      'Closed': 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+    };
+
+    const severityRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+    let exceptions = [
+      {
+        id: 'EX-9001',
+        employee: 'Lena Hofmann',
+        policy: 'AI Acceptable Use 2026',
+        team: 'Revenue Ops',
+        region: 'EU',
+        daysOverdue: 19,
+        severity: 'Critical',
+        status: 'Manager Review',
+        owner: 'Marc Dietrich',
+        reason: 'Shared external model outputs with unresolved customer data tags.',
+        managerNote: 'Pending manager attestation.',
+        requiresDpo: true
+      },
+      {
+        id: 'EX-9002',
+        employee: 'Jamal Pierce',
+        policy: 'Remote Access Baseline',
+        team: 'Customer Support',
+        region: 'US',
+        daysOverdue: 11,
+        severity: 'High',
+        status: 'New Exception',
+        owner: 'Iris Koch',
+        reason: 'MFA reset done but acknowledgment still missing.',
+        managerNote: '',
+        requiresDpo: false
+      },
+      {
+        id: 'EX-9003',
+        employee: 'Aya Nakamura',
+        policy: 'Data Retention Standard',
+        team: 'Analytics',
+        region: 'APAC',
+        daysOverdue: 7,
+        severity: 'Medium',
+        status: 'Manager Review',
+        owner: 'Tobias Kühn',
+        reason: 'Policy revision changed scope for archived dashboards.',
+        managerNote: 'Team lead collecting archive confirmations.',
+        requiresDpo: false
+      },
+      {
+        id: 'EX-9004',
+        employee: 'Noah Weber',
+        policy: 'Vendor Security Code',
+        team: 'Procurement',
+        region: 'EU',
+        daysOverdue: 26,
+        severity: 'High',
+        status: 'Legal Approval',
+        owner: 'Priya Sethi',
+        reason: 'Supplier questionnaire updated post-signature.',
+        managerNote: 'Manager validated supplier remediation plan.',
+        requiresDpo: false
+      },
+      {
+        id: 'EX-9005',
+        employee: 'Mila Berger',
+        policy: 'Code of Conduct 2026',
+        team: 'People Ops',
+        region: 'EU',
+        daysOverdue: 4,
+        severity: 'Low',
+        status: 'Closed',
+        owner: 'DPO Office',
+        reason: 'Late onboarding cohort imported after policy cycle cut-off.',
+        managerNote: 'Acknowledgment completed in LMS.',
+        requiresDpo: false
+      },
+      {
+        id: 'EX-9006',
+        employee: 'Ethan Cole',
+        policy: 'AI Acceptable Use 2026',
+        team: 'Product Engineering',
+        region: 'EU',
+        daysOverdue: 15,
+        severity: 'Critical',
+        status: 'Legal Approval',
+        owner: 'Leonie Grant',
+        reason: 'External assistant usage not yet mapped to approved tool list.',
+        managerNote: 'Manager confirmed temporary controls.',
+        requiresDpo: true
+      }
+    ];
+
+    let audit = [
+      { ts: '2026-04-05 04:18', text: 'Daily import ACK_EXCEPTION_SNAPSHOT_0405 loaded (6 records).' },
+      { ts: '2026-04-05 04:22', text: 'Policy gate LEG-ACK-12 active for critical acknowledgment exceptions.' },
+      { ts: '2026-04-05 04:25', text: 'Legal Counsel moved EX-9004 to Legal Approval queue.' }
+    ];
+
+    const roleView = document.getElementById('roleView');
+    const boardEl = document.getElementById('board');
+    const searchInput = document.getElementById('searchInput');
+    const policyFilter = document.getElementById('policyFilter');
+    const severityFilter = document.getElementById('severityFilter');
+    const regionFilter = document.getElementById('regionFilter');
+    const sortBy = document.getElementById('sortBy');
+    const policyHint = document.getElementById('policyHint');
+
+    function esc(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function addAudit(text) {
+      const ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      audit.unshift({ ts, text });
+      if (audit.length > 50) audit = audit.slice(0, 50);
+      renderAudit();
+    }
+
+    function initFilters() {
+      const policies = [...new Set(exceptions.map(item => item.policy))].sort();
+      policies.forEach((policy) => {
+        const option = document.createElement('option');
+        option.value = policy;
+        option.textContent = policy;
+        policyFilter.appendChild(option);
+      });
+    }
+
+    function getFilteredExceptions() {
+      const query = searchInput.value.trim().toLowerCase();
+      const policy = policyFilter.value;
+      const severity = severityFilter.value;
+      const region = regionFilter.value;
+      const sort = sortBy.value;
+
+      const list = exceptions.filter((item) => {
+        const matchesQuery = !query || [item.id, item.employee, item.policy, item.team, item.owner].join(' ').toLowerCase().includes(query);
+        const matchesPolicy = policy === 'all' || item.policy === policy;
+        const matchesSeverity = severity === 'all' || item.severity === severity;
+        const matchesRegion = region === 'all' || item.region === region;
+        return matchesQuery && matchesPolicy && matchesSeverity && matchesRegion;
+      });
+
+      if (sort === 'daysOverdue') {
+        list.sort((a, b) => b.daysOverdue - a.daysOverdue);
+      } else if (sort === 'severity') {
+        list.sort((a, b) => severityRank[b.severity] - severityRank[a.severity]);
+      } else if (sort === 'employee') {
+        list.sort((a, b) => a.employee.localeCompare(b.employee));
+      } else {
+        list.sort((a, b) => a.policy.localeCompare(b.policy));
+      }
+
+      return list;
+    }
+
+    function renderKpis() {
+      const open = exceptions.filter((item) => item.status !== 'Closed');
+      const critical = open.filter((item) => item.severity === 'Critical');
+      const dpo = open.filter((item) => item.requiresDpo);
+      const avg = open.length ? Math.round(open.reduce((sum, item) => sum + item.daysOverdue, 0) / open.length) : 0;
+
+      document.getElementById('kpiOpen').textContent = open.length;
+      document.getElementById('kpiCritical').textContent = critical.length;
+      document.getElementById('kpiDpo').textContent = dpo.length;
+      document.getElementById('kpiOverdue').textContent = avg;
+    }
+
+    function transitionInfo(item, direction) {
+      const currentIndex = statuses.indexOf(item.status);
+      const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+      if (targetIndex < 0 || targetIndex >= statuses.length) {
+        return { allowed: false, reason: 'No further transition available.' };
+      }
+
+      const role = roleView.value;
+      const target = statuses[targetIndex];
+
+      if (direction === 'next') {
+        if (item.status === 'New Exception' && !['HR Analyst', 'Team Manager', 'Legal Counsel', 'DPO'].includes(role)) {
+          return { allowed: false, reason: 'Only operational roles can start review routing.' };
+        }
+
+        if (item.status === 'Manager Review') {
+          if (!['Team Manager', 'Legal Counsel', 'DPO'].includes(role)) {
+            return { allowed: false, reason: 'Manager Review requires Team Manager or above.' };
+          }
+          if (item.managerNote.trim().length < 12) {
+            return { allowed: false, reason: 'Manager note must be at least 12 characters before legal routing.' };
+          }
+        }
+
+        if (item.status === 'Legal Approval') {
+          if (item.requiresDpo && role !== 'DPO') {
+            return { allowed: false, reason: 'EU AI Acceptable Use exceptions require DPO closure.' };
+          }
+          if (!item.requiresDpo && !['Legal Counsel', 'DPO'].includes(role)) {
+            return { allowed: false, reason: 'Only Legal Counsel or DPO can close legal-stage items.' };
+          }
+        }
+      }
+
+      if (direction === 'prev') {
+        if (role === 'Auditor') {
+          return { allowed: false, reason: 'Auditor role is read-only.' };
+        }
+      }
+
+      return { allowed: true, target };
+    }
+
+    function renderBoard() {
+      const filtered = getFilteredExceptions();
+      renderKpis();
+
+      boardEl.innerHTML = statuses.map((status) => {
+        const cards = filtered.filter((item) => item.status === status);
+
+        return `
+          <article class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <h2 class="text-sm font-semibold">${esc(status)}</h2>
+              <span class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-300">${cards.length}</span>
+            </div>
+            <div class="space-y-2 min-h-[140px]">
+              ${cards.length ? cards.map((item) => {
+                const nextCheck = transitionInfo(item, 'next');
+                const prevCheck = transitionInfo(item, 'prev');
+
+                return `
+                  <div tabindex="0" class="rounded-lg border border-slate-800 bg-slate-950 p-2 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <p class="text-xs text-slate-400">${esc(item.id)} · ${esc(item.team)} · ${esc(item.region)}</p>
+                        <p class="font-medium">${esc(item.employee)}</p>
+                      </div>
+                      <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] ${statusStyles[item.status]}">${esc(item.status)}</span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-300">${esc(item.policy)}</p>
+                    <p class="mt-1 text-[11px] text-slate-400">${item.daysOverdue} days overdue · severity ${esc(item.severity)} · owner ${esc(item.owner)}</p>
+                    <p class="mt-1 text-[11px] text-slate-400">${esc(item.reason)}</p>
+                    <p class="mt-1 text-[11px] text-cyan-300">Manager note: ${esc(item.managerNote || 'None')}</p>
+                    <div class="mt-2 flex gap-1">
+                      <button data-dir="prev" data-id="${esc(item.id)}" class="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40" ${prevCheck.allowed ? '' : 'disabled'} title="${esc(prevCheck.reason || '')}">← Back</button>
+                      <button data-dir="next" data-id="${esc(item.id)}" class="rounded border border-emerald-600/50 px-2 py-1 text-[11px] text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40" ${nextCheck.allowed ? '' : 'disabled'} title="${esc(nextCheck.reason || '')}">Advance →</button>
+                    </div>
+                  </div>
+                `;
+              }).join('') : '<p class="rounded-lg border border-dashed border-slate-700 p-3 text-xs text-slate-500">No cards in this column for current filters.</p>'}
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      document.querySelectorAll('button[data-dir]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const item = exceptions.find((entry) => entry.id === button.dataset.id);
+          if (!item) return;
+
+          const check = transitionInfo(item, button.dataset.dir);
+          if (!check.allowed) {
+            policyHint.textContent = `Policy block: ${check.reason}`;
+            policyHint.className = 'rounded-xl border border-rose-700/40 bg-rose-500/10 p-3 text-xs text-rose-200';
+            addAudit(`${roleView.value} blocked on ${item.id}: ${check.reason}`);
+            return;
+          }
+
+          item.status = check.target;
+          item.owner = roleView.value;
+          if (check.target === 'Closed') item.daysOverdue = Math.max(0, item.daysOverdue - 1);
+
+          policyHint.textContent = `Transition applied: ${item.id} moved to ${check.target} by ${roleView.value}.`;
+          policyHint.className = 'rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-3 text-xs text-cyan-200';
+          addAudit(`${roleView.value} moved ${item.id} to ${check.target}.`);
+          renderBoard();
+        });
+      });
+    }
+
+    function renderAudit() {
+      const auditList = document.getElementById('auditList');
+      auditList.innerHTML = audit.map((entry) => `
+        <li class="rounded border border-slate-800 bg-slate-950 p-2">
+          <p>${esc(entry.text)}</p>
+          <p class="mt-1 text-[11px] text-slate-500">${esc(entry.ts)}</p>
+        </li>
+      `).join('');
+    }
+
+    document.getElementById('exceptionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const employee = document.getElementById('employeeInput').value.trim();
+      const policy = document.getElementById('policyInput').value;
+      const team = document.getElementById('teamInput').value.trim();
+      const region = document.getElementById('regionInput').value;
+      const daysOverdue = Number(document.getElementById('daysInput').value || 0);
+      const severity = document.getElementById('severityInput').value;
+      const reason = document.getElementById('reasonInput').value.trim();
+      const formMsg = document.getElementById('formMsg');
+
+      if (!employee || !team || daysOverdue < 1 || daysOverdue > 120 || reason.length < 12) {
+        formMsg.textContent = 'Validation failed: employee/team required, overdue 1-120, reason at least 12 chars.';
+        formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const id = `EX-${Math.floor(Math.random() * 9000 + 1000)}`;
+      const requiresDpo = policy === 'AI Acceptable Use 2026' && region === 'EU' && ['High', 'Critical'].includes(severity);
+
+      const newItem = {
+        id,
+        employee,
+        policy,
+        team,
+        region,
+        daysOverdue,
+        severity,
+        status: 'New Exception',
+        owner: roleView.value,
+        reason,
+        managerNote: 'Pending manager attestation.',
+        requiresDpo
+      };
+
+      exceptions.unshift(newItem);
+
+      if (![...policyFilter.options].some((option) => option.value === policy)) {
+        const option = document.createElement('option');
+        option.value = policy;
+        option.textContent = policy;
+        policyFilter.appendChild(option);
+      }
+
+      formMsg.textContent = `${id} created in New Exception. ${requiresDpo ? 'DPO closure will be required at Legal stage.' : 'Standard legal closure path applied.'}`;
+      formMsg.className = 'text-xs text-emerald-300';
+      addAudit(`${roleView.value} created ${id} for ${employee} (${policy}, ${severity}, ${region}).`);
+
+      event.target.reset();
+      document.getElementById('policyInput').value = policy;
+      renderBoard();
+    });
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchInput.value = '';
+      policyFilter.value = 'all';
+      severityFilter.value = 'all';
+      regionFilter.value = 'all';
+      sortBy.value = 'daysOverdue';
+      policyHint.textContent = 'Filters reset. Policy gates remain active.';
+      policyHint.className = 'rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-3 text-xs text-cyan-200';
+      addAudit(`${roleView.value} reset board filters.`);
+      renderBoard();
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const rows = getFilteredExceptions();
+      const columns = ['id', 'employee', 'policy', 'team', 'region', 'daysOverdue', 'severity', 'status', 'owner', 'requiresDpo'];
+      const csv = [
+        columns.join(','),
+        ...rows.map((row) => columns.map((key) => `"${String(row[key]).replaceAll('"', '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'policy-ack-exception-kanban.csv';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      addAudit(`${roleView.value} exported CSV (${rows.length} rows).`);
+    });
+
+    document.getElementById('clearAudit').addEventListener('click', () => {
+      audit = [];
+      addAudit(`${roleView.value} cleared local audit stream.`);
+    });
+
+    function maybeUpdateManagerNotes() {
+      const role = roleView.value;
+      exceptions.forEach((item) => {
+        if (item.status === 'Manager Review' && (!item.managerNote || item.managerNote.length < 12) && ['Team Manager', 'Legal Counsel', 'DPO'].includes(role)) {
+          item.managerNote = `Validated by ${role} at ${new Date().toISOString().slice(11, 16)} UTC.`;
+        }
+      });
+    }
+
+    [roleView, searchInput, policyFilter, severityFilter, regionFilter, sortBy].forEach((control) => {
+      control.addEventListener('input', () => {
+        maybeUpdateManagerNotes();
+        renderBoard();
+      });
+      control.addEventListener('change', () => {
+        maybeUpdateManagerNotes();
+        renderBoard();
+      });
+    });
+
+    initFilters();
+    renderAudit();
+    renderBoard();
+  </script>
+</body>
+</html>
