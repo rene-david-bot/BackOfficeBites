@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Health Review Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight">Account Health Review Desk</h1>
+        <p class="mt-1 text-sm text-slate-300 max-w-3xl">Sales master-detail workspace for account health triage with policy-gated recovery plans, approval routing, and audit-ready retention actions.</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 space-y-4">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Portfolio ARR</p>
+          <p id="kpiArr" class="mt-2 text-xl font-semibold text-cyan-300">€0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">At Risk</p>
+          <p id="kpiRisk" class="mt-2 text-xl font-semibold text-rose-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Recovery Plans</p>
+          <p id="kpiPlans" class="mt-2 text-xl font-semibold text-amber-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Escalated</p>
+          <p id="kpiEsc" class="mt-2 text-xl font-semibold text-violet-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <label for="roleView" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+          <select id="roleView" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option>CSM</option>
+            <option>Sales Director</option>
+            <option>Finance Partner</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-5">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label class="text-xs text-slate-400" for="searchInput">Search
+                <input id="searchInput" type="text" placeholder="Account, owner, segment..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="text-xs text-slate-400" for="segmentFilter">Segment
+                <select id="segmentFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All segments</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="statusFilter">Health Status
+                <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All statuses</option>
+                  <option>Stable</option>
+                  <option>Watchlist</option>
+                  <option>At Risk</option>
+                  <option>Recovery In Progress</option>
+                  <option>Escalated</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="sortBy">Sort
+                <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="healthScore">Health score (low-high)</option>
+                  <option value="arr">ARR (high-low)</option>
+                  <option value="renewalDays">Renewal days (soon-late)</option>
+                  <option value="name">Account name (A-Z)</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button id="resetFilters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800">Reset</button>
+              <button id="exportCsv" class="rounded-lg border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+            <div class="max-h-[620px] overflow-auto">
+              <table class="min-w-full text-sm" aria-label="Account health table">
+                <thead class="sticky top-0 bg-slate-800/95 text-xs uppercase tracking-wide text-slate-300">
+                  <tr>
+                    <th class="px-3 py-2 text-left">Account</th>
+                    <th class="px-3 py-2 text-left">Health</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="accountRows" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-7">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <h2 class="text-lg font-semibold">Account Detail</h2>
+            <p id="detailHint" class="text-sm text-slate-400">Select an account to inspect risk drivers and launch recovery actions.</p>
+
+            <div id="detailPane" class="mt-3 hidden space-y-3">
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p id="dName" class="text-base font-semibold text-cyan-300"></p>
+                  <p id="dMeta" class="text-xs text-slate-400"></p>
+                  <p id="dOwner" class="mt-1 text-sm"></p>
+                  <p id="dStatus" class="mt-2"></p>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p class="text-xs uppercase tracking-wide text-slate-400">Risk Snapshot</p>
+                  <ul id="dRisks" class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300"></ul>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p class="text-xs uppercase tracking-wide text-slate-400">ARR</p>
+                  <p id="dArr" class="mt-1 text-lg font-semibold">€0</p>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p class="text-xs uppercase tracking-wide text-slate-400">Renewal Due</p>
+                  <p id="dRenewal" class="mt-1 text-lg font-semibold">0 days</p>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <p class="text-xs uppercase tracking-wide text-slate-400">Gross Margin</p>
+                  <p id="dMargin" class="mt-1 text-lg font-semibold">0%</p>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                <h3 class="text-sm font-semibold">Create Recovery Plan</h3>
+                <form id="planForm" class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2" novalidate>
+                  <label class="text-xs text-slate-400" for="playbookInput">Playbook
+                    <select id="playbookInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                      <option value="Executive Sponsor Reset">Executive Sponsor Reset</option>
+                      <option value="Adoption Recovery Sprint">Adoption Recovery Sprint</option>
+                      <option value="Commercial Re-scope">Commercial Re-scope</option>
+                      <option value="Support Stabilization">Support Stabilization</option>
+                    </select>
+                  </label>
+                  <label class="text-xs text-slate-400" for="discountInput">Proposed discount (%)
+                    <input id="discountInput" type="number" min="0" max="30" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                  </label>
+                  <label class="text-xs text-slate-400 md:col-span-2" for="reasonInput">Risk reason (min 12 chars)
+                    <input id="reasonInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                  </label>
+                  <div class="md:col-span-2 flex items-center gap-2">
+                    <button type="submit" class="rounded-lg border border-violet-600/60 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20">Route Plan for Approval</button>
+                    <p id="formMsg" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
+                  </div>
+                </form>
+                <p id="policyHint" class="mt-2 text-xs text-slate-400">Policy hint appears here.</p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold">Open Recovery Plans</h3>
+                    <p id="openCount" class="text-xs text-slate-400">0 open</p>
+                  </div>
+                  <ul id="planList" class="mt-2 space-y-2 text-sm"></ul>
+                </div>
+                <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold">Audit Trail</h3>
+                    <button id="clearAudit" class="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">Clear</button>
+                  </div>
+                  <ul id="auditList" class="mt-2 max-h-56 space-y-2 overflow-auto text-xs text-slate-300"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const accounts = [
+      {
+        id: 'AC-2017',
+        name: 'Hammel Logistics GmbH',
+        owner: 'Nina Schorr',
+        segment: 'Mid-Market',
+        arr: 118000,
+        renewalDays: 47,
+        healthScore: 61,
+        status: 'Watchlist',
+        marginPct: 42,
+        risks: ['Adoption down 18% QoQ', '2 unresolved P2 tickets'],
+      },
+      {
+        id: 'AC-2041',
+        name: 'Asteria Components AG',
+        owner: 'Jonas Franke',
+        segment: 'Enterprise',
+        arr: 286000,
+        renewalDays: 23,
+        healthScore: 38,
+        status: 'At Risk',
+        marginPct: 31,
+        risks: ['CFO requested commercial reduction', 'Escalation after missed SLA'],
+      },
+      {
+        id: 'AC-2099',
+        name: 'Nordkliniken Verbund',
+        owner: 'Mira Lenz',
+        segment: 'Enterprise',
+        arr: 351000,
+        renewalDays: 72,
+        healthScore: 79,
+        status: 'Stable',
+        marginPct: 54,
+        risks: ['Expansion blocked by security review'],
+      },
+      {
+        id: 'AC-2144',
+        name: 'VoltEdge Retail Systems',
+        owner: 'Timo Adler',
+        segment: 'SMB',
+        arr: 64000,
+        renewalDays: 14,
+        healthScore: 29,
+        status: 'Escalated',
+        marginPct: 37,
+        risks: ['Champion left account', 'Invoice dispute open 21 days'],
+      },
+      {
+        id: 'AC-2178',
+        name: 'RheinPort Services',
+        owner: 'Lea Markert',
+        segment: 'Mid-Market',
+        arr: 92000,
+        renewalDays: 31,
+        healthScore: 44,
+        status: 'Recovery In Progress',
+        marginPct: 40,
+        risks: ['Usage volatility in night shifts'],
+      },
+      {
+        id: 'AC-2230',
+        name: 'FerroMec Industries',
+        owner: 'Daniel Wirth',
+        segment: 'Enterprise',
+        arr: 198000,
+        renewalDays: 56,
+        healthScore: 67,
+        status: 'Watchlist',
+        marginPct: 46,
+        risks: ['Procurement asks for multi-year lock pricing'],
+      }
+    ];
+
+    let selectedId = accounts[0].id;
+
+    const plans = [
+      {
+        id: 'RP-5102',
+        accountId: 'AC-2041',
+        playbook: 'Commercial Re-scope',
+        discount: 12,
+        reason: 'Executive team requests concession to keep regional rollout on schedule.',
+        status: 'Pending Sales Director Approval',
+        createdBy: 'CSM',
+        ts: '2026-04-05 01:51'
+      },
+      {
+        id: 'RP-5103',
+        accountId: 'AC-2144',
+        playbook: 'Executive Sponsor Reset',
+        discount: 8,
+        reason: 'Need interim executive coverage after customer champion departure.',
+        status: 'Pending CSM Follow-up',
+        createdBy: 'Sales Director',
+        ts: '2026-04-05 01:58'
+      },
+      {
+        id: 'RP-5104',
+        accountId: 'AC-2178',
+        playbook: 'Adoption Recovery Sprint',
+        discount: 6,
+        reason: 'Customer requested training wave to recover night-shift adoption.',
+        status: 'Approved',
+        createdBy: 'CSM',
+        ts: '2026-04-05 02:07'
+      }
+    ];
+
+    let audit = [
+      { text: 'Portfolio sync loaded from CRM_HEALTH_DAILY_v2.', ts: '2026-04-05 02:12' },
+      { text: 'Policy set RETAIN-07 activated for concession routing.', ts: '2026-04-05 02:13' },
+      { text: 'Sales Director escalated AC-2144 to recovery board.', ts: '2026-04-05 02:16' }
+    ];
+
+    const rolePermissions = {
+      'CSM': ['Pending CSM Follow-up'],
+      'Sales Director': ['Pending Sales Director Approval'],
+      'Finance Partner': ['Pending Finance Approval']
+    };
+
+    const statusStyles = {
+      'Stable': 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+      'Watchlist': 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+      'At Risk': 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
+      'Recovery In Progress': 'bg-sky-500/15 text-sky-300 border border-sky-500/30',
+      'Escalated': 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
+    };
+
+    const accountRows = document.getElementById('accountRows');
+    const detailPane = document.getElementById('detailPane');
+    const detailHint = document.getElementById('detailHint');
+    const searchInput = document.getElementById('searchInput');
+    const segmentFilter = document.getElementById('segmentFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const sortBy = document.getElementById('sortBy');
+    const roleView = document.getElementById('roleView');
+    const auditList = document.getElementById('auditList');
+    const policyHint = document.getElementById('policyHint');
+
+    function esc(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatEuro(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function addAudit(text) {
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      audit.unshift({ text, ts: timestamp });
+      if (audit.length > 40) audit = audit.slice(0, 40);
+      renderAudit();
+    }
+
+    function initFilters() {
+      const segments = [...new Set(accounts.map(a => a.segment))].sort();
+      segments.forEach(segment => {
+        const option = document.createElement('option');
+        option.value = segment;
+        option.textContent = segment;
+        segmentFilter.appendChild(option);
+      });
+    }
+
+    function filteredAccounts() {
+      const query = searchInput.value.trim().toLowerCase();
+      const segment = segmentFilter.value;
+      const status = statusFilter.value;
+      const sort = sortBy.value;
+
+      const result = accounts
+        .filter(account => {
+          const matchesQuery = !query || [account.name, account.owner, account.segment, account.id]
+            .join(' ')
+            .toLowerCase()
+            .includes(query);
+          const matchesSegment = segment === 'all' || account.segment === segment;
+          const matchesStatus = status === 'all' || account.status === status;
+          return matchesQuery && matchesSegment && matchesStatus;
+        });
+
+      if (sort === 'healthScore') {
+        result.sort((a, b) => a.healthScore - b.healthScore);
+      } else if (sort === 'arr') {
+        result.sort((a, b) => b.arr - a.arr);
+      } else if (sort === 'renewalDays') {
+        result.sort((a, b) => a.renewalDays - b.renewalDays);
+      } else {
+        result.sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      return result;
+    }
+
+    function renderKpis() {
+      document.getElementById('kpiArr').textContent = formatEuro(accounts.reduce((sum, account) => sum + account.arr, 0));
+      document.getElementById('kpiRisk').textContent = accounts.filter(account => account.status === 'At Risk').length;
+      document.getElementById('kpiPlans').textContent = plans.filter(plan => plan.status.includes('Pending')).length;
+      document.getElementById('kpiEsc').textContent = accounts.filter(account => account.status === 'Escalated').length;
+    }
+
+    function renderRows() {
+      const list = filteredAccounts();
+
+      accountRows.innerHTML = list.map(account => `
+        <tr data-id="${account.id}" tabindex="0" class="cursor-pointer ${account.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'} focus:bg-slate-800/60 focus:outline-none">
+          <td class="px-3 py-2">
+            <p class="font-medium">${esc(account.name)}</p>
+            <p class="text-xs text-slate-400">${esc(account.id)} · ${esc(account.owner)}</p>
+          </td>
+          <td class="px-3 py-2 text-slate-300">${account.healthScore}</td>
+          <td class="px-3 py-2"><span class="inline-flex rounded-full px-2 py-0.5 text-xs ${statusStyles[account.status] || ''}">${esc(account.status)}</span></td>
+        </tr>
+      `).join('');
+
+      if (!list.length) {
+        accountRows.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-slate-400">No accounts match this view.</td></tr>';
+        selectedId = null;
+        renderDetail();
+      } else if (!list.find(account => account.id === selectedId)) {
+        selectedId = list[0].id;
+      }
+
+      accountRows.querySelectorAll('tr[data-id]').forEach(row => {
+        const select = () => {
+          selectedId = row.dataset.id;
+          renderRows();
+          renderDetail();
+        };
+        row.addEventListener('click', select);
+        row.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            select();
+          }
+        });
+      });
+
+      renderKpis();
+      renderDetail();
+    }
+
+    function planPolicy(account, discount) {
+      const gates = [];
+      let status = 'Pending CSM Follow-up';
+
+      if (discount > 10 || account.arr >= 150000) {
+        gates.push('Sales Director approval required');
+        status = 'Pending Sales Director Approval';
+      }
+      if (account.marginPct < 35 || discount > 15) {
+        gates.push('Finance approval required');
+        status = 'Pending Finance Approval';
+      }
+
+      return {
+        status,
+        gates: gates.length ? gates : ['No escalation gates triggered']
+      };
+    }
+
+    function renderDetail() {
+      const account = accounts.find(item => item.id === selectedId);
+
+      if (!account) {
+        detailPane.classList.add('hidden');
+        detailHint.textContent = 'No account selected in current filter view.';
+        return;
+      }
+
+      detailPane.classList.remove('hidden');
+      detailHint.textContent = `Health score ${account.healthScore} · ${account.segment} segment · policy profile active`;
+
+      document.getElementById('dName').textContent = account.name;
+      document.getElementById('dMeta').textContent = `${account.id} · ${account.segment}`;
+      document.getElementById('dOwner').textContent = `Owner: ${account.owner}`;
+      document.getElementById('dStatus').innerHTML = `<span class="inline-flex rounded-full px-2 py-0.5 text-xs ${statusStyles[account.status]}">${esc(account.status)}</span>`;
+      document.getElementById('dArr').textContent = formatEuro(account.arr);
+      document.getElementById('dRenewal').textContent = `${account.renewalDays} days`;
+      document.getElementById('dMargin').textContent = `${account.marginPct}%`;
+      document.getElementById('dRisks').innerHTML = account.risks.map(risk => `<li>${esc(risk)}</li>`).join('');
+
+      const discountPreview = Number(document.getElementById('discountInput').value || 0);
+      const policy = planPolicy(account, discountPreview);
+      policyHint.textContent = `Policy route preview: ${policy.gates.join(' · ')}.`;
+
+      const accountPlans = plans.filter(plan => plan.accountId === account.id);
+      const openPlans = accountPlans.filter(plan => plan.status.includes('Pending'));
+      document.getElementById('openCount').textContent = `${openPlans.length} open`;
+
+      document.getElementById('planList').innerHTML = accountPlans.length
+        ? accountPlans.map(plan => {
+            const canAct = rolePermissions[roleView.value].includes(plan.status);
+            const badge = plan.status.includes('Approved')
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+              : plan.status.includes('Rejected')
+              ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+              : 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300';
+
+            return `
+              <li class="rounded-lg border border-slate-800 bg-slate-900 p-2">
+                <p class="text-xs text-slate-400">${esc(plan.id)} · ${esc(plan.ts)} · by ${esc(plan.createdBy)}</p>
+                <p><strong>${esc(plan.playbook)}</strong> · ${plan.discount}% concession</p>
+                <p class="text-xs text-slate-400">${esc(plan.reason)}</p>
+                <p class="mt-1"><span class="inline-flex rounded-full border px-2 py-0.5 text-xs ${badge}">${esc(plan.status)}</span></p>
+                ${canAct ? `
+                  <div class="mt-2 flex gap-2">
+                    <button data-action="approve" data-id="${esc(plan.id)}" class="rounded border border-emerald-600/50 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20">Approve</button>
+                    <button data-action="reject" data-id="${esc(plan.id)}" class="rounded border border-rose-600/50 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/20">Reject</button>
+                  </div>
+                ` : ''}
+              </li>
+            `;
+          }).join('')
+        : '<li class="text-xs text-slate-400">No recovery plans for this account.</li>';
+
+      bindPlanActions();
+      renderAudit();
+    }
+
+    function bindPlanActions() {
+      document.querySelectorAll('[data-action]').forEach(button => {
+        button.addEventListener('click', () => {
+          const action = button.dataset.action;
+          const id = button.dataset.id;
+          const plan = plans.find(item => item.id === id);
+          const account = accounts.find(item => item.id === selectedId);
+          if (!plan || !account) return;
+
+          if (action === 'approve') {
+            if (plan.status === 'Pending Sales Director Approval') {
+              plan.status = account.marginPct < 35 || plan.discount > 15
+                ? 'Pending Finance Approval'
+                : 'Approved';
+            } else if (plan.status === 'Pending Finance Approval') {
+              plan.status = 'Approved';
+            } else {
+              plan.status = 'Approved';
+            }
+
+            account.status = plan.status === 'Approved' ? 'Recovery In Progress' : 'Escalated';
+            addAudit(`${roleView.value} approved ${plan.id} for ${account.name} (${plan.status}).`);
+          } else {
+            plan.status = 'Rejected';
+            account.status = 'At Risk';
+            addAudit(`${roleView.value} rejected ${plan.id} for ${account.name}.`);
+          }
+
+          renderRows();
+        });
+      });
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = audit.map(item => `
+        <li class="rounded border border-slate-800 bg-slate-900 p-2">
+          <p>${esc(item.text)}</p>
+          <p class="mt-1 text-[11px] text-slate-500">${esc(item.ts)}</p>
+        </li>
+      `).join('');
+    }
+
+    document.getElementById('planForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const account = accounts.find(item => item.id === selectedId);
+      if (!account) return;
+
+      const playbook = document.getElementById('playbookInput').value;
+      const discount = Number(document.getElementById('discountInput').value || 0);
+      const reason = document.getElementById('reasonInput').value.trim();
+      const formMsg = document.getElementById('formMsg');
+
+      if (Number.isNaN(discount) || discount < 0 || discount > 30 || reason.length < 12) {
+        formMsg.textContent = 'Validation failed: discount 0-30 and reason at least 12 characters.';
+        formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const policy = planPolicy(account, discount);
+      const newPlan = {
+        id: `RP-${Math.floor(Math.random() * 9000 + 1000)}`,
+        accountId: account.id,
+        playbook,
+        discount,
+        reason,
+        status: policy.status,
+        createdBy: roleView.value,
+        ts: new Date().toISOString().slice(0, 16).replace('T', ' ')
+      };
+
+      plans.unshift(newPlan);
+      account.status = newPlan.status.includes('Pending') ? 'Escalated' : 'Recovery In Progress';
+
+      addAudit(`${roleView.value} routed ${newPlan.id} for ${account.name} (${policy.gates.join(' / ')}).`);
+      formMsg.textContent = `Created ${newPlan.id} → ${newPlan.status}.`;
+      formMsg.className = 'text-xs text-emerald-300';
+
+      document.getElementById('discountInput').value = '';
+      document.getElementById('reasonInput').value = '';
+
+      renderRows();
+    });
+
+    document.getElementById('discountInput').addEventListener('input', renderDetail);
+
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      searchInput.value = '';
+      segmentFilter.value = 'all';
+      statusFilter.value = 'all';
+      sortBy.value = 'healthScore';
+      renderRows();
+      addAudit('Operator reset portfolio filters.');
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const list = filteredAccounts();
+      const columns = ['id', 'name', 'owner', 'segment', 'arr', 'renewalDays', 'healthScore', 'status', 'marginPct'];
+      const csv = [
+        columns.join(','),
+        ...list.map(row => columns.map(column => `"${String(row[column]).replaceAll('"', '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'account-health-review-desk.csv';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      addAudit(`${roleView.value} exported account health CSV (${list.length} rows).`);
+    });
+
+    document.getElementById('clearAudit').addEventListener('click', () => {
+      audit = [];
+      addAudit(`${roleView.value} cleared local audit stream.`);
+    });
+
+    [searchInput, segmentFilter, statusFilter, sortBy, roleView].forEach(control => {
+      control.addEventListener('input', renderRows);
+      control.addEventListener('change', renderRows);
+    });
+
+    initFilters();
+    renderRows();
+  </script>
+</body>
+</html>

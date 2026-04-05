@@ -1632,5 +1632,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-05",
+    "day": 74,
+    "slug": "2026-04-05-account-health-review-desk",
+    "name": "Account Health Review Desk",
+    "description": "Sales master-detail workspace for account health triage with policy-gated recovery plans, approval routing, and audit-ready retention actions.",
+    "category": "Sales",
+    "pattern": "Master-Detail",
+    "tags": [
+      "account health",
+      "sales",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
