@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Note Dispute Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <a href="../../index.html" class="text-sm text-emerald-300 underline underline-offset-4 hover:text-emerald-200">BackOfficeBites 🍔</a>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight">Credit Note Dispute Timeline</h1>
+        <p class="mt-1 max-w-3xl text-sm text-slate-300">Finance timeline workspace to route customer credit note disputes from intake to settlement with policy gating, role-based approvals, and audit-ready tracking.</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl space-y-4 px-4 py-4 sm:px-6 lg:px-8">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Visible Disputes</p>
+          <p id="kpiTotal" class="mt-2 text-xl font-semibold text-cyan-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Pending Approval</p>
+          <p id="kpiPending" class="mt-2 text-xl font-semibold text-amber-300">0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Open Exposure</p>
+          <p id="kpiExposure" class="mt-2 text-xl font-semibold text-rose-300">€0</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Avg Age</p>
+          <p id="kpiAge" class="mt-2 text-xl font-semibold text-violet-300">0d</p>
+        </div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 lg:col-span-2">
+          <label for="roleView" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+          <select id="roleView" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option>AR Analyst</option>
+            <option>AR Manager</option>
+            <option>Controller</option>
+            <option>Collections Lead</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-4">
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label class="text-xs text-slate-400" for="searchInput">Search
+                <input id="searchInput" type="text" placeholder="Dispute ID, customer, owner..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <label class="text-xs text-slate-400" for="statusFilter">Status
+                <select id="statusFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All statuses</option>
+                  <option>Logged</option>
+                  <option>Analyst Review</option>
+                  <option>Controller Approval</option>
+                  <option>Settled</option>
+                  <option>Rejected</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="reasonFilter">Reason
+                <select id="reasonFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="all">All reasons</option>
+                  <option>Pricing Error</option>
+                  <option>Tax Mismatch</option>
+                  <option>Return Damage</option>
+                  <option>Service SLA Breach</option>
+                </select>
+              </label>
+              <label class="text-xs text-slate-400" for="sortBy">Sort
+                <select id="sortBy" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                  <option value="due">Due date (soonest)</option>
+                  <option value="amount">Amount (high-low)</option>
+                  <option value="age">Age (high-low)</option>
+                  <option value="customer">Customer (A-Z)</option>
+                </select>
+              </label>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="resetFilters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800">Reset</button>
+              <button id="exportCsv" class="rounded-lg border border-emerald-600/50 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Log New Dispute</h2>
+            <form id="disputeForm" class="mt-2 space-y-2" novalidate>
+              <label class="block text-xs text-slate-400" for="customerInput">Customer
+                <input id="customerInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="reasonInput">Reason
+                  <select id="reasonInput" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option>Pricing Error</option>
+                    <option>Tax Mismatch</option>
+                    <option>Return Damage</option>
+                    <option>Service SLA Breach</option>
+                  </select>
+                </label>
+                <label class="block text-xs text-slate-400" for="amountInput">Amount (€)
+                  <input id="amountInput" type="number" min="100" step="100" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block text-xs text-slate-400" for="ownerInput">Owner
+                  <input id="ownerInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+                <label class="block text-xs text-slate-400" for="dueInput">Due date
+                  <input id="dueInput" type="date" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                </label>
+              </div>
+              <label class="block text-xs text-slate-400" for="noteInput">Case note (min 12 chars)
+                <input id="noteInput" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </label>
+              <button type="submit" class="w-full rounded-lg border border-violet-600/60 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20">Create Dispute</button>
+              <p id="formMsg" class="text-xs text-slate-400" role="status" aria-live="polite">Validation and policy hints appear here.</p>
+            </form>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Audit Trail</h2>
+              <button id="clearAudit" class="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">Clear</button>
+            </div>
+            <ul id="auditList" class="mt-2 max-h-64 space-y-2 overflow-auto text-xs text-slate-300"></ul>
+          </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-8">
+          <div id="policyHint" class="rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-3 text-xs text-cyan-200">Policy gate: tax mismatches or disputes above €50k must pass Controller Approval before settlement.</div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="text-sm font-semibold">Dispute Journey Timeline</h2>
+              <p id="visibleInfo" class="text-xs text-slate-400">Showing 0 disputes</p>
+            </div>
+            <div class="mt-3 grid grid-cols-5 gap-2 text-[11px] font-medium text-slate-300">
+              <div class="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center">Logged</div>
+              <div class="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center">Analyst Review</div>
+              <div class="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center">Controller Approval</div>
+              <div class="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center">Settled</div>
+              <div class="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center">Rejected</div>
+            </div>
+            <div id="timelineList" class="mt-3 space-y-3"></div>
+          </div>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+            <h2 class="text-sm font-semibold">Selected Dispute Detail</h2>
+            <div id="detailPanel" class="mt-2 text-sm text-slate-300">Select a dispute card to inspect full timeline events.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const stageOrder = ['Logged', 'Analyst Review', 'Controller Approval', 'Settled', 'Rejected'];
+    const stageClass = {
+      Logged: 'border-slate-500/50 bg-slate-500/10 text-slate-200',
+      'Analyst Review': 'border-amber-500/50 bg-amber-500/10 text-amber-300',
+      'Controller Approval': 'border-violet-500/50 bg-violet-500/10 text-violet-300',
+      Settled: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300',
+      Rejected: 'border-rose-500/50 bg-rose-500/10 text-rose-300'
+    };
+
+    let selectedCaseId = 'CN-9201';
+
+    let disputes = [
+      {
+        id: 'CN-9201',
+        customer: 'Nordhafen Retail GmbH',
+        reason: 'Pricing Error',
+        amount: 18450,
+        age: 4,
+        status: 'Analyst Review',
+        owner: 'Lea Kruger',
+        due: '2026-04-07',
+        note: 'Promotion discount applied twice across two invoice lines.',
+        rejectionReason: ''
+      },
+      {
+        id: 'CN-9202',
+        customer: 'Aster Mobility AG',
+        reason: 'Tax Mismatch',
+        amount: 74200,
+        age: 9,
+        status: 'Controller Approval',
+        owner: 'Jonas Fehr',
+        due: '2026-04-06',
+        note: 'Cross-border VAT mismatch requires revised tax mapping.',
+        rejectionReason: ''
+      },
+      {
+        id: 'CN-9203',
+        customer: 'Pioneer Foods Europe',
+        reason: 'Return Damage',
+        amount: 12600,
+        age: 3,
+        status: 'Logged',
+        owner: 'Mara Vogel',
+        due: '2026-04-10',
+        note: 'Warehouse photos attached and RMA was approved yesterday.',
+        rejectionReason: ''
+      },
+      {
+        id: 'CN-9204',
+        customer: 'Solex MedTech',
+        reason: 'Service SLA Breach',
+        amount: 35800,
+        age: 14,
+        status: 'Settled',
+        owner: 'Luka Brenner',
+        due: '2026-04-01',
+        note: 'Downtime credits posted after final legal wording sign-off.',
+        rejectionReason: ''
+      },
+      {
+        id: 'CN-9205',
+        customer: 'Helios Components',
+        reason: 'Pricing Error',
+        amount: 53100,
+        age: 7,
+        status: 'Rejected',
+        owner: 'Nina Schulte',
+        due: '2026-04-08',
+        note: 'Customer submitted expired campaign code from previous quarter.',
+        rejectionReason: 'Campaign ended before invoice date.'
+      }
+    ];
+
+    let audits = [
+      stamp('System', 'Loaded 5 disputes for April settlement board.'),
+      stamp('Controller', 'CN-9202 flagged for mandatory controller sign-off (tax + amount).'),
+      stamp('AR Manager', 'CN-9204 moved to Settled and posted to ledger.')
+    ];
+
+    const els = {
+      roleView: document.getElementById('roleView'),
+      searchInput: document.getElementById('searchInput'),
+      statusFilter: document.getElementById('statusFilter'),
+      reasonFilter: document.getElementById('reasonFilter'),
+      sortBy: document.getElementById('sortBy'),
+      resetFilters: document.getElementById('resetFilters'),
+      exportCsv: document.getElementById('exportCsv'),
+      timelineList: document.getElementById('timelineList'),
+      detailPanel: document.getElementById('detailPanel'),
+      visibleInfo: document.getElementById('visibleInfo'),
+      kpiTotal: document.getElementById('kpiTotal'),
+      kpiPending: document.getElementById('kpiPending'),
+      kpiExposure: document.getElementById('kpiExposure'),
+      kpiAge: document.getElementById('kpiAge'),
+      disputeForm: document.getElementById('disputeForm'),
+      customerInput: document.getElementById('customerInput'),
+      reasonInput: document.getElementById('reasonInput'),
+      amountInput: document.getElementById('amountInput'),
+      ownerInput: document.getElementById('ownerInput'),
+      dueInput: document.getElementById('dueInput'),
+      noteInput: document.getElementById('noteInput'),
+      formMsg: document.getElementById('formMsg'),
+      auditList: document.getElementById('auditList'),
+      clearAudit: document.getElementById('clearAudit')
+    };
+
+    function stamp(actor, action) {
+      return { at: new Date().toISOString(), actor, action };
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    }
+
+    function euro(v) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+    }
+
+    function progressTemplate(status) {
+      const current = stageOrder.indexOf(status);
+      const activeDot = {
+        Logged: 'bg-slate-300',
+        'Analyst Review': 'bg-amber-300',
+        'Controller Approval': 'bg-violet-300',
+        Settled: 'bg-emerald-300',
+        Rejected: 'bg-rose-300'
+      };
+      const activeLine = {
+        Logged: 'bg-slate-500/70',
+        'Analyst Review': 'bg-amber-500/70',
+        'Controller Approval': 'bg-violet-500/70',
+        Settled: 'bg-emerald-500/70',
+        Rejected: 'bg-rose-500/70'
+      };
+
+      return stageOrder.map((step, idx) => {
+        const active = idx <= current;
+        return `
+          <div class="flex items-center gap-1">
+            <div class="h-2.5 w-2.5 rounded-full ${active ? activeDot[step] : 'bg-slate-700'}"></div>
+            ${idx < stageOrder.length - 1 ? `<div class="h-px w-full ${active ? activeLine[step] : 'bg-slate-700'}"></div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function canAdvance(dispute) {
+      const role = els.roleView.value;
+      if (role === 'Auditor' || dispute.status === 'Settled' || dispute.status === 'Rejected') return false;
+      if (role === 'Controller') return dispute.status === 'Controller Approval';
+      if (role === 'AR Analyst') return dispute.status === 'Logged' || dispute.status === 'Analyst Review';
+      return true;
+    }
+
+    function canReject(dispute) {
+      const role = els.roleView.value;
+      if (role === 'Auditor' || dispute.status === 'Settled' || dispute.status === 'Rejected') return false;
+      return role !== 'Controller' || dispute.status === 'Controller Approval';
+    }
+
+    function nextStatus(dispute) {
+      if (dispute.status === 'Logged') return 'Analyst Review';
+      if (dispute.status === 'Analyst Review') {
+        if (dispute.amount >= 50000 || dispute.reason === 'Tax Mismatch') return 'Controller Approval';
+        return 'Settled';
+      }
+      if (dispute.status === 'Controller Approval') return 'Settled';
+      return dispute.status;
+    }
+
+    function getFilteredDisputes() {
+      const q = els.searchInput.value.trim().toLowerCase();
+      const status = els.statusFilter.value;
+      const reason = els.reasonFilter.value;
+      const sort = els.sortBy.value;
+
+      const list = disputes.filter((d) => {
+        const matchesQ = !q || `${d.id} ${d.customer} ${d.owner}`.toLowerCase().includes(q);
+        const matchesStatus = status === 'all' || d.status === status;
+        const matchesReason = reason === 'all' || d.reason === reason;
+        return matchesQ && matchesStatus && matchesReason;
+      });
+
+      const sorted = [...list].sort((a, b) => {
+        if (sort === 'amount') return b.amount - a.amount;
+        if (sort === 'age') return b.age - a.age;
+        if (sort === 'customer') return a.customer.localeCompare(b.customer);
+        return new Date(a.due) - new Date(b.due);
+      });
+
+      return sorted;
+    }
+
+    function renderKPIs(list) {
+      els.kpiTotal.textContent = list.length;
+      const pending = list.filter((d) => d.status === 'Analyst Review' || d.status === 'Controller Approval').length;
+      els.kpiPending.textContent = pending;
+      const exposure = list.filter((d) => d.status !== 'Settled' && d.status !== 'Rejected').reduce((sum, d) => sum + d.amount, 0);
+      els.kpiExposure.textContent = euro(exposure);
+      const avgAge = list.length ? Math.round(list.reduce((sum, d) => sum + d.age, 0) / list.length) : 0;
+      els.kpiAge.textContent = `${avgAge}d`;
+    }
+
+    function renderTimeline() {
+      const list = getFilteredDisputes();
+      renderKPIs(list);
+      els.visibleInfo.textContent = `Showing ${list.length} dispute${list.length === 1 ? '' : 's'}`;
+
+      if (!list.length) {
+        els.timelineList.innerHTML = '<p class="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-4 text-sm text-slate-400">No disputes match the current filters.</p>';
+        els.detailPanel.innerHTML = '<p class="text-slate-400">Adjust filters or create a new dispute.</p>';
+        return;
+      }
+
+      els.timelineList.innerHTML = list.map((d) => {
+        const blocked = (d.amount >= 50000 || d.reason === 'Tax Mismatch') && d.status === 'Analyst Review';
+        const dueSoon = new Date(d.due) <= new Date('2026-04-07');
+
+        return `
+          <article class="rounded-xl border ${selectedCaseId === d.id ? 'border-emerald-500/50' : 'border-slate-800'} bg-slate-950/50 p-3">
+            <button data-select="${d.id}" class="w-full text-left" aria-label="Select ${d.id} dispute detail">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-100">${d.id} · ${d.customer}</p>
+                  <p class="text-xs text-slate-400">${d.reason} · Owner ${d.owner}</p>
+                </div>
+                <span class="rounded-md border px-2 py-1 text-[11px] font-semibold ${stageClass[d.status]}">${d.status}</span>
+              </div>
+            </button>
+
+            <div class="mt-3 grid grid-cols-5 gap-1" aria-hidden="true">${progressTemplate(d.status)}</div>
+
+            <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
+              <div class="rounded border border-slate-800 bg-slate-900 px-2 py-1">Amount: <strong>${euro(d.amount)}</strong></div>
+              <div class="rounded border border-slate-800 bg-slate-900 px-2 py-1">Age: <strong>${d.age}d</strong></div>
+              <div class="rounded border border-slate-800 bg-slate-900 px-2 py-1">Due: <strong>${formatDate(d.due)}</strong></div>
+              <div class="rounded border border-slate-800 bg-slate-900 px-2 py-1">Risk: <strong class="${dueSoon ? 'text-rose-300' : 'text-slate-200'}">${dueSoon ? 'Due Soon' : 'On Track'}</strong></div>
+            </div>
+
+            <p class="mt-2 text-xs ${blocked ? 'text-amber-300' : 'text-slate-400'}">${blocked ? 'Policy block: controller sign-off required before settlement.' : d.note}</p>
+            ${d.rejectionReason ? `<p class="mt-1 text-xs text-rose-300">Rejected reason: ${d.rejectionReason}</p>` : ''}
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button data-advance="${d.id}" class="rounded border border-emerald-600/60 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40" ${canAdvance(d) ? '' : 'disabled'}>Advance Stage</button>
+              <button data-reject="${d.id}" class="rounded border border-rose-600/60 bg-rose-500/10 px-2 py-1 text-[11px] font-medium text-rose-300 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40" ${canReject(d) ? '' : 'disabled'}>Reject</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      const selectedVisible = list.find((d) => d.id === selectedCaseId) || list[0];
+      selectedCaseId = selectedVisible.id;
+      renderDetail(selectedVisible.id);
+    }
+
+    function renderDetail(id) {
+      const item = disputes.find((d) => d.id === id);
+      if (!item) return;
+
+      const caseAudits = audits.filter((a) => a.action.includes(id));
+      const trail = caseAudits.length
+        ? caseAudits.map((a) => `<li class="rounded border border-slate-800 bg-slate-950/50 px-2 py-1"><span class="text-slate-500">${new Date(a.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span class="text-slate-300">${a.actor}</span> · ${a.action}</li>`).join('')
+        : '<li class="rounded border border-slate-800 bg-slate-950/50 px-2 py-1 text-slate-400">No case-specific events yet.</li>';
+
+      els.detailPanel.innerHTML = `
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <div class="rounded border border-slate-800 bg-slate-950/50 p-3">
+            <p class="text-xs text-slate-400">Customer</p>
+            <p class="font-medium text-slate-100">${item.customer}</p>
+            <p class="mt-2 text-xs text-slate-400">Reason / Owner</p>
+            <p>${item.reason} · ${item.owner}</p>
+            <p class="mt-2 text-xs text-slate-400">Current status</p>
+            <p><span class="rounded border px-2 py-0.5 text-[11px] ${stageClass[item.status]}">${item.status}</span></p>
+          </div>
+          <div class="rounded border border-slate-800 bg-slate-950/50 p-3">
+            <p class="text-xs text-slate-400">Policy context</p>
+            <ul class="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-300">
+              <li>Tax mismatch + amount over €40k requires controller review.</li>
+              <li>Amounts over €120k must include note with CFO escalation.</li>
+              <li>Auditor role is read-only by design.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Event Timeline</p>
+          <ul class="mt-2 space-y-1 text-xs text-slate-300">${trail}</ul>
+        </div>
+      `;
+
+      renderAudit();
+    }
+
+    function renderAudit() {
+      els.auditList.innerHTML = audits
+        .slice()
+        .reverse()
+        .map((a) => `
+          <li class="rounded border border-slate-800 bg-slate-950/50 px-2 py-1">
+            <p class="text-[11px] text-slate-500">${new Date(a.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · ${a.actor}</p>
+            <p>${a.action}</p>
+          </li>
+        `)
+        .join('');
+    }
+
+    function resetFilters() {
+      els.searchInput.value = '';
+      els.statusFilter.value = 'all';
+      els.reasonFilter.value = 'all';
+      els.sortBy.value = 'due';
+      renderTimeline();
+    }
+
+    function exportCsv() {
+      const rows = getFilteredDisputes();
+      const header = ['id', 'customer', 'reason', 'amount', 'age', 'status', 'owner', 'due'];
+      const csv = [header.join(',')]
+        .concat(rows.map((r) => [r.id, r.customer, r.reason, r.amount, r.age, r.status, r.owner, r.due].map((v) => `"${String(v).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'credit-note-disputes.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      audits.push(stamp(els.roleView.value, `Exported ${rows.length} dispute rows to CSV.`));
+      renderAudit();
+    }
+
+    function advanceCase(id) {
+      const item = disputes.find((d) => d.id === id);
+      if (!item) return;
+      const prior = item.status;
+      const next = nextStatus(item);
+      if (next === prior) return;
+
+      item.status = next;
+      item.age += next === 'Settled' ? 0 : 1;
+      audits.push(stamp(els.roleView.value, `${id} advanced ${prior} → ${next}.`));
+      selectedCaseId = id;
+      renderTimeline();
+    }
+
+    function rejectCase(id) {
+      const item = disputes.find((d) => d.id === id);
+      if (!item) return;
+      const reason = window.prompt('Rejection reason (min 8 chars):', item.rejectionReason || '');
+      if (reason === null) return;
+      if (reason.trim().length < 8) {
+        audits.push(stamp('System', `${id} rejection blocked: reason too short.`));
+        renderAudit();
+        return;
+      }
+      item.status = 'Rejected';
+      item.rejectionReason = reason.trim();
+      audits.push(stamp(els.roleView.value, `${id} marked Rejected (${item.rejectionReason}).`));
+      selectedCaseId = id;
+      renderTimeline();
+    }
+
+    function createCase(e) {
+      e.preventDefault();
+      const customer = els.customerInput.value.trim();
+      const reason = els.reasonInput.value;
+      const amount = Number(els.amountInput.value);
+      const owner = els.ownerInput.value.trim();
+      const due = els.dueInput.value;
+      const note = els.noteInput.value.trim();
+
+      if (!customer || !owner || !due || !Number.isFinite(amount) || amount < 100 || note.length < 12) {
+        els.formMsg.textContent = 'Please complete all fields. Amount must be ≥ €100 and note at least 12 characters.';
+        els.formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (amount > 120000 && !/cfo/i.test(note)) {
+        els.formMsg.textContent = 'Policy check failed: disputes above €120k require a note mentioning CFO escalation.';
+        els.formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const nextNumber = 9200 + disputes.length + 1;
+      const status = reason === 'Tax Mismatch' || amount >= 50000 ? 'Controller Approval' : 'Logged';
+      const now = new Date('2026-04-05T09:00:00Z');
+      const created = {
+        id: `CN-${nextNumber}`,
+        customer,
+        reason,
+        amount,
+        age: 1,
+        status,
+        owner,
+        due,
+        note,
+        rejectionReason: ''
+      };
+
+      disputes.unshift(created);
+      audits.push(stamp(els.roleView.value, `${created.id} created for ${created.customer} at ${euro(created.amount)} (${status}).`));
+      selectedCaseId = created.id;
+      els.disputeForm.reset();
+      els.formMsg.textContent = status === 'Controller Approval'
+        ? 'Created. Policy route: sent directly to Controller Approval.'
+        : 'Created. Case entered in Logged stage.';
+      els.formMsg.className = 'text-xs text-emerald-300';
+      renderTimeline();
+    }
+
+    document.addEventListener('click', (event) => {
+      const selectBtn = event.target.closest('[data-select]');
+      const advanceBtn = event.target.closest('[data-advance]');
+      const rejectBtn = event.target.closest('[data-reject]');
+
+      if (selectBtn) {
+        selectedCaseId = selectBtn.dataset.select;
+        renderTimeline();
+      }
+      if (advanceBtn) {
+        advanceCase(advanceBtn.dataset.advance);
+      }
+      if (rejectBtn) {
+        rejectCase(rejectBtn.dataset.reject);
+      }
+    });
+
+    ['input', 'change'].forEach((evtName) => {
+      [els.searchInput, els.statusFilter, els.reasonFilter, els.sortBy, els.roleView].forEach((el) => {
+        el.addEventListener(evtName, renderTimeline);
+      });
+    });
+
+    els.resetFilters.addEventListener('click', resetFilters);
+    els.exportCsv.addEventListener('click', exportCsv);
+    els.clearAudit.addEventListener('click', () => {
+      audits = [stamp('System', 'Audit trail manually cleared.')];
+      renderAudit();
+    });
+    els.disputeForm.addEventListener('submit', createCase);
+
+    renderTimeline();
+    renderAudit();
+  </script>
+</body>
+</html>

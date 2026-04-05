@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Capacity Freeze Calendar** — Planning calendar workspace for capacity-freeze approvals with policy gates, role-based routing, audit trails, and CSV export.
+**Credit Note Dispute Timeline** — Finance timeline workspace for credit note disputes with policy-gated approvals, role-based actions, and audit-ready export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
