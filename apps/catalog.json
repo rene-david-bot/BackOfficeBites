@@ -1728,5 +1728,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-06",
+    "day": 78,
+    "slug": "2026-04-06-onboarding-checklist-chatdesk",
+    "name": "Onboarding Checklist Coach Chatdesk",
+    "description": "HR chat-first onboarding workspace with policy validation, role-based approvals, checklist progress, and audit-ready exports.",
+    "category": "HR",
+    "pattern": "Chat UI",
+    "tags": [
+      "onboarding checklist",
+      "hr",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
