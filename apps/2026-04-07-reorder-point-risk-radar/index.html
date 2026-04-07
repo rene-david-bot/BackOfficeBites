@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reorder Point Risk Radar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10 space-y-6">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <header class="space-y-2">
+      <h1 class="text-2xl md:text-4xl font-bold tracking-tight">Reorder Point Risk Radar</h1>
+      <p class="text-slate-300 max-w-3xl">Supply chain dashboard for daily reorder planning with policy validation, role-based approvals, stockout risk scoring, and audit-ready CSV export.</p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs text-slate-400">Tracked SKUs</p>
+        <p id="metricSkus" class="text-2xl font-semibold mt-1">0</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs text-slate-400">At Risk Now</p>
+        <p id="metricRisk" class="text-2xl font-semibold mt-1 text-rose-300">0</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs text-slate-400">Stockout in Lead-Time</p>
+        <p id="metricStockout" class="text-2xl font-semibold mt-1 text-amber-300">0</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs text-slate-400">Open Recommendations</p>
+        <p id="metricOpenRecs" class="text-2xl font-semibold mt-1 text-cyan-300">0</p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-4">
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label for="search" class="block text-xs text-slate-400 mb-1">Search SKU or item</label>
+            <input id="search" type="text" placeholder="e.g. valve" class="w-56 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="warehouseFilter" class="block text-xs text-slate-400 mb-1">Warehouse</label>
+            <select id="warehouseFilter" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="all">All</option>
+            </select>
+          </div>
+          <div>
+            <label for="riskFilter" class="block text-xs text-slate-400 mb-1">Risk level</label>
+            <select id="riskFilter" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="all">All</option>
+              <option value="At Risk">At Risk</option>
+              <option value="Watch">Watch</option>
+              <option value="Healthy">Healthy</option>
+            </select>
+          </div>
+          <div>
+            <label for="roleSelect" class="block text-xs text-slate-400 mb-1">Active role</label>
+            <select id="roleSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="planner">Planner</option>
+              <option value="manager">Manager</option>
+              <option value="procurement">Procurement</option>
+            </select>
+          </div>
+          <button id="exportBtn" class="ml-auto bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg px-3 py-2">Export CSV</button>
+        </div>
+
+        <div class="overflow-auto border border-slate-800 rounded-lg">
+          <table class="w-full text-sm min-w-[900px]">
+            <thead class="bg-slate-950 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2"><button data-sort="sku" class="sortBtn">SKU</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="item" class="sortBtn">Item</button></th>
+                <th class="text-left px-3 py-2"><button data-sort="warehouse" class="sortBtn">Warehouse</button></th>
+                <th class="text-right px-3 py-2"><button data-sort="onHand" class="sortBtn">On Hand</button></th>
+                <th class="text-right px-3 py-2"><button data-sort="reorderPoint" class="sortBtn">Reorder Pt</button></th>
+                <th class="text-right px-3 py-2"><button data-sort="leadDays" class="sortBtn">Lead Days</button></th>
+                <th class="text-right px-3 py-2"><button data-sort="coverageDays" class="sortBtn">Coverage</button></th>
+                <th class="text-left px-3 py-2">Risk</th>
+              </tr>
+            </thead>
+            <tbody id="skuRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-4">
+        <h2 class="font-semibold">Risk by Warehouse</h2>
+        <div id="warehouseBars" class="space-y-3"></div>
+        <p class="text-xs text-slate-400">Bar scale = count of <span class="text-rose-300">At Risk</span> SKUs.</p>
+      </aside>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+        <h2 class="font-semibold">Create Reorder Recommendation</h2>
+        <form id="reorderForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label for="skuSelect" class="block text-xs text-slate-400 mb-1">SKU</label>
+            <select id="skuSelect" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm"></select>
+          </div>
+          <div>
+            <label for="qtyInput" class="block text-xs text-slate-400 mb-1">Recommended Qty</label>
+            <input id="qtyInput" type="number" min="1" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label for="urgency" class="block text-xs text-slate-400 mb-1">Urgency</label>
+            <select id="urgency" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option>Standard</option>
+              <option>Expedite</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label for="reason" class="block text-xs text-slate-400 mb-1">Reason (min 10 chars)</label>
+            <textarea id="reason" rows="3" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Demand spike from line 2 maintenance plan..."></textarea>
+          </div>
+          <div class="md:col-span-2 flex items-center gap-2">
+            <button class="bg-cyan-600 hover:bg-cyan-500 text-white text-sm rounded-lg px-3 py-2" type="submit">Save Draft</button>
+            <p id="formMsg" class="text-xs text-slate-400" aria-live="polite"></p>
+          </div>
+        </form>
+      </div>
+
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Approval Workflow Queue</h2>
+          <span id="roleBadge" class="text-xs px-2 py-1 rounded-full bg-slate-800 border border-slate-700">Role: Planner</span>
+        </div>
+        <div class="overflow-auto border border-slate-800 rounded-lg">
+          <table class="w-full text-sm min-w-[700px]">
+            <thead class="bg-slate-950 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2">SKU</th>
+                <th class="text-right px-3 py-2">Qty</th>
+                <th class="text-left px-3 py-2">Urgency</th>
+                <th class="text-left px-3 py-2">Status</th>
+                <th class="text-left px-3 py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody id="recRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-3">
+      <h2 class="font-semibold">Audit Trail</h2>
+      <ul id="auditLog" class="space-y-2 text-sm"></ul>
+    </section>
+  </main>
+
+  <script>
+    const skuData = [
+      { sku: 'RM-2041', item: 'Hydraulic Valve 22mm', warehouse: 'Berlin DC', onHand: 120, reorderPoint: 180, maxStock: 420, leadDays: 9, dailyUsage: 18, supplier: 'NordFlow GmbH' },
+      { sku: 'RM-1188', item: 'Bearing Set B14', warehouse: 'Dresden Hub', onHand: 360, reorderPoint: 250, maxStock: 640, leadDays: 6, dailyUsage: 22, supplier: 'Dynaparts AG' },
+      { sku: 'RM-3310', item: 'Sensor Harness S9', warehouse: 'Leipzig FC', onHand: 75, reorderPoint: 130, maxStock: 300, leadDays: 12, dailyUsage: 11, supplier: 'Aether Components' },
+      { sku: 'RM-4507', item: 'Rotor Coupling C7', warehouse: 'Berlin DC', onHand: 210, reorderPoint: 200, maxStock: 500, leadDays: 8, dailyUsage: 17, supplier: 'Dynaparts AG' },
+      { sku: 'RM-5602', item: 'Sealing Ring Pack', warehouse: 'Dresden Hub', onHand: 88, reorderPoint: 140, maxStock: 360, leadDays: 5, dailyUsage: 21, supplier: 'Rubix Industrial' },
+      { sku: 'RM-7781', item: 'Control Relay R2', warehouse: 'Leipzig FC', onHand: 44, reorderPoint: 95, maxStock: 200, leadDays: 10, dailyUsage: 9, supplier: 'Voltis Tech' },
+      { sku: 'RM-9083', item: 'Thermal Shield Sheet', warehouse: 'Berlin DC', onHand: 280, reorderPoint: 190, maxStock: 520, leadDays: 7, dailyUsage: 16, supplier: 'NordFlow GmbH' }
+    ];
+
+    const recommendations = [
+      { id: crypto.randomUUID(), sku: 'RM-2041', qty: 220, urgency: 'Expedite', reason: 'Q2 maintenance backlog + low buffer.', status: 'Submitted' },
+      { id: crypto.randomUUID(), sku: 'RM-5602', qty: 180, urgency: 'Standard', reason: 'High daily usage trend from last 14 days.', status: 'Draft' }
+    ];
+
+    const audit = [
+      `${timeNow()} Planner submitted RM-2041 recommendation for manager review.`,
+      `${timeNow()} Policy engine flagged RM-5602 as below safety threshold.`
+    ];
+
+    const ui = {
+      search: document.getElementById('search'),
+      warehouseFilter: document.getElementById('warehouseFilter'),
+      riskFilter: document.getElementById('riskFilter'),
+      skuRows: document.getElementById('skuRows'),
+      metricSkus: document.getElementById('metricSkus'),
+      metricRisk: document.getElementById('metricRisk'),
+      metricStockout: document.getElementById('metricStockout'),
+      metricOpenRecs: document.getElementById('metricOpenRecs'),
+      warehouseBars: document.getElementById('warehouseBars'),
+      skuSelect: document.getElementById('skuSelect'),
+      qtyInput: document.getElementById('qtyInput'),
+      urgency: document.getElementById('urgency'),
+      reason: document.getElementById('reason'),
+      formMsg: document.getElementById('formMsg'),
+      reorderForm: document.getElementById('reorderForm'),
+      recRows: document.getElementById('recRows'),
+      roleSelect: document.getElementById('roleSelect'),
+      roleBadge: document.getElementById('roleBadge'),
+      auditLog: document.getElementById('auditLog'),
+      exportBtn: document.getElementById('exportBtn')
+    };
+
+    let sortKey = 'coverageDays';
+    let sortDir = 'asc';
+
+    function timeNow() {
+      return new Date().toISOString().replace('T', ' ').slice(0, 16);
+    }
+
+    function enrich(row) {
+      const coverageDays = Number((row.onHand / row.dailyUsage).toFixed(1));
+      const leadConsumption = row.dailyUsage * row.leadDays;
+      const stockoutInLead = row.onHand < leadConsumption;
+      let risk = 'Healthy';
+      if (row.onHand < row.reorderPoint || stockoutInLead) risk = 'At Risk';
+      else if (coverageDays < row.leadDays * 1.4) risk = 'Watch';
+      return { ...row, coverageDays, stockoutInLead, risk };
+    }
+
+    function filteredRows() {
+      const query = ui.search.value.trim().toLowerCase();
+      const wh = ui.warehouseFilter.value;
+      const risk = ui.riskFilter.value;
+
+      return skuData
+        .map(enrich)
+        .filter(r => {
+          const matchQ = !query || `${r.sku} ${r.item}`.toLowerCase().includes(query);
+          const matchW = wh === 'all' || r.warehouse === wh;
+          const matchR = risk === 'all' || r.risk === risk;
+          return matchQ && matchW && matchR;
+        })
+        .sort((a, b) => {
+          const av = a[sortKey];
+          const bv = b[sortKey];
+          if (typeof av === 'number' && typeof bv === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+          return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+        });
+    }
+
+    function riskBadge(risk) {
+      const cls = risk === 'At Risk'
+        ? 'bg-rose-950 text-rose-300 border-rose-800'
+        : risk === 'Watch'
+          ? 'bg-amber-950 text-amber-300 border-amber-800'
+          : 'bg-emerald-950 text-emerald-300 border-emerald-800';
+      return `<span class="text-xs px-2 py-1 rounded-full border ${cls}">${risk}</span>`;
+    }
+
+    function renderSkuTable() {
+      const rows = filteredRows();
+      ui.skuRows.innerHTML = rows.map(r => `
+        <tr class="border-t border-slate-800 hover:bg-slate-800/40">
+          <td class="px-3 py-2 font-mono text-xs">${r.sku}</td>
+          <td class="px-3 py-2">${r.item}</td>
+          <td class="px-3 py-2">${r.warehouse}</td>
+          <td class="px-3 py-2 text-right">${r.onHand}</td>
+          <td class="px-3 py-2 text-right">${r.reorderPoint}</td>
+          <td class="px-3 py-2 text-right">${r.leadDays}</td>
+          <td class="px-3 py-2 text-right">${r.coverageDays}d</td>
+          <td class="px-3 py-2">${riskBadge(r.risk)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderMetricsAndChart() {
+      const all = skuData.map(enrich);
+      ui.metricSkus.textContent = all.length;
+      ui.metricRisk.textContent = all.filter(r => r.risk === 'At Risk').length;
+      ui.metricStockout.textContent = all.filter(r => r.stockoutInLead).length;
+      ui.metricOpenRecs.textContent = recommendations.filter(r => !['Rejected', 'PO Created'].includes(r.status)).length;
+
+      const byWarehouse = {};
+      all.filter(r => r.risk === 'At Risk').forEach(r => {
+        byWarehouse[r.warehouse] = (byWarehouse[r.warehouse] || 0) + 1;
+      });
+      const max = Math.max(1, ...Object.values(byWarehouse));
+      const allWarehouses = [...new Set(skuData.map(r => r.warehouse))];
+
+      ui.warehouseBars.innerHTML = allWarehouses.map(w => {
+        const value = byWarehouse[w] || 0;
+        const width = Math.round((value / max) * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span>${w}</span><span>${value}</span></div>
+            <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-2 bg-rose-500 rounded-full" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRecs() {
+      const role = ui.roleSelect.value;
+      ui.roleBadge.textContent = `Role: ${role[0].toUpperCase()}${role.slice(1)}`;
+
+      ui.recRows.innerHTML = recommendations.map(r => {
+        const actionButtons = actionsFor(r, role);
+        return `
+          <tr class="border-t border-slate-800 hover:bg-slate-800/40">
+            <td class="px-3 py-2 font-mono text-xs">${r.sku}</td>
+            <td class="px-3 py-2 text-right">${r.qty}</td>
+            <td class="px-3 py-2">${r.urgency}</td>
+            <td class="px-3 py-2">${r.status}</td>
+            <td class="px-3 py-2">${actionButtons}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function actionsFor(rec, role) {
+      const btn = (label, action, style='bg-slate-700 hover:bg-slate-600') =>
+        `<button data-id="${rec.id}" data-action="${action}" class="${style} text-white text-xs px-2 py-1 rounded mr-1 mb-1">${label}</button>`;
+
+      if (role === 'planner' && rec.status === 'Draft') return btn('Submit', 'submit', 'bg-cyan-700 hover:bg-cyan-600');
+      if (role === 'manager' && rec.status === 'Submitted') {
+        return btn('Approve', 'approve', 'bg-emerald-700 hover:bg-emerald-600') + btn('Reject', 'reject', 'bg-rose-700 hover:bg-rose-600');
+      }
+      if (role === 'procurement' && rec.status === 'Manager Approved') return btn('Create PO', 'po', 'bg-indigo-700 hover:bg-indigo-600');
+      return '<span class="text-xs text-slate-500">No action</span>';
+    }
+
+    function transitionStatus(id, action) {
+      const rec = recommendations.find(r => r.id === id);
+      if (!rec) return;
+      const prev = rec.status;
+      if (action === 'submit' && rec.status === 'Draft') rec.status = 'Submitted';
+      if (action === 'approve' && rec.status === 'Submitted') rec.status = 'Manager Approved';
+      if (action === 'reject' && rec.status === 'Submitted') rec.status = 'Rejected';
+      if (action === 'po' && rec.status === 'Manager Approved') rec.status = 'PO Created';
+
+      if (prev !== rec.status) {
+        audit.unshift(`${timeNow()} ${ui.roleSelect.value} changed ${rec.sku} from ${prev} to ${rec.status}.`);
+        renderAll();
+      }
+    }
+
+    function fillSelectors() {
+      const warehouses = [...new Set(skuData.map(r => r.warehouse))];
+      ui.warehouseFilter.innerHTML = '<option value="all">All</option>' + warehouses.map(w => `<option value="${w}">${w}</option>`).join('');
+      ui.skuSelect.innerHTML = skuData.map(r => `<option value="${r.sku}">${r.sku} — ${r.item}</option>`).join('');
+    }
+
+    function renderAudit() {
+      ui.auditLog.innerHTML = audit.slice(0, 8).map(line => `<li class="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg">${line}</li>`).join('');
+    }
+
+    function exportCsv() {
+      const rows = filteredRows();
+      const header = ['sku','item','warehouse','onHand','reorderPoint','leadDays','coverageDays','risk'];
+      const data = rows.map(r => [r.sku, r.item, r.warehouse, r.onHand, r.reorderPoint, r.leadDays, r.coverageDays, r.risk]);
+      const csv = [header, ...data].map(row => row.map(cell => `"${String(cell).replaceAll('"','""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reorder-risk-radar.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      audit.unshift(`${timeNow()} ${ui.roleSelect.value} exported ${rows.length} rows to CSV.`);
+      renderAudit();
+    }
+
+    function renderAll() {
+      renderSkuTable();
+      renderMetricsAndChart();
+      renderRecs();
+      renderAudit();
+    }
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const next = btn.dataset.sort;
+        if (sortKey === next) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else {
+          sortKey = next;
+          sortDir = 'asc';
+        }
+        renderSkuTable();
+      });
+    });
+
+    [ui.search, ui.warehouseFilter, ui.riskFilter].forEach(el => el.addEventListener('input', renderSkuTable));
+    ui.roleSelect.addEventListener('change', renderRecs);
+
+    ui.reorderForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const sku = ui.skuSelect.value;
+      const qty = Number(ui.qtyInput.value);
+      const reason = ui.reason.value.trim();
+      const urgency = ui.urgency.value;
+      const row = skuData.find(r => r.sku === sku);
+      const maxOrder = row.maxStock - row.onHand;
+
+      if (!qty || qty < 1) {
+        ui.formMsg.textContent = 'Quantity must be greater than 0.';
+        ui.formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+      if (qty > maxOrder) {
+        ui.formMsg.textContent = `Policy check: qty exceeds max stock gap (${maxOrder}).`;
+        ui.formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+      if (reason.length < 10) {
+        ui.formMsg.textContent = 'Reason must be at least 10 characters.';
+        ui.formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      recommendations.unshift({ id: crypto.randomUUID(), sku, qty, urgency, reason, status: 'Draft' });
+      audit.unshift(`${timeNow()} planner created draft recommendation for ${sku} (qty ${qty}).`);
+      ui.reorderForm.reset();
+      ui.formMsg.textContent = 'Draft saved. Submit from planner role when ready.';
+      ui.formMsg.className = 'text-xs text-emerald-300';
+      renderAll();
+    });
+
+    ui.recRows.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      transitionStatus(btn.dataset.id, btn.dataset.action);
+    });
+
+    ui.exportBtn.addEventListener('click', exportCsv);
+
+    fillSelectors();
+    renderAll();
+  </script>
+</body>
+</html>

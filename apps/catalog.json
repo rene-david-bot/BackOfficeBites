@@ -1752,5 +1752,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-07",
+    "day": 79,
+    "slug": "2026-04-07-reorder-point-risk-radar",
+    "name": "Reorder Point Risk Radar",
+    "description": "Supply chain dashboard for reorder-point risk detection with policy-gated recommendations, role-based approvals, and audit-ready CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "reorder points",
+      "supply chain",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
