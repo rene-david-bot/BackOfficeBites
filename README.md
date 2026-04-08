@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Reorder Point Risk Radar** — Supply chain dashboard for reorder-point risk detection with policy-gated recommendations, role-based approvals, and audit-ready CSV export.
+**Incident SLA Command Center** — IT Ops dashboard for SLA-risk incidents with role-based exception approvals, policy validation, and audit-ready CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

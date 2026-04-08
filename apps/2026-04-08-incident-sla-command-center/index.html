@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incident SLA Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#020617'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Incident SLA Command Center</h1>
+        <p class="text-slate-400 mt-2">IT Ops dashboard for SLA-risk incidents, policy-gated exceptions, and auditable resolution flow.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option>NOC Analyst</option>
+            <option>Incident Manager</option>
+            <option>CAB Approver</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Severity</span>
+          <select id="severityFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="INC, service, owner..." class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+        </label>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6" id="kpiGrid"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div class="xl:col-span-2 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Incident Queue</h2>
+            <button id="exportBtn" class="text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5">Export CSV</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[760px]">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-2 font-medium">ID</th>
+                  <th class="text-left py-2 font-medium">Service</th>
+                  <th class="text-left py-2 font-medium">
+                    <button class="hover:text-white" data-sort="severity">Severity ↕</button>
+                  </th>
+                  <th class="text-left py-2 font-medium">Owner</th>
+                  <th class="text-left py-2 font-medium">
+                    <button class="hover:text-white" data-sort="minutesToBreach">Min to breach ↕</button>
+                  </th>
+                  <th class="text-left py-2 font-medium">State</th>
+                  <th class="text-left py-2 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="incidentTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Severity Mix</h2>
+          <div id="severityBars" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">SLA Exception Request</h2>
+          <form id="exceptionForm" class="space-y-3" novalidate>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Incident</span>
+              <select id="incidentSelect" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Extension (minutes)</span>
+              <input id="extensionInput" type="number" min="5" max="120" step="5" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Business justification</span>
+              <textarea id="reasonInput" rows="3" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Explain customer impact and mitigation plan"></textarea>
+            </label>
+            <button class="w-full bg-cyan-600 hover:bg-cyan-500 rounded-lg px-3 py-2 font-medium">Submit for approval</button>
+            <p id="formMessage" class="text-xs"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit Trail</h2>
+          <ul id="auditTrail" class="space-y-2 text-sm max-h-72 overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const incidents = [
+      { id: 'INC-4721', service: 'Payments API', severity: 'P1', owner: 'Marta', minutesToBreach: 12, state: 'Investigating', exception: 'None' },
+      { id: 'INC-4724', service: 'Warehouse Scanner Sync', severity: 'P2', owner: 'Jonas', minutesToBreach: 38, state: 'New', exception: 'None' },
+      { id: 'INC-4726', service: 'Employee SSO Login', severity: 'P1', owner: 'Lea', minutesToBreach: -6, state: 'Mitigated', exception: 'Pending CAB' },
+      { id: 'INC-4728', service: 'CRM Lead Import', severity: 'P3', owner: 'Ravi', minutesToBreach: 84, state: 'New', exception: 'None' },
+      { id: 'INC-4730', service: 'EDI Order Gateway', severity: 'P2', owner: 'Nina', minutesToBreach: 21, state: 'Investigating', exception: 'None' },
+      { id: 'INC-4732', service: 'VPN Access Europe', severity: 'P1', owner: 'Yusuf', minutesToBreach: 4, state: 'Investigating', exception: 'None' },
+      { id: 'INC-4735', service: 'Laptop Provisioning Bot', severity: 'P3', owner: 'Mila', minutesToBreach: 57, state: 'Resolved', exception: 'Approved +20m' }
+    ];
+
+    const rolePermissions = {
+      'NOC Analyst': { canResolve: false, canApprove: false, canRequest: true },
+      'Incident Manager': { canResolve: true, canApprove: false, canRequest: true },
+      'CAB Approver': { canResolve: false, canApprove: true, canRequest: false }
+    };
+
+    const severityWeight = { P1: 1, P2: 2, P3: 3 };
+
+    const stateFlow = {
+      New: 'Investigating',
+      Investigating: 'Mitigated',
+      Mitigated: 'Resolved',
+      Resolved: 'Resolved'
+    };
+
+    const audit = [
+      { ts: '08:02', text: 'INC-4726 exception request forwarded to CAB queue.' },
+      { ts: '08:04', text: 'INC-4732 bridge call opened with network vendor.' },
+      { ts: '08:07', text: 'SLA policy v2.8 loaded (P1 max extension 30 min).' }
+    ];
+
+    let sortKey = 'minutesToBreach';
+    let sortDir = 'asc';
+
+    const tableBody = document.getElementById('incidentTableBody');
+    const severityFilter = document.getElementById('severityFilter');
+    const searchInput = document.getElementById('searchInput');
+    const roleSelect = document.getElementById('roleSelect');
+    const incidentSelect = document.getElementById('incidentSelect');
+    const kpiGrid = document.getElementById('kpiGrid');
+    const severityBars = document.getElementById('severityBars');
+    const auditTrail = document.getElementById('auditTrail');
+    const formMessage = document.getElementById('formMessage');
+
+    function badgeClass(sev) {
+      return sev === 'P1' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : sev === 'P2' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    }
+
+    function roleView() {
+      return rolePermissions[roleSelect.value];
+    }
+
+    function filteredIncidents() {
+      const q = searchInput.value.trim().toLowerCase();
+      return incidents
+        .filter(i => severityFilter.value === 'all' || i.severity === severityFilter.value)
+        .filter(i => !q || [i.id, i.service, i.owner, i.state].join(' ').toLowerCase().includes(q))
+        .sort((a, b) => {
+          const base = sortKey === 'severity'
+            ? severityWeight[a.severity] - severityWeight[b.severity]
+            : a[sortKey] - b[sortKey];
+          return sortDir === 'asc' ? base : -base;
+        });
+    }
+
+    function renderKPIs(list) {
+      const open = list.filter(i => i.state !== 'Resolved').length;
+      const breached = list.filter(i => i.minutesToBreach < 0).length;
+      const pendingCab = list.filter(i => i.exception.includes('Pending')).length;
+      const mttr = Math.round(list.reduce((acc, i) => acc + Math.max(15, 120 - i.minutesToBreach), 0) / list.length);
+      const atRisk = list.filter(i => i.minutesToBreach <= 15 && i.state !== 'Resolved').length;
+
+      const cards = [
+        ['Open incidents', open, 'text-cyan-300'],
+        ['Breached SLAs', breached, 'text-rose-300'],
+        ['Pending CAB', pendingCab, 'text-amber-300'],
+        ['Avg MTTR (min)', mttr, 'text-fuchsia-300'],
+        ['At-risk next 15m', atRisk, 'text-orange-300']
+      ];
+
+      kpiGrid.innerHTML = cards.map(([label, value, tone]) => `
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${tone}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderSeverityBars(list) {
+      const total = list.length || 1;
+      const counts = ['P1', 'P2', 'P3'].map(sev => ({ sev, count: list.filter(i => i.severity === sev).length }));
+      severityBars.innerHTML = counts.map(({ sev, count }) => {
+        const width = Math.round((count / total) * 100);
+        const hue = sev === 'P1' ? 'bg-rose-500' : sev === 'P2' ? 'bg-amber-500' : 'bg-emerald-500';
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1 text-slate-400"><span>${sev}</span><span>${count} incidents</span></div>
+            <div class="h-2 rounded bg-slate-800 overflow-hidden">
+              <div class="h-full ${hue}" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTable() {
+      const list = filteredIncidents();
+      renderKPIs(list);
+      renderSeverityBars(list);
+
+      tableBody.innerHTML = list.map(i => {
+        const nextState = stateFlow[i.state];
+        const canResolve = roleView().canResolve && i.state !== 'Resolved';
+        const canApprove = roleView().canApprove && i.exception === 'Pending CAB';
+        return `
+          <tr class="border-b border-slate-800/70 hover:bg-slate-800/40">
+            <td class="py-2 pr-2 font-mono text-xs">${i.id}</td>
+            <td class="py-2 pr-2">${i.service}</td>
+            <td class="py-2 pr-2"><span class="inline-flex px-2 py-0.5 border rounded-full text-xs ${badgeClass(i.severity)}">${i.severity}</span></td>
+            <td class="py-2 pr-2">${i.owner}</td>
+            <td class="py-2 pr-2 ${i.minutesToBreach < 0 ? 'text-rose-300' : i.minutesToBreach <= 15 ? 'text-amber-300' : 'text-slate-200'}">${i.minutesToBreach}</td>
+            <td class="py-2 pr-2">${i.state}</td>
+            <td class="py-2 pr-2">
+              <div class="flex gap-2 flex-wrap">
+                <button data-action="advance" data-id="${i.id}" ${canResolve ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-slate-700 ${canResolve ? 'hover:bg-slate-700' : 'opacity-30 cursor-not-allowed'}">${nextState === i.state ? 'Locked' : 'Move → ' + nextState}</button>
+                <button data-action="approve" data-id="${i.id}" ${canApprove ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-cyan-600/50 ${canApprove ? 'hover:bg-cyan-600/30' : 'opacity-30 cursor-not-allowed'}">Approve exception</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAudit() {
+      auditTrail.innerHTML = audit.slice().reverse().map(a => `
+        <li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/70">
+          <p class="text-xs text-slate-400">${a.ts}</p>
+          <p>${a.text}</p>
+        </li>
+      `).join('');
+    }
+
+    function refreshIncidentSelect() {
+      incidentSelect.innerHTML = incidents
+        .filter(i => i.state !== 'Resolved')
+        .map(i => `<option value="${i.id}">${i.id} — ${i.service} (${i.severity})</option>`)
+        .join('');
+    }
+
+    function addAudit(text) {
+      const now = new Date();
+      audit.push({ ts: now.toISOString().slice(11, 16), text });
+      renderAudit();
+    }
+
+    document.getElementById('exceptionForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      formMessage.textContent = '';
+
+      if (!roleView().canRequest) {
+        formMessage.textContent = 'Current role cannot submit SLA exception requests.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const incidentId = incidentSelect.value;
+      const extension = Number(document.getElementById('extensionInput').value);
+      const reason = document.getElementById('reasonInput').value.trim();
+      const incident = incidents.find(i => i.id === incidentId);
+
+      if (!incident || !extension || !reason) {
+        formMessage.textContent = 'All fields are required.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const maxByPolicy = incident.severity === 'P1' ? 30 : incident.severity === 'P2' ? 60 : 90;
+      if (extension > maxByPolicy) {
+        formMessage.textContent = `Policy violation: ${incident.severity} can request max ${maxByPolicy} minutes.`;
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (reason.length < 20) {
+        formMessage.textContent = 'Justification must be at least 20 characters for audit compliance.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      incident.exception = 'Pending CAB';
+      addAudit(`${incident.id} exception request submitted (+${extension}m). Reason: ${reason}`);
+      formMessage.textContent = `Request submitted for ${incident.id}.`;
+      formMessage.className = 'text-xs text-emerald-300';
+      e.target.reset();
+      refreshIncidentSelect();
+      renderTable();
+    });
+
+    tableBody.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      const incident = incidents.find(i => i.id === id);
+      if (!incident) return;
+
+      if (action === 'advance' && roleView().canResolve && incident.state !== 'Resolved') {
+        const from = incident.state;
+        incident.state = stateFlow[incident.state];
+        addAudit(`${id} state changed ${from} → ${incident.state} by ${roleSelect.value}.`);
+      }
+
+      if (action === 'approve' && roleView().canApprove && incident.exception === 'Pending CAB') {
+        incident.exception = 'Approved +20m';
+        incident.minutesToBreach += 20;
+        addAudit(`${id} SLA exception approved by CAB (+20m).`);
+      }
+
+      refreshIncidentSelect();
+      renderTable();
+    });
+
+    document.querySelectorAll('[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const next = btn.dataset.sort;
+        if (sortKey === next) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortKey = next; sortDir = 'asc'; }
+        renderTable();
+      });
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const headers = ['id', 'service', 'severity', 'owner', 'minutesToBreach', 'state', 'exception'];
+      const rows = filteredIncidents().map(i => headers.map(h => `"${String(i[h]).replaceAll('"', '""')}"`).join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'incident-sla-export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('CSV export generated for current filtered queue.');
+    });
+
+    [severityFilter, searchInput, roleSelect].forEach(el => el.addEventListener('input', () => {
+      refreshIncidentSelect();
+      renderTable();
+    }));
+
+    refreshIncidentSelect();
+    renderAudit();
+    renderTable();
+  </script>
+</body>
+</html>

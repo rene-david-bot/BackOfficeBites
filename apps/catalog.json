@@ -1777,5 +1777,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-08",
+    "day": 80,
+    "slug": "2026-04-08-incident-sla-command-center",
+    "name": "Incident SLA Command Center",
+    "description": "IT Ops dashboard for SLA-risk incidents with role-based exception approvals, policy validation, and audit-ready CSV export.",
+    "category": "IT Ops",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "incident management",
+      "it ops",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
