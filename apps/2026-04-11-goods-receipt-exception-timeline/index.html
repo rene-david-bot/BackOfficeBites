@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goods Receipt Exception Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:px-6 lg:px-8">
+    <a href="../../index.html" class="text-amber-300 hover:text-amber-200 text-sm">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Goods Receipt Exception Timeline</h1>
+    <p class="text-slate-400 mt-1">Supply Chain timeline desk for receiving discrepancies, policy-gated approvals, and audit-ready exports.</p>
+
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6" id="kpis" aria-label="Summary metrics"></section>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div class="md:col-span-2">
+          <label for="search" class="block text-sm text-slate-300 mb-1">Search</label>
+          <input id="search" type="text" placeholder="PO, supplier, SKU" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2" />
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-sm text-slate-300 mb-1">Status</label>
+          <select id="statusFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+            <option>Logged</option>
+            <option>Investigating</option>
+            <option>Pending Approval</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>Escalated</option>
+          </select>
+        </div>
+        <div>
+          <label for="warehouseFilter" class="block text-sm text-slate-300 mb-1">Warehouse</label>
+          <select id="warehouseFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="severityFilter" class="block text-sm text-slate-300 mb-1">Severity</label>
+          <select id="severityFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="block text-sm text-slate-300 mb-1">Sort by</label>
+          <select id="sortBy" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="dueSoon">Due date (soonest)</option>
+            <option value="varianceHigh">Variance % (highest)</option>
+            <option value="valueHigh">At-risk value (highest)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-end gap-3 mt-4">
+        <div>
+          <label for="role" class="block text-sm text-slate-300 mb-1">Role-based view</label>
+          <select id="role" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2">
+            <option>Receiver</option>
+            <option>Supervisor</option>
+            <option>Finance Controller</option>
+          </select>
+        </div>
+        <button id="exportCsv" class="bg-amber-400 text-slate-900 font-semibold px-4 py-2 rounded-lg hover:bg-amber-300">Export filtered CSV</button>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-6">
+      <div class="lg:col-span-3 space-y-3" id="timelineList" aria-live="polite"></div>
+      <aside class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 h-fit sticky top-4">
+        <h2 class="text-lg font-semibold">Exception detail</h2>
+        <p class="text-sm text-slate-400 mb-3">Select an exception to review timeline events, policy checks, and approvals.</p>
+        <div id="detail"></div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const data = [
+      {
+        id: 'GR-4821', po: 'PO-90831', supplier: 'Nordic Fasteners GmbH', sku: 'NF-M8-440', warehouse: 'Dresden-DC1',
+        variancePct: 2.4, atRiskValue: 8400, severity: 'Low', status: 'Logged', due: '2026-04-11T11:00:00Z',
+        timeline: ['Goods received', 'Quantity mismatch detected'],
+        audit: [{ t: '2026-04-11 07:10', actor: 'System', action: 'Exception logged', note: 'Expected 4,000, received 3,904' }]
+      },
+      {
+        id: 'GR-4824', po: 'PO-90852', supplier: 'Baltic Components AG', sku: 'BC-SERVO-22', warehouse: 'Leipzig-DC2',
+        variancePct: 6.8, atRiskValue: 31500, severity: 'High', status: 'Pending Approval', due: '2026-04-11T09:40:00Z',
+        timeline: ['Goods received', 'Damage evidence uploaded', 'Pending approval gate'],
+        audit: [{ t: '2026-04-11 06:40', actor: 'Receiver', action: 'Moved to pending approval', note: 'Packaging crushed' }]
+      },
+      {
+        id: 'GR-4828', po: 'PO-90873', supplier: 'Vega Logistics', sku: 'VG-BELT-90', warehouse: 'Dresden-DC1',
+        variancePct: 4.1, atRiskValue: 12200, severity: 'Medium', status: 'Investigating', due: '2026-04-11T12:20:00Z',
+        timeline: ['Goods received', 'Count variance under review'],
+        audit: [{ t: '2026-04-11 07:55', actor: 'Supervisor', action: 'Investigation started', note: 'Cycle recount requested' }]
+      },
+      {
+        id: 'GR-4830', po: 'PO-90901', supplier: 'Hanse Robotics Parts', sku: 'HRP-GEAR-11', warehouse: 'Berlin-HUB',
+        variancePct: 9.3, atRiskValue: 46800, severity: 'High', status: 'Pending Approval', due: '2026-04-11T09:10:00Z',
+        timeline: ['Goods received', 'Spec mismatch flagged', 'Pending finance gate'],
+        audit: [{ t: '2026-04-11 06:25', actor: 'Receiver', action: 'Escalation requested', note: 'Diameter out of tolerance' }]
+      },
+      {
+        id: 'GR-4812', po: 'PO-90765', supplier: 'Saxon Plastics', sku: 'SP-CASE-17', warehouse: 'Berlin-HUB',
+        variancePct: 1.1, atRiskValue: 3200, severity: 'Low', status: 'Approved', due: '2026-04-11T08:50:00Z',
+        timeline: ['Goods received', 'Minor variance accepted'],
+        audit: [{ t: '2026-04-11 05:50', actor: 'Supervisor', action: 'Approved exception', note: 'Within local threshold' }]
+      },
+      {
+        id: 'GR-4809', po: 'PO-90711', supplier: 'Delta Hydraulics', sku: 'DH-PUMP-04', warehouse: 'Leipzig-DC2',
+        variancePct: 7.9, atRiskValue: 27400, severity: 'High', status: 'Rejected', due: '2026-04-11T08:20:00Z',
+        timeline: ['Goods received', 'Damage and leak observed', 'Rejected and return initiated'],
+        audit: [{ t: '2026-04-11 04:48', actor: 'Finance Controller', action: 'Rejected exception', note: 'Immediate supplier return required' }]
+      }
+    ];
+
+    const state = {
+      items: structuredClone(data),
+      selectedId: data[0].id,
+      role: 'Receiver',
+      search: '',
+      status: 'all',
+      warehouse: 'all',
+      severity: 'all',
+      sortBy: 'dueSoon'
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const fmtMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+
+    const badgeClass = (status) => ({
+      'Logged': 'bg-slate-700 text-slate-100',
+      'Investigating': 'bg-sky-900 text-sky-200',
+      'Pending Approval': 'bg-amber-900 text-amber-200',
+      'Approved': 'bg-emerald-900 text-emerald-200',
+      'Rejected': 'bg-rose-900 text-rose-200',
+      'Escalated': 'bg-violet-900 text-violet-200'
+    }[status] || 'bg-slate-700 text-slate-100');
+
+    function filtered() {
+      const q = state.search.toLowerCase().trim();
+      let out = state.items.filter(i => {
+        const text = `${i.id} ${i.po} ${i.supplier} ${i.sku}`.toLowerCase();
+        return (!q || text.includes(q))
+          && (state.status === 'all' || i.status === state.status)
+          && (state.warehouse === 'all' || i.warehouse === state.warehouse)
+          && (state.severity === 'all' || i.severity === state.severity);
+      });
+      out.sort((a, b) => {
+        if (state.sortBy === 'varianceHigh') return b.variancePct - a.variancePct;
+        if (state.sortBy === 'valueHigh') return b.atRiskValue - a.atRiskValue;
+        return new Date(a.due) - new Date(b.due);
+      });
+      return out;
+    }
+
+    function renderKpis() {
+      const list = filtered();
+      const pending = list.filter(i => i.status === 'Pending Approval').length;
+      const high = list.filter(i => i.severity === 'High').length;
+      const value = list.reduce((s, i) => s + i.atRiskValue, 0);
+      const overdue = list.filter(i => new Date(i.due) < new Date() && !['Approved', 'Rejected'].includes(i.status)).length;
+      const cards = [
+        ['Visible Exceptions', list.length, 'text-sky-300'],
+        ['Pending Approval', pending, 'text-amber-300'],
+        ['High Severity', high, 'text-rose-300'],
+        ['At-Risk Value', fmtMoney(value), 'text-emerald-300'],
+        ['Overdue', overdue, 'text-violet-300']
+      ];
+      $('kpis').innerHTML = cards.map(([k, v, c]) => `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 col-span-1">
+          <div class="text-xs uppercase tracking-wide text-slate-400">${k}</div>
+          <div class="text-xl font-semibold ${c}">${v}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderList() {
+      const list = filtered();
+      $('timelineList').innerHTML = list.map(i => {
+        const active = i.id === state.selectedId ? 'ring-2 ring-amber-400' : 'hover:border-slate-600';
+        return `
+          <article class="bg-slate-900 border border-slate-800 rounded-xl p-4 ${active}">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="font-semibold">${i.id} · ${i.supplier}</h3>
+                <p class="text-sm text-slate-400">${i.po} · ${i.sku} · ${i.warehouse}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full ${badgeClass(i.status)}">${i.status}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
+              <div><span class="text-slate-400">Variance</span><div class="font-medium">${i.variancePct}%</div></div>
+              <div><span class="text-slate-400">At risk</span><div class="font-medium">${fmtMoney(i.atRiskValue)}</div></div>
+              <div><span class="text-slate-400">Due</span><div class="font-medium">${new Date(i.due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>
+            </div>
+            <div class="mt-3 flex items-center justify-between">
+              <div class="text-xs text-slate-500">Timeline: ${i.timeline.join(' → ')}</div>
+              <button data-open="${i.id}" class="text-sm text-amber-300 hover:text-amber-200">Open</button>
+            </div>
+          </article>
+        `;
+      }).join('') || '<p class="text-slate-400">No exceptions match your filters.</p>';
+
+      document.querySelectorAll('[data-open]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.open;
+          render();
+        });
+      });
+    }
+
+    function nextStatus(item) {
+      if (item.status === 'Logged') return 'Investigating';
+      if (item.status === 'Investigating') return 'Pending Approval';
+      if (item.status === 'Pending Approval') return 'Approved';
+      return null;
+    }
+
+    function addAudit(item, action, note = '') {
+      item.audit.unshift({
+        t: new Date().toISOString().slice(0,16).replace('T', ' '),
+        actor: state.role,
+        action,
+        note
+      });
+    }
+
+    function renderDetail() {
+      const item = state.items.find(i => i.id === state.selectedId);
+      if (!item) {
+        $('detail').innerHTML = '<p class="text-slate-400">Select an exception.</p>';
+        return;
+      }
+
+      const blocked = item.status === 'Pending Approval' && item.variancePct > 5 && state.role !== 'Finance Controller';
+      const next = nextStatus(item);
+
+      $('detail').innerHTML = `
+        <div class="space-y-3 text-sm">
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <div class="font-semibold">${item.id}</div>
+            <div class="text-slate-400">${item.po} · ${item.supplier}</div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span class="px-2 py-1 rounded-full ${badgeClass(item.status)} text-xs">${item.status}</span>
+              <span class="px-2 py-1 rounded-full bg-slate-800 text-xs">${item.severity}</span>
+              <span class="px-2 py-1 rounded-full bg-slate-800 text-xs">${item.variancePct}% variance</span>
+            </div>
+            <p class="mt-2 text-slate-300">At-risk value: <strong>${fmtMoney(item.atRiskValue)}</strong></p>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <h3 class="font-semibold mb-2">Policy validation</h3>
+            <ul class="space-y-1 text-slate-300 list-disc pl-4">
+              <li>Variance ≤ 5% can be approved by Supervisor or higher.</li>
+              <li>Variance > 5% requires Finance Controller approval.</li>
+              <li>Rejections require a reason of at least 8 characters.</li>
+            </ul>
+            ${blocked ? '<p class="mt-2 text-rose-300">Blocked: switch role to Finance Controller to approve this exception.</p>' : '<p class="mt-2 text-emerald-300">Current role can execute the next allowed action.</p>'}
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button id="advanceBtn" class="bg-sky-700 hover:bg-sky-600 px-3 py-2 rounded-lg disabled:opacity-40" ${!next || blocked ? 'disabled' : ''}>${next ? `Move to ${next}` : 'No further transition'}</button>
+            <button id="escalateBtn" class="bg-violet-700 hover:bg-violet-600 px-3 py-2 rounded-lg ${item.status === 'Escalated' ? 'opacity-40 pointer-events-none' : ''}">Escalate</button>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <label for="rejectNote" class="block text-sm text-slate-300 mb-1">Reject reason (required)</label>
+            <textarea id="rejectNote" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1" placeholder="Explain why this exception is rejected..."></textarea>
+            <button id="rejectBtn" class="mt-2 bg-rose-700 hover:bg-rose-600 px-3 py-2 rounded-lg">Reject exception</button>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <h3 class="font-semibold mb-2">Audit trail</h3>
+            <div class="max-h-48 overflow-auto">
+              <table class="w-full text-xs">
+                <thead class="text-slate-400"><tr><th class="text-left py-1">Time</th><th class="text-left">Actor</th><th class="text-left">Action</th></tr></thead>
+                <tbody>
+                  ${item.audit.map(a => `<tr class="border-t border-slate-800"><td class="py-1 pr-2">${a.t}</td><td class="pr-2">${a.actor}</td><td>${a.action}${a.note ? ` · ${a.note}` : ''}</td></tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      $('advanceBtn')?.addEventListener('click', () => {
+        const target = nextStatus(item);
+        if (!target) return;
+        if (target === 'Approved' && item.variancePct > 5 && state.role !== 'Finance Controller') {
+          alert('Policy gate: Finance Controller required for approvals above 5% variance.');
+          return;
+        }
+        item.status = target;
+        addAudit(item, `Status changed to ${target}`);
+        if (target === 'Approved') item.timeline.push('Approved and posted');
+        render();
+      });
+
+      $('escalateBtn')?.addEventListener('click', () => {
+        item.status = 'Escalated';
+        item.timeline.push('Escalated to central procurement');
+        addAudit(item, 'Escalated', 'Manual escalation initiated');
+        render();
+      });
+
+      $('rejectBtn')?.addEventListener('click', () => {
+        const note = $('rejectNote').value.trim();
+        if (note.length < 8) {
+          alert('Validation: rejection reason must be at least 8 characters.');
+          return;
+        }
+        item.status = 'Rejected';
+        item.timeline.push('Rejected and supplier return started');
+        addAudit(item, 'Rejected', note);
+        render();
+      });
+    }
+
+    function exportCsv() {
+      const rows = filtered().map(i => ({
+        id: i.id,
+        po: i.po,
+        supplier: i.supplier,
+        warehouse: i.warehouse,
+        status: i.status,
+        severity: i.severity,
+        variancePct: i.variancePct,
+        atRiskValue: i.atRiskValue,
+        dueUtc: i.due
+      }));
+      const header = Object.keys(rows[0] || { id:'',po:'',supplier:'',warehouse:'',status:'',severity:'',variancePct:'',atRiskValue:'',dueUtc:'' });
+      const csv = [header.join(','), ...rows.map(r => header.map(h => `"${String(r[h]).replaceAll('"','""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `goods-receipt-exceptions-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function wireControls() {
+      $('search').addEventListener('input', e => { state.search = e.target.value; render(); });
+      $('statusFilter').addEventListener('change', e => { state.status = e.target.value; render(); });
+      $('warehouseFilter').addEventListener('change', e => { state.warehouse = e.target.value; render(); });
+      $('severityFilter').addEventListener('change', e => { state.severity = e.target.value; render(); });
+      $('sortBy').addEventListener('change', e => { state.sortBy = e.target.value; render(); });
+      $('role').addEventListener('change', e => { state.role = e.target.value; renderDetail(); });
+      $('exportCsv').addEventListener('click', exportCsv);
+
+      const warehouses = [...new Set(state.items.map(i => i.warehouse))];
+      $('warehouseFilter').innerHTML += warehouses.map(w => `<option>${w}</option>`).join('');
+    }
+
+    function render() {
+      renderKpis();
+      renderList();
+      renderDetail();
+    }
+
+    wireControls();
+    render();
+  </script>
+</body>
+</html>

@@ -1802,5 +1802,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-11",
+    "day": 81,
+    "slug": "2026-04-11-goods-receipt-exception-timeline",
+    "name": "Goods Receipt Exception Timeline",
+    "description": "Supply chain timeline workspace for goods-receipt discrepancies with policy-gated approvals, role-based actions, and audit-ready CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Timeline",
+    "tags": [
+      "goods receipt",
+      "supply chain",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
