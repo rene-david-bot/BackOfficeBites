@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>License Renewal Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">License Renewal Control Grid</h1>
+        <p class="text-slate-400 mt-2">IT Ops data grid for renewal risk, policy validation, approvals, and auditable software-license governance.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full lg:w-auto">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option>IT Asset Analyst</option>
+            <option>Security Lead</option>
+            <option>Finance Controller</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Vendor</span>
+          <select id="vendorFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All</option>
+            <option>Compliant</option>
+            <option>Pending Approval</option>
+            <option>At Risk</option>
+            <option>Expired</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Product, owner, ID..." class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+        </label>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6" id="kpiGrid"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div class="xl:col-span-2 bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 class="text-lg font-semibold">License Portfolio</h2>
+          <button id="exportBtn" class="text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5">Export CSV</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[920px]">
+            <thead class="text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="text-left py-2 font-medium">ID</th>
+                <th class="text-left py-2 font-medium">Product</th>
+                <th class="text-left py-2 font-medium">Vendor</th>
+                <th class="text-left py-2 font-medium">Owner</th>
+                <th class="text-left py-2 font-medium"><button data-sort="daysToRenew" class="hover:text-white">Days left ↕</button></th>
+                <th class="text-left py-2 font-medium"><button data-sort="utilization" class="hover:text-white">Utilization ↕</button></th>
+                <th class="text-left py-2 font-medium"><button data-sort="annualCost" class="hover:text-white">Annual cost ↕</button></th>
+                <th class="text-left py-2 font-medium">Status</th>
+                <th class="text-left py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Policy Exception Request</h2>
+          <form id="exceptionForm" class="space-y-3" novalidate>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">License</span>
+              <select id="licenseSelect" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Requested extension (days)</span>
+              <input id="extensionInput" type="number" min="7" max="120" step="1" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Reason</span>
+              <textarea id="reasonInput" rows="3" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" placeholder="Explain procurement or migration dependency"></textarea>
+            </label>
+            <button class="w-full bg-cyan-600 hover:bg-cyan-500 rounded-lg px-3 py-2 font-medium">Submit exception</button>
+            <p id="formMessage" class="text-xs"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit Trail</h2>
+          <ul id="auditTrail" class="space-y-2 text-sm max-h-72 overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const licenses = [
+      { id: 'LIC-1840', product: 'Okta Workforce', vendor: 'Okta', owner: 'IAM Team', daysToRenew: 18, utilization: 87, annualCost: 98200, status: 'Compliant', autoRenew: true },
+      { id: 'LIC-1843', product: 'Miro Enterprise', vendor: 'Miro', owner: 'PMO', daysToRenew: 9, utilization: 44, annualCost: 61200, status: 'At Risk', autoRenew: true },
+      { id: 'LIC-1848', product: 'Datadog APM', vendor: 'Datadog', owner: 'SRE', daysToRenew: 31, utilization: 91, annualCost: 126400, status: 'Compliant', autoRenew: true },
+      { id: 'LIC-1852', product: 'Atlassian Cloud', vendor: 'Atlassian', owner: 'Engineering Ops', daysToRenew: 5, utilization: 79, annualCost: 146000, status: 'Pending Approval', autoRenew: false },
+      { id: 'LIC-1857', product: 'M365 E5', vendor: 'Microsoft', owner: 'Workplace IT', daysToRenew: 42, utilization: 95, annualCost: 221700, status: 'Compliant', autoRenew: true },
+      { id: 'LIC-1861', product: 'Zoom Rooms', vendor: 'Zoom', owner: 'Workplace IT', daysToRenew: -2, utilization: 38, annualCost: 33800, status: 'Expired', autoRenew: false },
+      { id: 'LIC-1864', product: 'CrowdStrike Falcon', vendor: 'CrowdStrike', owner: 'SecOps', daysToRenew: 12, utilization: 84, annualCost: 89400, status: 'At Risk', autoRenew: false }
+    ];
+
+    const rolePermissions = {
+      'IT Asset Analyst': { canApprove: false, canToggleRenewal: false, canRequestException: true },
+      'Security Lead': { canApprove: true, canToggleRenewal: false, canRequestException: false },
+      'Finance Controller': { canApprove: true, canToggleRenewal: true, canRequestException: true }
+    };
+
+    let sortKey = 'daysToRenew';
+    let sortDir = 'asc';
+
+    const tableBody = document.getElementById('tableBody');
+    const vendorFilter = document.getElementById('vendorFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+    const roleSelect = document.getElementById('roleSelect');
+    const licenseSelect = document.getElementById('licenseSelect');
+    const formMessage = document.getElementById('formMessage');
+    const kpiGrid = document.getElementById('kpiGrid');
+    const auditTrail = document.getElementById('auditTrail');
+
+    const audit = [
+      { ts: '08:03', text: 'Policy baseline loaded: no auto-renew for utilization below 60% and cost above €50k.' },
+      { ts: '08:06', text: 'LIC-1852 routed to Security Lead for pending approval.' },
+      { ts: '08:08', text: 'Quarterly vendor cleanup campaign started for underused tools.' }
+    ];
+
+    function currency(num) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(num);
+    }
+
+    function roleView() {
+      return rolePermissions[roleSelect.value];
+    }
+
+    function addAudit(text) {
+      const now = new Date().toISOString().slice(11, 16);
+      audit.push({ ts: now, text });
+      renderAudit();
+    }
+
+    function statusClass(status) {
+      if (status === 'Compliant') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      if (status === 'Pending Approval') return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+      if (status === 'Expired') return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+    }
+
+    function filteredRows() {
+      const q = searchInput.value.trim().toLowerCase();
+      return licenses
+        .filter(row => vendorFilter.value === 'all' || row.vendor === vendorFilter.value)
+        .filter(row => statusFilter.value === 'all' || row.status === statusFilter.value)
+        .filter(row => !q || [row.id, row.product, row.vendor, row.owner, row.status].join(' ').toLowerCase().includes(q))
+        .sort((a, b) => {
+          const valA = a[sortKey];
+          const valB = b[sortKey];
+          const base = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+          return sortDir === 'asc' ? base : -base;
+        });
+    }
+
+    function renderKPIs(rows) {
+      const dueSoon = rows.filter(r => r.daysToRenew <= 14 && r.daysToRenew >= 0).length;
+      const expired = rows.filter(r => r.daysToRenew < 0).length;
+      const atRisk = rows.filter(r => r.status === 'At Risk').length;
+      const spend = rows.reduce((acc, row) => acc + row.annualCost, 0);
+
+      const cards = [
+        ['Renewals ≤14d', dueSoon, 'text-amber-300'],
+        ['Expired contracts', expired, 'text-rose-300'],
+        ['At-risk licenses', atRisk, 'text-orange-300'],
+        ['Annual spend (visible)', currency(spend), 'text-cyan-300']
+      ];
+
+      kpiGrid.innerHTML = cards.map(([label, value, tone]) => `
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${tone}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      const permission = roleView();
+      renderKPIs(rows);
+
+      tableBody.innerHTML = rows.map(row => {
+        const canApprove = permission.canApprove && row.status === 'Pending Approval';
+        const canToggle = permission.canToggleRenewal;
+
+        return `
+          <tr class="border-b border-slate-800/70 hover:bg-slate-800/40">
+            <td class="py-2 pr-2 font-mono text-xs">${row.id}</td>
+            <td class="py-2 pr-2">${row.product}</td>
+            <td class="py-2 pr-2">${row.vendor}</td>
+            <td class="py-2 pr-2">${row.owner}</td>
+            <td class="py-2 pr-2 ${row.daysToRenew <= 7 ? 'text-rose-300' : row.daysToRenew <= 14 ? 'text-amber-300' : 'text-slate-200'}">${row.daysToRenew}</td>
+            <td class="py-2 pr-2">${row.utilization}%</td>
+            <td class="py-2 pr-2">${currency(row.annualCost)}</td>
+            <td class="py-2 pr-2"><span class="inline-flex px-2 py-0.5 border rounded-full text-xs ${statusClass(row.status)}">${row.status}</span></td>
+            <td class="py-2 pr-2">
+              <div class="flex flex-wrap gap-2">
+                <button data-action="approve" data-id="${row.id}" ${canApprove ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-cyan-600/50 ${canApprove ? 'hover:bg-cyan-600/30' : 'opacity-30 cursor-not-allowed'}">Approve</button>
+                <button data-action="toggle-renew" data-id="${row.id}" ${canToggle ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-slate-700 ${canToggle ? 'hover:bg-slate-700' : 'opacity-30 cursor-not-allowed'}">${row.autoRenew ? 'Disable auto-renew' : 'Enable auto-renew'}</button>
+                <button data-action="risk" data-id="${row.id}" class="text-xs px-2 py-1 rounded border border-amber-600/40 hover:bg-amber-600/20">Flag risk</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAudit() {
+      auditTrail.innerHTML = audit.slice().reverse().map(item => `
+        <li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/70">
+          <p class="text-xs text-slate-400">${item.ts}</p>
+          <p>${item.text}</p>
+        </li>
+      `).join('');
+    }
+
+    function refreshLicenseSelect() {
+      licenseSelect.innerHTML = licenses
+        .filter(row => row.status !== 'Expired')
+        .map(row => `<option value="${row.id}">${row.id} — ${row.product} (${row.daysToRenew}d)</option>`)
+        .join('');
+    }
+
+    document.getElementById('exceptionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      formMessage.textContent = '';
+
+      if (!roleView().canRequestException) {
+        formMessage.textContent = 'Current role cannot submit exception requests.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const id = licenseSelect.value;
+      const extension = Number(document.getElementById('extensionInput').value);
+      const reason = document.getElementById('reasonInput').value.trim();
+      const target = licenses.find(row => row.id === id);
+
+      if (!target || !extension || !reason) {
+        formMessage.textContent = 'All fields are required.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (reason.length < 20) {
+        formMessage.textContent = 'Reason must be at least 20 characters for audit compliance.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (extension > 45 && target.status !== 'At Risk') {
+        formMessage.textContent = 'Policy rule: extensions above 45 days are only allowed for At Risk licenses.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      target.status = 'Pending Approval';
+      target.daysToRenew += extension;
+      addAudit(`${target.id} exception submitted (+${extension}d): ${reason}`);
+      formMessage.textContent = `Exception queued for ${target.id}.`;
+      formMessage.className = 'text-xs text-emerald-300';
+      event.target.reset();
+      refreshLicenseSelect();
+      renderTable();
+    });
+
+    tableBody.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const row = licenses.find(item => item.id === btn.dataset.id);
+      if (!row) return;
+
+      if (btn.dataset.action === 'approve' && roleView().canApprove && row.status === 'Pending Approval') {
+        row.status = row.daysToRenew < 0 ? 'Expired' : 'Compliant';
+        addAudit(`${row.id} approved by ${roleSelect.value}. Status set to ${row.status}.`);
+      }
+
+      if (btn.dataset.action === 'toggle-renew' && roleView().canToggleRenewal) {
+        const blocked = !row.autoRenew && row.utilization < 60 && row.annualCost > 50000;
+        if (blocked) {
+          addAudit(`${row.id} auto-renew blocked by policy (utilization ${row.utilization}%, cost ${currency(row.annualCost)}).`);
+        } else {
+          row.autoRenew = !row.autoRenew;
+          addAudit(`${row.id} auto-renew ${row.autoRenew ? 'enabled' : 'disabled'} by ${roleSelect.value}.`);
+        }
+      }
+
+      if (btn.dataset.action === 'risk') {
+        row.status = 'At Risk';
+        addAudit(`${row.id} marked At Risk by ${roleSelect.value}.`);
+      }
+
+      refreshLicenseSelect();
+      renderTable();
+    });
+
+    document.querySelectorAll('[data-sort]').forEach(button => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.sort;
+        if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else {
+          sortKey = key;
+          sortDir = 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const cols = ['id', 'product', 'vendor', 'owner', 'daysToRenew', 'utilization', 'annualCost', 'status', 'autoRenew'];
+      const rows = filteredRows().map(row => cols.map(col => `"${String(row[col]).replaceAll('"', '""')}"`).join(','));
+      const csv = [cols.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'license-renewal-control-grid.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('CSV export generated from current filtered view.');
+    });
+
+    [vendorFilter, statusFilter, searchInput, roleSelect].forEach(el => {
+      el.addEventListener('input', () => {
+        renderTable();
+        refreshLicenseSelect();
+      });
+    });
+
+    const vendors = Array.from(new Set(licenses.map(row => row.vendor))).sort();
+    vendorFilter.innerHTML = `<option value="all">All</option>${vendors.map(v => `<option>${v}</option>`).join('')}`;
+
+    renderAudit();
+    refreshLicenseSelect();
+    renderTable();
+  </script>
+</body>
+</html>

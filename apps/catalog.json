@@ -1826,5 +1826,24 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-12",
+    "day": 82,
+    "slug": "2026-04-12-license-renewal-control-grid",
+    "name": "License Renewal Control Grid",
+    "description": "Data-grid workspace to govern software renewals with role-based approvals, policy checks, and audit trail.",
+    "category": "IT Ops",
+    "pattern": "Data Grid",
+    "tags": [
+      "license manager",
+      "data grid",
+      "role-based views",
+      "policy validation",
+      "audit trail",
+      "csv export",
+      "search/filter/sort"
+    ],
+    "thumb": ""
   }
 ]
