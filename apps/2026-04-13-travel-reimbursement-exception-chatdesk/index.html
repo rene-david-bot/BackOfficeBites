@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Reimbursement Exception Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto p-4 md:p-6">
+    <a href="../../index.html" class="text-xs text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="mt-2 text-2xl md:text-3xl font-semibold">Travel Reimbursement Exception Chatdesk</h1>
+    <p class="mt-2 text-slate-300 text-sm md:text-base">Finance chat-first desk for policy exceptions, approvals, and payout readiness.</p>
+
+    <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Open Claims</p><p id="kpiOpen" class="text-lg font-semibold">0</p></div>
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Needs Action</p><p id="kpiAction" class="text-lg font-semibold">0</p></div>
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Paid This Week</p><p id="kpiPaid" class="text-lg font-semibold">0</p></div>
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3"><p class="text-slate-400">Exception Rate</p><p id="kpiException" class="text-lg font-semibold">0%</p></div>
+    </div>
+
+    <div class="mt-4 grid lg:grid-cols-3 gap-4">
+      <section class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center gap-2">
+          <label for="role" class="text-xs text-slate-400">Role View</label>
+          <select id="role" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+            <option value="employee">Employee</option>
+            <option value="manager">Manager</option>
+            <option value="finance" selected>Finance</option>
+          </select>
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <div>
+            <label for="search" class="block text-xs text-slate-400">Search</label>
+            <input id="search" type="text" placeholder="employee or trip" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label for="statusFilter" class="block text-xs text-slate-400">Status</label>
+            <select id="statusFilter" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm">
+              <option value="all">All</option>
+              <option>Draft</option>
+              <option>Submitted</option>
+              <option>Needs Receipt</option>
+              <option>Manager Approved</option>
+              <option>Finance Approved</option>
+              <option>Paid</option>
+              <option>Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-2 flex items-center gap-2">
+          <label for="sort" class="text-xs text-slate-400">Sort</label>
+          <select id="sort" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+            <option value="risk">Risk score</option>
+            <option value="amount">Amount</option>
+            <option value="newest">Newest</option>
+          </select>
+          <button id="exportCsv" class="ml-auto text-xs bg-emerald-600 hover:bg-emerald-500 px-2 py-1 rounded">CSV Export</button>
+        </div>
+
+        <ul id="claimList" class="mt-3 space-y-2 max-h-[30rem] overflow-auto pr-1"></ul>
+      </section>
+
+      <section class="lg:col-span-2 space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="claimTitle" class="text-lg font-semibold">Select a claim</h2>
+              <p id="claimMeta" class="text-sm text-slate-400 mt-1">Open one claim from the list.</p>
+            </div>
+            <div class="flex flex-wrap gap-2" id="actionBar"></div>
+          </div>
+
+          <div class="mt-3 grid md:grid-cols-3 gap-3 text-sm">
+            <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-3"><p class="text-slate-400">Category</p><p id="fCategory">-</p></div>
+            <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-3"><p class="text-slate-400">Amount</p><p id="fAmount">-</p></div>
+            <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-3"><p class="text-slate-400">Receipt</p><p id="fReceipt">-</p></div>
+          </div>
+
+          <div id="policyAlerts" class="mt-3 space-y-2"></div>
+
+          <div id="chat" class="mt-3 space-y-2 max-h-64 overflow-auto pr-1"></div>
+
+          <form id="chatForm" class="mt-3 flex gap-2">
+            <label for="chatInput" class="sr-only">Add internal note</label>
+            <input id="chatInput" type="text" class="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Add internal note..." />
+            <button class="bg-sky-600 hover:bg-sky-500 px-3 py-2 rounded text-sm" type="submit">Post</button>
+          </form>
+          <p id="chatError" class="text-xs text-rose-400 mt-1"></p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <h3 class="font-semibold">New reimbursement</h3>
+          <form id="newClaimForm" class="mt-3 grid md:grid-cols-5 gap-2 text-sm">
+            <div>
+              <label for="employee" class="block text-xs text-slate-400">Employee</label>
+              <input id="employee" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5" />
+            </div>
+            <div>
+              <label for="trip" class="block text-xs text-slate-400">Trip / Event</label>
+              <input id="trip" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5" />
+            </div>
+            <div>
+              <label for="category" class="block text-xs text-slate-400">Category</label>
+              <select id="category" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5">
+                <option>Hotel</option><option>Meal</option><option>Transport</option><option>Conference Fee</option>
+              </select>
+            </div>
+            <div>
+              <label for="amount" class="block text-xs text-slate-400">Amount (€)</label>
+              <input id="amount" type="number" min="1" step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5" />
+            </div>
+            <div>
+              <label for="receipt" class="block text-xs text-slate-400">Receipt Attached</label>
+              <select id="receipt" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5"><option value="yes">Yes</option><option value="no">No</option></select>
+            </div>
+            <button type="submit" class="md:col-span-5 bg-amber-600 hover:bg-amber-500 rounded px-3 py-2">Create Draft Claim</button>
+          </form>
+          <p id="newClaimError" class="text-xs text-rose-400 mt-1"></p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-2 text-xs text-slate-300 space-y-1 max-h-40 overflow-auto pr-1"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+<script>
+const claims = [
+  { id: "TR-4012", employee: "Lina Meyer", trip: "SAP Concur Summit", category: "Hotel", amount: 1480, status: "Manager Approved", receipt: true, submittedAt: "2026-04-11", risk: 52, exception: true, messages: [
+    {by:"employee", text:"Hotel exceeded city cap due to conference venue block.", at:"08:24"},
+    {by:"manager", text:"Approved exception with client dinner receipts attached.", at:"09:02"}
+  ]},
+  { id: "TR-4019", employee: "J. Albrecht", trip: "Supplier visit Munich", category: "Meal", amount: 122, status: "Needs Receipt", receipt: false, submittedAt: "2026-04-12", risk: 74, exception: true, messages: [
+    {by:"finance", text:"Receipt missing. Please attach or add policy exception note.", at:"10:16"}
+  ]},
+  { id: "TR-4023", employee: "Marvin Koch", trip: "Customer workshop Berlin", category: "Transport", amount: 89, status: "Submitted", receipt: true, submittedAt: "2026-04-12", risk: 21, exception: false, messages: [
+    {by:"employee", text:"Submitted after workshop completion.", at:"17:45"}
+  ]},
+  { id: "TR-3998", employee: "Sara Demir", trip: "EMEA planning offsite", category: "Conference Fee", amount: 2150, status: "Finance Approved", receipt: true, submittedAt: "2026-04-10", risk: 81, exception: true, messages: [
+    {by:"manager", text:"Budget exception approved under Q2 enablement carve-out.", at:"11:10"},
+    {by:"finance", text:"Finance approval granted. Ready for payout run.", at:"14:37"}
+  ]},
+  { id: "TR-3987", employee: "Tobias Franke", trip: "Partner demo day", category: "Meal", amount: 42, status: "Paid", receipt: true, submittedAt: "2026-04-08", risk: 8, exception: false, messages: [
+    {by:"finance", text:"Paid in batch P-441.", at:"16:02"}
+  ]}
+];
+
+const allowedActions = {
+  employee: ["submit", "comment"],
+  manager: ["requestReceipt", "managerApprove", "reject", "comment"],
+  finance: ["financeApprove", "pay", "reject", "comment"]
+};
+
+const stateActions = {
+  Draft: ["submit", "reject"],
+  Submitted: ["requestReceipt", "managerApprove", "reject"],
+  "Needs Receipt": ["managerApprove", "reject"],
+  "Manager Approved": ["financeApprove", "reject"],
+  "Finance Approved": ["pay"],
+  Paid: [],
+  Rejected: []
+};
+
+const labels = {
+  submit: "Submit",
+  requestReceipt: "Request Receipt",
+  managerApprove: "Manager Approve",
+  financeApprove: "Finance Approve",
+  pay: "Mark Paid",
+  reject: "Reject"
+};
+
+const audit = ["09:14 Finance bot: Policy reminder, meal claims > €75 require receipt."];
+let currentRole = "finance";
+let selectedId = claims[0].id;
+
+const el = id => document.getElementById(id);
+
+function policyWarnings(c) {
+  const warnings = [];
+  if (c.amount > 75 && !c.receipt) warnings.push("Receipt required for claims above €75.");
+  if (c.category === "Hotel" && c.amount > 1200) warnings.push("Hotel cap exceeded, manager exception justification required.");
+  if (c.amount > 2000) warnings.push("High amount claim, second-level finance check recommended.");
+  return warnings;
+}
+
+function formatEuro(v){
+  return new Intl.NumberFormat('en-DE',{style:'currency',currency:'EUR'}).format(v);
+}
+
+function filteredClaims() {
+  const q = el('search').value.trim().toLowerCase();
+  const sf = el('statusFilter').value;
+  const sort = el('sort').value;
+  let list = claims.filter(c => {
+    const matchQ = !q || c.employee.toLowerCase().includes(q) || c.trip.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
+    const matchS = sf === 'all' || c.status === sf;
+    return matchQ && matchS;
+  });
+  if (sort === 'risk') list.sort((a,b)=>b.risk-a.risk);
+  if (sort === 'amount') list.sort((a,b)=>b.amount-a.amount);
+  if (sort === 'newest') list.sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
+  return list;
+}
+
+function renderList() {
+  const list = filteredClaims();
+  el('claimList').innerHTML = '';
+  list.forEach(c => {
+    const li = document.createElement('li');
+    li.className = `border rounded-lg p-3 cursor-pointer ${c.id===selectedId ? 'border-amber-400 bg-slate-800' : 'border-slate-700 hover:border-slate-500 bg-slate-900'}`;
+    li.tabIndex = 0;
+    li.setAttribute('role','button');
+    li.innerHTML = `<div class="flex justify-between gap-2"><p class="font-medium">${c.id}</p><span class="text-xs px-2 py-0.5 rounded ${c.exception?'bg-rose-700':'bg-emerald-700'}">${c.exception?'Exception':'Standard'}</span></div>
+      <p class="text-xs text-slate-400 mt-1">${c.employee} · ${c.trip}</p>
+      <div class="mt-2 flex justify-between text-xs"><span>${c.status}</span><span>${formatEuro(c.amount)}</span></div>`;
+    li.onclick = () => { selectedId = c.id; renderAll(); };
+    li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectedId = c.id; renderAll(); } };
+    el('claimList').appendChild(li);
+  });
+}
+
+function actionAllowed(action, claim) {
+  return allowedActions[currentRole].includes(action) && stateActions[claim.status].includes(action);
+}
+
+function runAction(action) {
+  const claim = claims.find(c=>c.id===selectedId);
+  if (!claim) return;
+
+  const deny = (msg) => { pushAudit(`Policy block on ${claim.id}: ${msg}`); alert(msg); };
+
+  if (action === 'submit') claim.status = 'Submitted';
+  if (action === 'requestReceipt') claim.status = 'Needs Receipt';
+  if (action === 'managerApprove') {
+    if (claim.amount > 1200 && !claim.exception) return deny('Amount above €1200 needs exception note before manager approval.');
+    claim.status = 'Manager Approved';
+  }
+  if (action === 'financeApprove') {
+    if (claim.amount > 75 && !claim.receipt) return deny('Cannot finance-approve without receipt for claims above €75.');
+    claim.status = 'Finance Approved';
+  }
+  if (action === 'pay') claim.status = 'Paid';
+  if (action === 'reject') claim.status = 'Rejected';
+
+  claim.messages.push({by: currentRole, text: `${labels[action]} executed.`, at: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
+  pushAudit(`${currentRole} → ${labels[action]} on ${claim.id} (${claim.status})`);
+  renderAll();
+}
+
+function pushAudit(line) {
+  const stamp = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  audit.unshift(`${stamp} ${line}`);
+}
+
+function renderDetail() {
+  const claim = claims.find(c => c.id === selectedId);
+  if (!claim) return;
+
+  el('claimTitle').textContent = `${claim.id} · ${claim.employee}`;
+  el('claimMeta').textContent = `${claim.trip} · ${claim.status} · submitted ${claim.submittedAt}`;
+  el('fCategory').textContent = claim.category;
+  el('fAmount').textContent = formatEuro(claim.amount);
+  el('fReceipt').textContent = claim.receipt ? 'Attached' : 'Missing';
+
+  el('policyAlerts').innerHTML = policyWarnings(claim)
+    .map(w => `<div class="text-xs bg-amber-900/40 border border-amber-700 text-amber-200 rounded px-3 py-2">${w}</div>`)
+    .join('');
+
+  el('chat').innerHTML = claim.messages.map(m => `
+    <div class="rounded-lg border border-slate-700 bg-slate-800/70 p-2">
+      <p class="text-xs text-slate-400">${m.by} · ${m.at}</p>
+      <p class="text-sm mt-1">${m.text}</p>
+    </div>
+  `).join('');
+
+  const actionBar = el('actionBar');
+  actionBar.innerHTML = '';
+  ["submit","requestReceipt","managerApprove","financeApprove","pay","reject"].forEach(action => {
+    if (!actionAllowed(action, claim)) return;
+    const b = document.createElement('button');
+    b.className = 'px-3 py-1.5 rounded text-sm bg-slate-700 hover:bg-slate-600';
+    b.textContent = labels[action];
+    b.onclick = () => runAction(action);
+    actionBar.appendChild(b);
+  });
+}
+
+function renderAudit() {
+  el('auditTrail').innerHTML = audit.slice(0, 14).map(a => `<li>• ${a}</li>`).join('');
+}
+
+function renderKpis() {
+  const open = claims.filter(c => !['Paid','Rejected'].includes(c.status));
+  const action = claims.filter(c => ['Needs Receipt','Manager Approved','Finance Approved'].includes(c.status));
+  const paid = claims.filter(c => c.status === 'Paid');
+  const exceptionRate = Math.round((claims.filter(c=>c.exception).length / claims.length) * 100);
+  el('kpiOpen').textContent = open.length;
+  el('kpiAction').textContent = action.length;
+  el('kpiPaid').textContent = paid.length;
+  el('kpiException').textContent = `${exceptionRate}%`;
+}
+
+function renderAll() {
+  currentRole = el('role').value;
+  const view = filteredClaims();
+  if (!view.some(c=>c.id===selectedId) && view.length) selectedId = view[0].id;
+  if (!view.length) {
+    el('claimList').innerHTML = '<li class="text-sm text-slate-400 p-3 border border-slate-700 rounded">No matching claims.</li>';
+  } else {
+    renderList();
+  }
+  if (claims.find(c=>c.id===selectedId)) renderDetail();
+  renderKpis();
+  renderAudit();
+}
+
+['role','search','statusFilter','sort'].forEach(id => el(id).addEventListener('input', renderAll));
+
+el('chatForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = el('chatInput').value.trim();
+  el('chatError').textContent = '';
+  if (!msg) { el('chatError').textContent = 'Note cannot be empty.'; return; }
+  const claim = claims.find(c => c.id === selectedId);
+  claim.messages.push({by: currentRole, text: msg, at: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
+  pushAudit(`${currentRole} commented on ${claim.id}`);
+  el('chatInput').value = '';
+  renderAll();
+});
+
+el('newClaimForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const employee = el('employee').value.trim();
+  const trip = el('trip').value.trim();
+  const category = el('category').value;
+  const amount = Number(el('amount').value);
+  const receipt = el('receipt').value === 'yes';
+  el('newClaimError').textContent = '';
+
+  if (!employee || !trip || !amount || amount <= 0) {
+    el('newClaimError').textContent = 'Employee, trip, and positive amount are required.';
+    return;
+  }
+
+  const id = `TR-${Math.floor(4025 + Math.random()*900)}`;
+  const exception = (category === 'Hotel' && amount > 1200) || (!receipt && amount > 75);
+  claims.unshift({
+    id, employee, trip, category, amount, status: 'Draft', receipt,
+    submittedAt: new Date().toISOString().slice(0,10), risk: exception ? 68 : 16,
+    exception,
+    messages: [{by:'system', text:'Draft created. Submit when complete.', at:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}]
+  });
+
+  pushAudit(`employee created ${id} (${category}, ${formatEuro(amount)})`);
+  e.target.reset();
+  selectedId = id;
+  renderAll();
+});
+
+el('exportCsv').addEventListener('click', () => {
+  const rows = filteredClaims();
+  const csv = ['id,employee,trip,category,amount,status,receipt,exception,submittedAt']
+    .concat(rows.map(r => `${r.id},"${r.employee}","${r.trip}",${r.category},${r.amount},${r.status},${r.receipt},${r.exception},${r.submittedAt}`))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'travel-reimbursements.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  pushAudit(`${currentRole} exported ${rows.length} rows to CSV`);
+  renderAudit();
+});
+
+renderAll();
+</script>
+</body>
+</html>

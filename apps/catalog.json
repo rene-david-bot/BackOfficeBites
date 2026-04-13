@@ -1845,5 +1845,29 @@
       "search/filter/sort"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-13",
+    "day": 83,
+    "slug": "2026-04-13-travel-reimbursement-exception-chatdesk",
+    "name": "Travel Reimbursement Exception Chatdesk",
+    "description": "Finance chat-first workspace for travel reimbursement exceptions with policy-gated approvals, audit trail actions, and CSV export.",
+    "category": "Finance",
+    "pattern": "Chat UI",
+    "tags": [
+      "travel reimbursement",
+      "finance",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
