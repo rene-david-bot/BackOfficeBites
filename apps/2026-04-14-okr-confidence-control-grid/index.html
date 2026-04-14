@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OKR Confidence Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">OKR Confidence Control Grid</h1>
+        <p class="text-slate-400 mt-2">Planning control grid for confidence drift, policy-aware rebaselines, approval routing, and audit-ready portfolio tracking.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full lg:w-auto">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option>PMO Analyst</option>
+            <option>Exec Sponsor</option>
+            <option>Finance Partner</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Quarter</span>
+          <select id="quarterFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All</option>
+            <option>On Track</option>
+            <option>Watchlist</option>
+            <option>Critical</option>
+            <option>Pending Approval</option>
+            <option>Rebaselined</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Objective, owner, squad..." class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+        </label>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div class="xl:col-span-2 bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 class="text-lg font-semibold">Objective Portfolio</h2>
+          <button id="exportBtn" class="text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5">Export CSV</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[1020px]">
+            <thead class="text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="text-left py-2 font-medium">ID</th>
+                <th class="text-left py-2 font-medium">Objective</th>
+                <th class="text-left py-2 font-medium">Owner</th>
+                <th class="text-left py-2 font-medium">Quarter</th>
+                <th class="text-left py-2 font-medium">Team</th>
+                <th class="text-left py-2 font-medium"><button data-sort="confidence" class="hover:text-white">Confidence ↕</button></th>
+                <th class="text-left py-2 font-medium"><button data-sort="delta" class="hover:text-white">Δ 2w ↕</button></th>
+                <th class="text-left py-2 font-medium"><button data-sort="budgetImpact" class="hover:text-white">Budget risk ↕</button></th>
+                <th class="text-left py-2 font-medium">Status</th>
+                <th class="text-left py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Rebaseline Request</h2>
+          <form id="requestForm" class="space-y-3" novalidate>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Objective</span>
+              <select id="objectiveSelect" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></select>
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Target confidence</span>
+              <input id="targetConfidenceInput" type="number" min="35" max="95" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="block text-slate-400 mb-1">Mitigation plan</span>
+              <textarea id="planInput" rows="3" required placeholder="Describe concrete actions and dependencies" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></textarea>
+            </label>
+            <button class="w-full bg-cyan-600 hover:bg-cyan-500 rounded-lg px-3 py-2 font-medium">Submit request</button>
+            <p id="formMessage" class="text-xs"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Approval Policy</h2>
+          <ul class="space-y-2 text-sm text-slate-300 list-disc pl-4">
+            <li>Confidence drop of <strong>more than 15 points</strong> must route to Pending Approval.</li>
+            <li>Confidence below <strong>50</strong> + budget risk above <strong>€100k</strong> requires Exec Sponsor or Finance Partner approval.</li>
+            <li>Requests with mitigation text under 30 chars are blocked for audit quality.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit Trail</h2>
+          <ul id="auditTrail" class="space-y-2 text-sm max-h-72 overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const objectives = [
+      { id: 'OKR-301', objective: 'Reduce enterprise onboarding lead time', owner: 'M. Klein', quarter: 'Q2-2026', team: 'Customer Ops', confidence: 78, delta: -4, budgetImpact: 42000, status: 'On Track' },
+      { id: 'OKR-304', objective: 'Lift self-service deflection to 54%', owner: 'S. Weber', quarter: 'Q2-2026', team: 'Support Enablement', confidence: 63, delta: -19, budgetImpact: 118000, status: 'Watchlist' },
+      { id: 'OKR-308', objective: 'Automate invoice exception routing', owner: 'R. Dietz', quarter: 'Q2-2026', team: 'Finance Platforms', confidence: 52, delta: -11, budgetImpact: 87000, status: 'Watchlist' },
+      { id: 'OKR-315', objective: 'Cut release rollback rate below 2%', owner: 'T. Berger', quarter: 'Q3-2026', team: 'Platform Engineering', confidence: 47, delta: -23, budgetImpact: 136000, status: 'Critical' },
+      { id: 'OKR-322', objective: 'Increase field-service utilization to 81%', owner: 'K. Fischer', quarter: 'Q3-2026', team: 'Field Ops', confidence: 69, delta: 3, budgetImpact: 54000, status: 'On Track' },
+      { id: 'OKR-327', objective: 'Consolidate vendor contracts in top 12 markets', owner: 'N. Braun', quarter: 'Q3-2026', team: 'Procurement', confidence: 58, delta: -17, budgetImpact: 161000, status: 'Watchlist' },
+      { id: 'OKR-331', objective: 'Improve NPS recovery for detractors', owner: 'E. Hahn', quarter: 'Q4-2026', team: 'Revenue Ops', confidence: 74, delta: -2, budgetImpact: 39000, status: 'On Track' }
+    ];
+
+    const roles = {
+      'PMO Analyst': { canApprove: false, canSetStatus: true, canSubmit: true },
+      'Exec Sponsor': { canApprove: true, canSetStatus: true, canSubmit: false },
+      'Finance Partner': { canApprove: true, canSetStatus: true, canSubmit: true }
+    };
+
+    let sortKey = 'confidence';
+    let sortDir = 'desc';
+
+    const tableBody = document.getElementById('tableBody');
+    const quarterFilter = document.getElementById('quarterFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+    const roleSelect = document.getElementById('roleSelect');
+    const objectiveSelect = document.getElementById('objectiveSelect');
+    const targetConfidenceInput = document.getElementById('targetConfidenceInput');
+    const planInput = document.getElementById('planInput');
+    const formMessage = document.getElementById('formMessage');
+    const auditTrail = document.getElementById('auditTrail');
+    const kpiGrid = document.getElementById('kpiGrid');
+
+    const audit = [
+      { ts: '08:01', text: 'Weekly OKR confidence sync imported from PMO report.' },
+      { ts: '08:04', text: 'Policy check engine active for delta and budget risk thresholds.' },
+      { ts: '08:06', text: 'OKR-315 auto-flagged as Critical after confidence dropped below 50.' }
+    ];
+
+    function roleView() {
+      return roles[roleSelect.value];
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function addAudit(text) {
+      const ts = new Date().toISOString().slice(11, 16);
+      audit.push({ ts, text });
+      renderAudit();
+    }
+
+    function badgeClass(status) {
+      if (status === 'On Track') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      if (status === 'Pending Approval') return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+      if (status === 'Rebaselined') return 'bg-violet-500/20 text-violet-300 border-violet-500/40';
+      if (status === 'Critical') return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+    }
+
+    function policyNeedsApproval(row) {
+      return row.delta <= -16 || (row.confidence < 50 && row.budgetImpact > 100000);
+    }
+
+    function filteredRows() {
+      const q = searchInput.value.trim().toLowerCase();
+      return objectives
+        .filter(item => quarterFilter.value === 'all' || item.quarter === quarterFilter.value)
+        .filter(item => statusFilter.value === 'all' || item.status === statusFilter.value)
+        .filter(item => !q || [item.id, item.objective, item.owner, item.team, item.status].join(' ').toLowerCase().includes(q))
+        .sort((a, b) => {
+          const va = a[sortKey];
+          const vb = b[sortKey];
+          const base = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+          return sortDir === 'asc' ? base : -base;
+        });
+    }
+
+    function renderKPIs(rows) {
+      const pending = rows.filter(r => r.status === 'Pending Approval').length;
+      const critical = rows.filter(r => r.status === 'Critical').length;
+      const needsApproval = rows.filter(policyNeedsApproval).length;
+      const weightedConfidence = rows.length
+        ? Math.round(rows.reduce((sum, r) => sum + r.confidence, 0) / rows.length)
+        : 0;
+
+      const cards = [
+        ['Pending approvals', pending, 'text-sky-300'],
+        ['Critical objectives', critical, 'text-rose-300'],
+        ['Policy triggers', needsApproval, 'text-amber-300'],
+        ['Avg confidence', `${weightedConfidence}%`, 'text-cyan-300']
+      ];
+
+      kpiGrid.innerHTML = cards.map(([label, value, tone]) => `
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${tone}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      const permission = roleView();
+      renderKPIs(rows);
+
+      tableBody.innerHTML = rows.map(row => {
+        const approvalRequired = policyNeedsApproval(row);
+        const canApprove = permission.canApprove && row.status === 'Pending Approval';
+        const canRoute = permission.canSetStatus && row.status !== 'Pending Approval' && approvalRequired;
+
+        return `
+          <tr class="border-b border-slate-800/70 hover:bg-slate-800/40 align-top">
+            <td class="py-2 pr-2 font-mono text-xs">${row.id}</td>
+            <td class="py-2 pr-2">${row.objective}</td>
+            <td class="py-2 pr-2">${row.owner}</td>
+            <td class="py-2 pr-2">${row.quarter}</td>
+            <td class="py-2 pr-2">${row.team}</td>
+            <td class="py-2 pr-2 ${row.confidence < 50 ? 'text-rose-300' : row.confidence < 65 ? 'text-amber-300' : 'text-emerald-300'}">${row.confidence}%</td>
+            <td class="py-2 pr-2 ${row.delta <= -16 ? 'text-rose-300' : row.delta < 0 ? 'text-amber-300' : 'text-emerald-300'}">${row.delta > 0 ? '+' : ''}${row.delta}</td>
+            <td class="py-2 pr-2">${money(row.budgetImpact)}</td>
+            <td class="py-2 pr-2"><span class="inline-flex px-2 py-0.5 border rounded-full text-xs ${badgeClass(row.status)}">${row.status}</span></td>
+            <td class="py-2 pr-2">
+              <div class="flex flex-wrap gap-2">
+                <button data-action="route" data-id="${row.id}" ${canRoute ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-sky-600/50 ${canRoute ? 'hover:bg-sky-600/30' : 'opacity-30 cursor-not-allowed'}">Route approval</button>
+                <button data-action="approve" data-id="${row.id}" ${canApprove ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-emerald-600/50 ${canApprove ? 'hover:bg-emerald-600/30' : 'opacity-30 cursor-not-allowed'}">Approve</button>
+                <button data-action="watch" data-id="${row.id}" ${permission.canSetStatus ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-amber-600/40 ${permission.canSetStatus ? 'hover:bg-amber-600/20' : 'opacity-30 cursor-not-allowed'}">Set watchlist</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAudit() {
+      auditTrail.innerHTML = audit.slice().reverse().map(entry => `
+        <li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/70">
+          <p class="text-xs text-slate-400">${entry.ts}</p>
+          <p>${entry.text}</p>
+        </li>
+      `).join('');
+    }
+
+    function refreshObjectiveOptions() {
+      objectiveSelect.innerHTML = objectives
+        .filter(item => item.status !== 'Pending Approval')
+        .map(item => `<option value="${item.id}">${item.id} — ${item.objective.slice(0, 42)}${item.objective.length > 42 ? '…' : ''}</option>`)
+        .join('');
+    }
+
+    function autoPolicyRecheck(row) {
+      if (policyNeedsApproval(row) && row.status !== 'Pending Approval') {
+        row.status = 'Pending Approval';
+        addAudit(`${row.id} auto-routed to Pending Approval by policy engine.`);
+      }
+    }
+
+    document.getElementById('requestForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      formMessage.textContent = '';
+
+      if (!roleView().canSubmit) {
+        formMessage.textContent = 'Current role cannot submit rebaseline requests.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const id = objectiveSelect.value;
+      const row = objectives.find(item => item.id === id);
+      const target = Number(targetConfidenceInput.value);
+      const plan = planInput.value.trim();
+
+      if (!row || !target || !plan) {
+        formMessage.textContent = 'All fields are required.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (plan.length < 30) {
+        formMessage.textContent = 'Mitigation plan must be at least 30 characters for audit quality.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (target < row.confidence - 5) {
+        formMessage.textContent = 'Target confidence cannot reduce more than 5 points in one request.';
+        formMessage.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      row.confidence = target;
+      row.delta = Math.min(row.delta, -16);
+      row.status = 'Pending Approval';
+      addAudit(`${row.id} rebaseline submitted by ${roleSelect.value}. Target ${target}%. Plan: ${plan}`);
+
+      formMessage.textContent = `Request submitted for ${row.id}.`;
+      formMessage.className = 'text-xs text-emerald-300';
+      event.target.reset();
+      refreshObjectiveOptions();
+      renderTable();
+    });
+
+    tableBody.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const row = objectives.find(item => item.id === btn.dataset.id);
+      if (!row) return;
+
+      if (btn.dataset.action === 'route' && roleView().canSetStatus && policyNeedsApproval(row)) {
+        row.status = 'Pending Approval';
+        addAudit(`${row.id} manually routed to approval by ${roleSelect.value}.`);
+      }
+
+      if (btn.dataset.action === 'approve' && roleView().canApprove && row.status === 'Pending Approval') {
+        row.status = row.confidence >= 65 ? 'Rebaselined' : 'Watchlist';
+        addAudit(`${row.id} approved by ${roleSelect.value}. New status: ${row.status}.`);
+      }
+
+      if (btn.dataset.action === 'watch' && roleView().canSetStatus) {
+        row.status = row.confidence < 50 ? 'Critical' : 'Watchlist';
+        addAudit(`${row.id} set to ${row.status} by ${roleSelect.value}.`);
+      }
+
+      autoPolicyRecheck(row);
+      refreshObjectiveOptions();
+      renderTable();
+    });
+
+    document.querySelectorAll('[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort;
+        if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else {
+          sortKey = key;
+          sortDir = key === 'confidence' ? 'desc' : 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const fields = ['id', 'objective', 'owner', 'quarter', 'team', 'confidence', 'delta', 'budgetImpact', 'status'];
+      const rows = filteredRows().map(row => fields.map(field => `"${String(row[field]).replaceAll('"', '""')}"`).join(','));
+      const csv = [fields.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'okr-confidence-control-grid.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('CSV export generated from active filters.');
+    });
+
+    [quarterFilter, statusFilter, searchInput, roleSelect].forEach(el => {
+      el.addEventListener('input', () => {
+        renderTable();
+        refreshObjectiveOptions();
+      });
+    });
+
+    const quarters = Array.from(new Set(objectives.map(item => item.quarter))).sort();
+    quarterFilter.innerHTML = `<option value="all">All</option>${quarters.map(q => `<option>${q}</option>`).join('')}`;
+
+    objectives.forEach(autoPolicyRecheck);
+    renderAudit();
+    refreshObjectiveOptions();
+    renderTable();
+  </script>
+</body>
+</html>

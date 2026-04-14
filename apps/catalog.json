@@ -1869,5 +1869,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-14",
+    "day": 84,
+    "slug": "2026-04-14-okr-confidence-control-grid",
+    "name": "OKR Confidence Control Grid",
+    "description": "Planning data-grid workspace for confidence drift with policy-aware rebaseline approvals, audit trail, and CSV export.",
+    "category": "Planning",
+    "pattern": "Data Grid",
+    "tags": [
+      "okr",
+      "planning",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
