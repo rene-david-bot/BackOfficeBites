@@ -1917,5 +1917,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-16",
+    "day": 86,
+    "slug": "2026-04-16-contract-obligation-deadline-calendar",
+    "name": "Contract Obligation Deadline Calendar",
+    "description": "Legal calendar to track contract obligations with escalation workflow, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Calendar",
+    "tags": [
+      "contract obligations",
+      "legal ops",
+      "calendar",
+      "deadline tracking",
+      "role-based views",
+      "escalation workflow",
+      "state machine",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contract Obligation Deadline Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { slate: { 950: '#020617' } }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Contract Obligation Deadline Calendar</h1>
+        <p class="text-slate-400 mt-2">Legal calendar to manage contract obligations, escalation workflow, role-based actions, and audit-ready exports.</p>
+      </div>
+      <div class="grid gap-3 w-full lg:w-auto lg:grid-cols-4">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option>Contract Analyst</option>
+            <option>Legal Counsel</option>
+            <option>Compliance Lead</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Risk filter</span>
+          <select id="riskFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All risks</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status filter</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All status</option>
+            <option>Open</option>
+            <option>Pending Review</option>
+            <option>Completed</option>
+            <option>Breached</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Contract, owner, type..." class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+        </label>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div class="xl:col-span-2 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Deadline Calendar</h2>
+            <div class="flex items-center gap-2">
+              <button id="prevMonthBtn" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm hover:bg-slate-800" aria-label="Previous month">←</button>
+              <p id="monthLabel" class="text-sm text-slate-300 min-w-[10rem] text-center"></p>
+              <button id="nextMonthBtn" class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm hover:bg-slate-800" aria-label="Next month">→</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2">
+            <p class="text-center">Sun</p><p class="text-center">Mon</p><p class="text-center">Tue</p><p class="text-center">Wed</p><p class="text-center">Thu</p><p class="text-center">Fri</p><p class="text-center">Sat</p>
+          </div>
+          <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Obligation Queue</h2>
+            <div class="flex items-center gap-2">
+              <button id="sortDueBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort due ↕</button>
+              <button id="sortRiskBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort risk ↕</button>
+              <button id="exportBtn" class="text-xs rounded border border-cyan-600/50 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/40">Export CSV</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[900px]">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-2">ID</th>
+                  <th class="text-left py-2">Contract</th>
+                  <th class="text-left py-2">Type</th>
+                  <th class="text-left py-2">Owner</th>
+                  <th class="text-left py-2">Due</th>
+                  <th class="text-left py-2">Risk</th>
+                  <th class="text-left py-2">Status</th>
+                  <th class="text-left py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="queueBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">New obligation</h2>
+          <form id="obligationForm" class="space-y-3" novalidate>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Contract ID</span>
+              <input id="contractInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Counterparty</span>
+              <input id="counterpartyInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Obligation type</span>
+              <select id="typeInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                <option value="">Select</option>
+                <option>Insurance Certificate</option>
+                <option>Price Review Notice</option>
+                <option>Data Processing Audit</option>
+                <option>SLA Breach Remedy</option>
+                <option>Renewal Opt-Out Window</option>
+              </select>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Owner</span>
+                <input id="ownerInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Risk</span>
+                <select id="riskInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </label>
+            </div>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Due date</span>
+              <input id="dueInput" type="date" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Notes</span>
+              <textarea id="notesInput" rows="2" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2"></textarea>
+            </label>
+            <button type="submit" class="w-full rounded-lg border border-emerald-600/60 bg-emerald-700/30 px-3 py-2 text-sm hover:bg-emerald-700/40">Add obligation</button>
+            <p id="formMsg" class="text-xs text-slate-400"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Workflow policy</h2>
+          <ul class="space-y-2 text-sm text-slate-300 list-disc pl-4">
+            <li>High-risk items due in 5 days auto-highlight for escalation.</li>
+            <li>Only Legal Counsel can close <strong>Pending Review</strong> items.</li>
+            <li>Compliance Lead can mark any item as <strong>Breached</strong>.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit trail</h2>
+          <ul id="auditTrail" class="space-y-2 text-sm max-h-[20rem] overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const riskFilter = document.getElementById('riskFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+
+    const monthLabel = document.getElementById('monthLabel');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const queueBody = document.getElementById('queueBody');
+    const kpiGrid = document.getElementById('kpiGrid');
+    const auditTrail = document.getElementById('auditTrail');
+
+    const form = document.getElementById('obligationForm');
+    const contractInput = document.getElementById('contractInput');
+    const counterpartyInput = document.getElementById('counterpartyInput');
+    const typeInput = document.getElementById('typeInput');
+    const ownerInput = document.getElementById('ownerInput');
+    const riskInput = document.getElementById('riskInput');
+    const dueInput = document.getElementById('dueInput');
+    const notesInput = document.getElementById('notesInput');
+    const formMsg = document.getElementById('formMsg');
+
+    const state = {
+      monthCursor: new Date('2026-04-01T00:00:00'),
+      sortBy: 'due',
+      sortDir: 'asc'
+    };
+
+    const obligations = [
+      { id: 'OB-4101', contract: 'MSA-8841', counterparty: 'Northline Logistics', type: 'Insurance Certificate', owner: 'M. Weber', due: '2026-04-17', risk: 'High', status: 'Open', notes: 'Updated umbrella policy required.' },
+      { id: 'OB-4102', contract: 'DPA-9012', counterparty: 'Helix Systems', type: 'Data Processing Audit', owner: 'S. Braun', due: '2026-04-22', risk: 'Medium', status: 'Pending Review', notes: 'Security appendix under legal review.' },
+      { id: 'OB-4103', contract: 'SLA-7740', counterparty: 'OmniRetail', type: 'SLA Breach Remedy', owner: 'J. Vogel', due: '2026-04-19', risk: 'High', status: 'Open', notes: 'Service credit letter due by contract clause 9.4.' },
+      { id: 'OB-4104', contract: 'NDA-6220', counterparty: 'Apex Health', type: 'Renewal Opt-Out Window', owner: 'L. Schmitt', due: '2026-04-29', risk: 'Low', status: 'Completed', notes: 'Auto-renew disabled via signed annex.' },
+      { id: 'OB-4105', contract: 'PSA-5531', counterparty: 'Dataforge GmbH', type: 'Price Review Notice', owner: 'K. Otto', due: '2026-05-03', risk: 'Medium', status: 'Open', notes: '90-day notice period.' },
+      { id: 'OB-4106', contract: 'SOW-7719', counterparty: 'Rheinwerk AG', type: 'Insurance Certificate', owner: 'M. Weber', due: '2026-05-08', risk: 'Low', status: 'Open', notes: 'Waiting for broker copy.' },
+      { id: 'OB-4107', contract: 'CSA-4922', counterparty: 'Voltix Energy', type: 'Data Processing Audit', owner: 'P. Adler', due: '2026-04-15', risk: 'High', status: 'Breached', notes: 'Response package missed cutoff.' }
+    ];
+
+    const audit = [
+      { ts: '07:50', text: 'Daily obligation feed synchronized from CLM.' },
+      { ts: '07:53', text: 'OB-4102 moved to Pending Review by Contract Analyst.' },
+      { ts: '07:58', text: 'Breach warning issued for OB-4107.' }
+    ];
+
+    function todayISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDate(iso) {
+      return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function addAudit(text) {
+      const now = new Date();
+      const ts = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      audit.push({ ts, text });
+      renderAudit();
+    }
+
+    function riskTone(risk) {
+      if (risk === 'High') return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      if (risk === 'Medium') return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    }
+
+    function statusTone(status) {
+      if (status === 'Completed') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      if (status === 'Pending Review') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+      if (status === 'Breached') return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      return 'bg-slate-500/20 text-slate-300 border-slate-500/40';
+    }
+
+    function filtered() {
+      const q = searchInput.value.trim().toLowerCase();
+      return obligations
+        .filter(item => riskFilter.value === 'all' || item.risk === riskFilter.value)
+        .filter(item => statusFilter.value === 'all' || item.status === statusFilter.value)
+        .filter(item => {
+          if (!q) return true;
+          return [item.id, item.contract, item.counterparty, item.type, item.owner, item.status].join(' ').toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          let base = 0;
+          if (state.sortBy === 'risk') {
+            const score = { High: 3, Medium: 2, Low: 1 };
+            base = score[a.risk] - score[b.risk];
+          } else {
+            base = a.due.localeCompare(b.due);
+          }
+          return state.sortDir === 'asc' ? base : -base;
+        });
+    }
+
+    function role() {
+      return roleSelect.value;
+    }
+
+    function can(action, item) {
+      if (action === 'complete') return item.status === 'Open' && (role() === 'Contract Analyst' || role() === 'Legal Counsel');
+      if (action === 'escalate') return item.status === 'Open' && (item.risk === 'High' || role() !== 'Contract Analyst');
+      if (action === 'closeReview') return item.status === 'Pending Review' && role() === 'Legal Counsel';
+      if (action === 'breach') return item.status !== 'Breached' && role() === 'Compliance Lead';
+      if (action === 'reopen') return item.status === 'Completed' && role() === 'Legal Counsel';
+      return false;
+    }
+
+    function renderKPIs(rows) {
+      const now = todayISO();
+      const dueThisMonth = rows.filter(item => item.due.slice(0, 7) === `${state.monthCursor.getFullYear()}-${String(state.monthCursor.getMonth() + 1).padStart(2, '0')}`).length;
+      const overdueOpen = rows.filter(item => item.due < now && item.status !== 'Completed' && item.status !== 'Breached').length;
+      const escalated = rows.filter(item => item.status === 'Pending Review').length;
+      const completed = rows.filter(item => item.status === 'Completed').length;
+      const completionRate = rows.length ? Math.round((completed / rows.length) * 100) : 0;
+
+      const cards = [
+        ['Deadlines in month', dueThisMonth, 'text-cyan-300'],
+        ['Overdue open', overdueOpen, 'text-rose-300'],
+        ['Pending review', escalated, 'text-amber-300'],
+        ['Completion rate', `${completionRate}%`, 'text-emerald-300']
+      ];
+
+      kpiGrid.innerHTML = cards.map(([label, value, tone]) => `
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${tone}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderQueue() {
+      const rows = filtered();
+      renderKPIs(rows);
+      queueBody.innerHTML = rows.map(item => `
+        <tr class="border-b border-slate-800/70 hover:bg-slate-800/40 align-top">
+          <td class="py-2 pr-2 font-mono text-xs">${item.id}</td>
+          <td class="py-2 pr-2">${item.contract}<p class="text-xs text-slate-500">${item.counterparty}</p></td>
+          <td class="py-2 pr-2">${item.type}</td>
+          <td class="py-2 pr-2">${item.owner}</td>
+          <td class="py-2 pr-2 ${item.status !== 'Completed' && item.status !== 'Breached' && item.due < todayISO() ? 'text-rose-300 font-semibold' : ''}">${formatDate(item.due)}</td>
+          <td class="py-2 pr-2"><span class="inline-flex px-2 py-0.5 border rounded-full text-xs ${riskTone(item.risk)}">${item.risk}</span></td>
+          <td class="py-2 pr-2"><span class="inline-flex px-2 py-0.5 border rounded-full text-xs ${statusTone(item.status)}">${item.status}</span></td>
+          <td class="py-2 pr-2">
+            <div class="flex flex-wrap gap-2">
+              <button data-action="complete" data-id="${item.id}" ${can('complete', item) ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-emerald-600/50 ${can('complete', item) ? 'hover:bg-emerald-600/20' : 'opacity-30 cursor-not-allowed'}">Complete</button>
+              <button data-action="escalate" data-id="${item.id}" ${can('escalate', item) ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-cyan-600/50 ${can('escalate', item) ? 'hover:bg-cyan-600/20' : 'opacity-30 cursor-not-allowed'}">Escalate</button>
+              <button data-action="closeReview" data-id="${item.id}" ${can('closeReview', item) ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-violet-600/50 ${can('closeReview', item) ? 'hover:bg-violet-600/20' : 'opacity-30 cursor-not-allowed'}">Close review</button>
+              <button data-action="breach" data-id="${item.id}" ${can('breach', item) ? '' : 'disabled'} class="text-xs px-2 py-1 rounded border border-rose-600/50 ${can('breach', item) ? 'hover:bg-rose-600/20' : 'opacity-30 cursor-not-allowed'}">Breach</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCalendar() {
+      const year = state.monthCursor.getFullYear();
+      const month = state.monthCursor.getMonth();
+      const monthStart = new Date(year, month, 1);
+      const firstWeekday = monthStart.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthIso = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+      monthLabel.textContent = monthStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+      const dayCells = [];
+      for (let i = 0; i < firstWeekday; i += 1) dayCells.push(null);
+      for (let d = 1; d <= daysInMonth; d += 1) dayCells.push(d);
+      while (dayCells.length < 42) dayCells.push(null);
+
+      calendarGrid.innerHTML = dayCells.map(day => {
+        if (!day) return '<div class="rounded-lg border border-slate-900 bg-slate-950/40 min-h-[7rem]"></div>';
+
+        const iso = `${monthIso}-${String(day).padStart(2, '0')}`;
+        const items = filtered().filter(item => item.due === iso && item.status !== 'Completed');
+        const isToday = iso === todayISO();
+
+        return `
+          <button type="button" class="text-left rounded-lg border ${isToday ? 'border-cyan-500/60' : 'border-slate-800'} bg-slate-950/70 p-2 min-h-[7rem] hover:border-slate-600" aria-label="${iso} obligations">
+            <p class="text-xs ${isToday ? 'text-cyan-300' : 'text-slate-400'} mb-1">${day}</p>
+            <div class="space-y-1">
+              ${items.slice(0, 2).map(item => `<p class="text-[10px] px-1.5 py-0.5 rounded border ${riskTone(item.risk)} truncate">${item.id} · ${item.risk}</p>`).join('')}
+              ${items.length > 2 ? `<p class="text-[10px] text-slate-500">+${items.length - 2} more</p>` : ''}
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderAudit() {
+      auditTrail.innerHTML = audit.slice().reverse().map(entry => `
+        <li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/70">
+          <p class="text-xs text-slate-400">${entry.ts}</p>
+          <p>${entry.text}</p>
+        </li>
+      `).join('');
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const payload = {
+        contract: contractInput.value.trim(),
+        counterparty: counterpartyInput.value.trim(),
+        type: typeInput.value,
+        owner: ownerInput.value.trim(),
+        risk: riskInput.value,
+        due: dueInput.value,
+        notes: notesInput.value.trim()
+      };
+
+      if (!payload.contract || !payload.counterparty || !payload.type || !payload.owner || !payload.risk || !payload.due) {
+        formMsg.textContent = 'Please complete all required fields.';
+        formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const id = `OB-${4100 + obligations.length + 1}`;
+      obligations.push({ id, ...payload, status: payload.risk === 'High' ? 'Pending Review' : 'Open' });
+      addAudit(`${id} created for ${payload.contract} (${payload.type}) by ${role()}.`);
+      formMsg.textContent = `${id} added successfully.`;
+      formMsg.className = 'text-xs text-emerald-300';
+      form.reset();
+      renderQueue();
+      renderCalendar();
+    });
+
+    queueBody.addEventListener('click', event => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+      const item = obligations.find(row => row.id === btn.dataset.id);
+      if (!item) return;
+
+      if (btn.dataset.action === 'complete' && can('complete', item)) {
+        item.status = 'Completed';
+        addAudit(`${item.id} marked completed by ${role()}.`);
+      }
+
+      if (btn.dataset.action === 'escalate' && can('escalate', item)) {
+        item.status = 'Pending Review';
+        addAudit(`${item.id} escalated to Legal Counsel by ${role()}.`);
+      }
+
+      if (btn.dataset.action === 'closeReview' && can('closeReview', item)) {
+        item.status = 'Completed';
+        addAudit(`${item.id} review closed by Legal Counsel.`);
+      }
+
+      if (btn.dataset.action === 'breach' && can('breach', item)) {
+        item.status = 'Breached';
+        addAudit(`${item.id} marked breached by Compliance Lead.`);
+      }
+
+      renderQueue();
+      renderCalendar();
+    });
+
+    document.getElementById('prevMonthBtn').addEventListener('click', () => {
+      state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() - 1, 1);
+      renderCalendar();
+      renderQueue();
+    });
+
+    document.getElementById('nextMonthBtn').addEventListener('click', () => {
+      state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() + 1, 1);
+      renderCalendar();
+      renderQueue();
+    });
+
+    document.getElementById('sortDueBtn').addEventListener('click', () => {
+      state.sortBy = 'due';
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      renderQueue();
+    });
+
+    document.getElementById('sortRiskBtn').addEventListener('click', () => {
+      state.sortBy = 'risk';
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      renderQueue();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const fields = ['id', 'contract', 'counterparty', 'type', 'owner', 'due', 'risk', 'status'];
+      const rows = filtered().map(item => fields.map(field => `"${String(item[field] ?? '').replaceAll('"', '""')}"`).join(','));
+      const csv = [fields.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contract-obligations.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit('CSV export generated from current queue filters.');
+    });
+
+    [roleSelect, riskFilter, statusFilter, searchInput].forEach(el => {
+      el.addEventListener('input', () => {
+        renderQueue();
+        renderCalendar();
+      });
+    });
+
+    renderQueue();
+    renderCalendar();
+    renderAudit();
+  </script>
+</body>
+</html>
