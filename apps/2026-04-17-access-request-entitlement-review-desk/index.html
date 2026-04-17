@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Request Entitlement Review Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' },
+            cyan: { 950: '#082f49' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Access Request Entitlement Review Desk</h1>
+        <p class="text-slate-400 mt-2">IT Ops master-detail workspace to route entitlement requests through manager, security, and IAM approvals with policy checks and audit-ready exports.</p>
+      </div>
+      <div class="grid gap-3 w-full lg:w-auto lg:grid-cols-5">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option>Requester</option>
+            <option>Manager</option>
+            <option>Security Admin</option>
+            <option>IAM Ops</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All</option>
+            <option>Draft</option>
+            <option>Pending Manager</option>
+            <option>Pending Security</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>Provisioned</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">System</span>
+          <select id="systemFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All systems</option>
+            <option>SAP S/4</option>
+            <option>NetSuite</option>
+            <option>Salesforce</option>
+            <option>GitHub Enterprise</option>
+            <option>Workday</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Risk</span>
+          <select id="riskFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Req ID, user, entitlement" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+        </label>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div class="xl:col-span-7 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Request Queue</h2>
+            <div class="flex items-center gap-2">
+              <button id="sortDateBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort submitted ↕</button>
+              <button id="sortRiskBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort risk ↕</button>
+              <button id="exportBtn" class="text-xs rounded border border-cyan-600/50 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/40">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[760px]">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-2">Req ID</th>
+                  <th class="text-left py-2">User</th>
+                  <th class="text-left py-2">System</th>
+                  <th class="text-left py-2">Entitlement</th>
+                  <th class="text-left py-2">Risk</th>
+                  <th class="text-left py-2">Status</th>
+                  <th class="text-left py-2">SLA</th>
+                </tr>
+              </thead>
+              <tbody id="requestRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">New access request</h2>
+          <form id="requestForm" class="space-y-3" novalidate>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Employee name</span>
+                <input id="nameInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Manager</span>
+                <input id="managerInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">System</span>
+                <select id="systemInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>SAP S/4</option>
+                  <option>NetSuite</option>
+                  <option>Salesforce</option>
+                  <option>GitHub Enterprise</option>
+                  <option>Workday</option>
+                </select>
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Risk class</span>
+                <select id="riskInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Requested entitlement</span>
+              <input id="entitlementInput" required placeholder="e.g. FI_AP_Approver" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+            </label>
+
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Business justification</span>
+              <textarea id="justificationInput" required rows="3" placeholder="Why this access is needed and for how long" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500"></textarea>
+            </label>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Ticket reference</span>
+                <input id="ticketInput" required placeholder="SNOW-####" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Compensating control (required for High risk)</span>
+                <input id="controlInput" placeholder="e.g. daily reconciliation review" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+              </label>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="submit" class="rounded-lg border border-emerald-600/60 bg-emerald-700/30 px-3 py-2 text-sm hover:bg-emerald-700/40">Submit request</button>
+              <p id="formMsg" class="text-xs text-slate-400"></p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <aside class="xl:col-span-5 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Request detail</h2>
+            <span id="detailBadge" class="text-xs rounded-full px-2 py-1 border border-slate-600 text-slate-300">No request selected</span>
+          </div>
+          <div id="detailPanel" class="space-y-3 text-sm text-slate-300"></div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="sendSecurityBtn" class="text-xs rounded border border-indigo-600/60 bg-indigo-700/30 px-2.5 py-1.5 hover:bg-indigo-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Send to Security</button>
+            <button id="approveBtn" class="text-xs rounded border border-emerald-600/60 bg-emerald-700/30 px-2.5 py-1.5 hover:bg-emerald-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Approve</button>
+            <button id="rejectBtn" class="text-xs rounded border border-rose-600/60 bg-rose-700/30 px-2.5 py-1.5 hover:bg-rose-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Reject</button>
+            <button id="provisionBtn" class="text-xs rounded border border-cyan-600/60 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Mark Provisioned</button>
+            <button id="cloneBtn" class="text-xs rounded border border-slate-600 px-2.5 py-1.5 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed">Clone</button>
+          </div>
+          <p id="policyMsg" class="text-xs text-slate-400 mt-3"></p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Policy guardrails</h2>
+          <ul class="space-y-2 text-sm text-slate-300 list-disc pl-4">
+            <li>Manager can route only from <strong>Pending Manager</strong>.</li>
+            <li><strong>High risk</strong> approvals require compensating control text.</li>
+            <li>Only <strong>Security Admin</strong> can approve or reject security review.</li>
+            <li>Only <strong>IAM Ops</strong> can mark approved requests as provisioned.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit trail</h2>
+          <ul id="auditList" class="space-y-2 text-sm max-h-[20rem] overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const statusFilter = document.getElementById('statusFilter');
+    const systemFilter = document.getElementById('systemFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const searchInput = document.getElementById('searchInput');
+    const requestRows = document.getElementById('requestRows');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailBadge = document.getElementById('detailBadge');
+    const policyMsg = document.getElementById('policyMsg');
+    const auditList = document.getElementById('auditList');
+    const kpiGrid = document.getElementById('kpiGrid');
+
+    const sendSecurityBtn = document.getElementById('sendSecurityBtn');
+    const approveBtn = document.getElementById('approveBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+    const provisionBtn = document.getElementById('provisionBtn');
+    const cloneBtn = document.getElementById('cloneBtn');
+
+    const requestForm = document.getElementById('requestForm');
+    const nameInput = document.getElementById('nameInput');
+    const managerInput = document.getElementById('managerInput');
+    const systemInput = document.getElementById('systemInput');
+    const riskInput = document.getElementById('riskInput');
+    const entitlementInput = document.getElementById('entitlementInput');
+    const justificationInput = document.getElementById('justificationInput');
+    const ticketInput = document.getElementById('ticketInput');
+    const controlInput = document.getElementById('controlInput');
+    const formMsg = document.getElementById('formMsg');
+
+    const requests = [
+      {
+        id: 'AR-9211',
+        employee: 'L. Schneider',
+        manager: 'N. Keller',
+        system: 'SAP S/4',
+        entitlement: 'FI_AP_Approver',
+        risk: 'High',
+        status: 'Pending Security',
+        submitted: '2026-04-15T08:20:00Z',
+        slaHours: 9,
+        ticket: 'SNOW-4431',
+        justification: 'Covers AP approvals during quarter close while primary approver is on leave.',
+        control: 'Daily payment file reconciliation by Finance Control',
+        sod: ['Approver conflicts with vendor maintenance role']
+      },
+      {
+        id: 'AR-9212',
+        employee: 'D. Vogt',
+        manager: 'S. Braun',
+        system: 'Salesforce',
+        entitlement: 'Renewals_ReadWrite',
+        risk: 'Medium',
+        status: 'Pending Manager',
+        submitted: '2026-04-16T10:35:00Z',
+        slaHours: 14,
+        ticket: 'SNOW-4438',
+        justification: 'Needs renewal object write permissions for Q2 renewal campaign setup.',
+        control: '',
+        sod: []
+      },
+      {
+        id: 'AR-9213',
+        employee: 'M. Haase',
+        manager: 'K. Otto',
+        system: 'GitHub Enterprise',
+        entitlement: 'Repo_Admin_FinanceApps',
+        risk: 'High',
+        status: 'Approved',
+        submitted: '2026-04-14T13:00:00Z',
+        slaHours: 4,
+        ticket: 'SNOW-4403',
+        justification: 'Temporary admin access for release rollback and emergency patch workflow.',
+        control: 'Pair-review mandatory on protected branches',
+        sod: ['Admin role bypasses standard merge checks if misconfigured']
+      },
+      {
+        id: 'AR-9214',
+        employee: 'A. Richter',
+        manager: 'R. Fink',
+        system: 'Workday',
+        entitlement: 'HRBP_ViewOnly',
+        risk: 'Low',
+        status: 'Provisioned',
+        submitted: '2026-04-13T09:10:00Z',
+        slaHours: 2,
+        ticket: 'SNOW-4389',
+        justification: 'New HR business partner needs view access for regional org support.',
+        control: '',
+        sod: []
+      },
+      {
+        id: 'AR-9215',
+        employee: 'T. Weiss',
+        manager: 'N. Keller',
+        system: 'NetSuite',
+        entitlement: 'GL_Journal_Create',
+        risk: 'High',
+        status: 'Rejected',
+        submitted: '2026-04-12T07:45:00Z',
+        slaHours: 6,
+        ticket: 'SNOW-4371',
+        justification: 'Urgent access requested for quarter-end entries.',
+        control: '',
+        sod: ['No SoD mitigation attached for high-risk finance posting role']
+      },
+      {
+        id: 'AR-9216',
+        employee: 'P. Adler',
+        manager: 'S. Braun',
+        system: 'SAP S/4',
+        entitlement: 'MM_PO_Display',
+        risk: 'Low',
+        status: 'Draft',
+        submitted: '2026-04-17T07:30:00Z',
+        slaHours: 23,
+        ticket: 'SNOW-4452',
+        justification: 'Read-only PO visibility for vendor onboarding checks.',
+        control: '',
+        sod: []
+      }
+    ];
+
+    const audit = [
+      { ts: '07:42', text: 'Overnight sync imported 6 open requests from ServiceNow.' },
+      { ts: '07:46', text: 'AR-9211 flagged for SoD conflict check.' },
+      { ts: '07:49', text: 'AR-9213 approved by Security Admin (K. Adler).' }
+    ];
+
+    const riskRank = { High: 3, Medium: 2, Low: 1 };
+
+    const state = {
+      selectedId: requests[0]?.id || null,
+      sortBy: 'submitted',
+      sortDir: 'desc'
+    };
+
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function statusClass(status) {
+      const map = {
+        'Draft': 'border-slate-600 text-slate-300',
+        'Pending Manager': 'border-amber-600/60 text-amber-300',
+        'Pending Security': 'border-indigo-600/60 text-indigo-300',
+        'Approved': 'border-emerald-600/60 text-emerald-300',
+        'Rejected': 'border-rose-600/60 text-rose-300',
+        'Provisioned': 'border-cyan-600/60 text-cyan-300'
+      };
+      return map[status] || 'border-slate-600 text-slate-300';
+    }
+
+    function getFilteredRequests() {
+      const q = searchInput.value.trim().toLowerCase();
+      let rows = requests.filter((item) => {
+        if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+        if (systemFilter.value !== 'all' && item.system !== systemFilter.value) return false;
+        if (riskFilter.value !== 'all' && item.risk !== riskFilter.value) return false;
+        if (!q) return true;
+        return [item.id, item.employee, item.system, item.entitlement, item.ticket]
+          .join(' ')
+          .toLowerCase()
+          .includes(q);
+      });
+
+      rows.sort((a, b) => {
+        let cmp = 0;
+        if (state.sortBy === 'risk') {
+          cmp = riskRank[a.risk] - riskRank[b.risk];
+        } else {
+          cmp = new Date(a.submitted) - new Date(b.submitted);
+        }
+        return state.sortDir === 'asc' ? cmp : -cmp;
+      });
+
+      return rows;
+    }
+
+    function ensureSelected(rows) {
+      if (!rows.length) {
+        state.selectedId = null;
+        return;
+      }
+      if (!rows.find((r) => r.id === state.selectedId)) {
+        state.selectedId = rows[0].id;
+      }
+    }
+
+    function renderKPIs() {
+      const pending = requests.filter((r) => r.status === 'Pending Manager' || r.status === 'Pending Security').length;
+      const highOpen = requests.filter((r) => r.risk === 'High' && !['Rejected', 'Provisioned'].includes(r.status)).length;
+      const approved = requests.filter((r) => r.status === 'Approved').length;
+      const avgSla = Math.round(requests.reduce((acc, r) => acc + r.slaHours, 0) / requests.length);
+
+      const cards = [
+        { label: 'Pending approvals', value: pending, tone: 'text-amber-300' },
+        { label: 'High risk open', value: highOpen, tone: 'text-rose-300' },
+        { label: 'Approved awaiting IAM', value: approved, tone: 'text-emerald-300' },
+        { label: 'Avg turnaround (h)', value: avgSla, tone: 'text-cyan-300' }
+      ];
+
+      kpiGrid.innerHTML = cards
+        .map((c) => `<article class="rounded-xl border border-slate-800 bg-slate-900/80 p-3"><p class="text-xs text-slate-400">${c.label}</p><p class="text-2xl font-semibold mt-1 ${c.tone}">${c.value}</p></article>`)
+        .join('');
+    }
+
+    function renderRows() {
+      const rows = getFilteredRequests();
+      ensureSelected(rows);
+
+      if (!rows.length) {
+        requestRows.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">No requests match current filters.</td></tr>';
+        renderDetail();
+        return;
+      }
+
+      requestRows.innerHTML = rows
+        .map((item) => {
+          const selected = item.id === state.selectedId;
+          const riskTone = item.risk === 'High' ? 'text-rose-300' : item.risk === 'Medium' ? 'text-amber-300' : 'text-emerald-300';
+          return `
+            <tr data-id="${item.id}" tabindex="0" class="cursor-pointer border-b border-slate-900 hover:bg-slate-800/70 focus:outline-none focus:ring-1 focus:ring-cyan-500 ${selected ? 'bg-slate-800/80' : ''}">
+              <td class="py-2 font-medium">${item.id}</td>
+              <td class="py-2">${item.employee}</td>
+              <td class="py-2">${item.system}</td>
+              <td class="py-2">${item.entitlement}</td>
+              <td class="py-2 ${riskTone}">${item.risk}</td>
+              <td class="py-2"><span class="inline-flex rounded-full border px-2 py-0.5 text-xs ${statusClass(item.status)}">${item.status}</span></td>
+              <td class="py-2">${item.slaHours}h</td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      requestRows.querySelectorAll('tr[data-id]').forEach((tr) => {
+        tr.addEventListener('click', () => {
+          state.selectedId = tr.dataset.id;
+          render();
+        });
+        tr.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            state.selectedId = tr.dataset.id;
+            render();
+          }
+        });
+      });
+
+      renderDetail();
+    }
+
+    function getSelected() {
+      return requests.find((r) => r.id === state.selectedId) || null;
+    }
+
+    function can(action, req, role) {
+      if (!req) return false;
+      if (action === 'sendSecurity') return role === 'Manager' && req.status === 'Pending Manager';
+      if (action === 'approve') return role === 'Security Admin' && req.status === 'Pending Security';
+      if (action === 'reject') return role === 'Security Admin' && req.status === 'Pending Security';
+      if (action === 'provision') return role === 'IAM Ops' && req.status === 'Approved';
+      if (action === 'clone') return role === 'Requester';
+      return false;
+    }
+
+    function renderDetail() {
+      const req = getSelected();
+      const role = roleSelect.value;
+
+      if (!req) {
+        detailBadge.textContent = 'No request selected';
+        detailBadge.className = 'text-xs rounded-full px-2 py-1 border border-slate-600 text-slate-300';
+        detailPanel.innerHTML = '<p class="text-slate-400">Select a request from the queue to inspect details and actions.</p>';
+        policyMsg.textContent = '';
+        setActionState(null);
+        return;
+      }
+
+      detailBadge.textContent = req.id;
+      detailBadge.className = `text-xs rounded-full px-2 py-1 border ${statusClass(req.status)}`;
+
+      const sodList = req.sod.length
+        ? `<ul class="list-disc pl-4 text-rose-200 space-y-1">${req.sod.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`
+        : '<p class="text-emerald-300">No SoD conflict detected.</p>';
+
+      detailPanel.innerHTML = `
+        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+          <p>User</p><p class="text-slate-200">${escapeHtml(req.employee)}</p>
+          <p>Manager</p><p class="text-slate-200">${escapeHtml(req.manager)}</p>
+          <p>System</p><p class="text-slate-200">${escapeHtml(req.system)}</p>
+          <p>Ticket</p><p class="text-slate-200">${escapeHtml(req.ticket)}</p>
+          <p>Submitted</p><p class="text-slate-200">${fmtDate(req.submitted)}</p>
+          <p>Risk</p><p class="text-slate-200">${escapeHtml(req.risk)}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">Entitlement</p>
+          <p class="text-sm text-slate-200">${escapeHtml(req.entitlement)}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">Business justification</p>
+          <p class="text-sm text-slate-200">${escapeHtml(req.justification)}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">Compensating control</p>
+          <p class="text-sm ${req.control ? 'text-slate-200' : 'text-rose-300'}">${req.control ? escapeHtml(req.control) : 'Missing control note'}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">SoD findings</p>
+          ${sodList}
+        </div>
+      `;
+
+      setActionState(req);
+
+      const hints = [];
+      if (role === 'Manager' && req.status !== 'Pending Manager') hints.push('Manager can only route requests from Pending Manager.');
+      if (role === 'Security Admin' && req.status === 'Pending Security' && req.risk === 'High' && !req.control.trim()) hints.push('High-risk request needs compensating control before approval.');
+      if (role === 'IAM Ops' && req.status !== 'Approved') hints.push('IAM Ops can provision only approved requests.');
+      if (role === 'Requester') hints.push('Requester can clone selected request into Draft.');
+
+      policyMsg.textContent = hints.join(' ');
+    }
+
+    function setActionState(req) {
+      const role = roleSelect.value;
+      sendSecurityBtn.disabled = !can('sendSecurity', req, role);
+      approveBtn.disabled = !can('approve', req, role);
+      rejectBtn.disabled = !can('reject', req, role);
+      provisionBtn.disabled = !can('provision', req, role);
+      cloneBtn.disabled = !can('clone', req, role);
+    }
+
+    function addAudit(text) {
+      const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      audit.unshift({ ts, text });
+      renderAudit();
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = audit
+        .slice(0, 16)
+        .map((item) => `<li class="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2"><p class="text-[11px] text-slate-500">${item.ts}</p><p class="text-slate-200">${escapeHtml(item.text)}</p></li>`)
+        .join('');
+    }
+
+    function nextId() {
+      const n = Math.max(...requests.map((r) => Number(r.id.split('-')[1]))) + 1;
+      return `AR-${n}`;
+    }
+
+    function validateForm() {
+      const errors = [];
+      if (!nameInput.value.trim()) errors.push('Employee name is required.');
+      if (!managerInput.value.trim()) errors.push('Manager is required.');
+      if (!systemInput.value) errors.push('System is required.');
+      if (!riskInput.value) errors.push('Risk class is required.');
+      if (!entitlementInput.value.trim()) errors.push('Entitlement is required.');
+      if (justificationInput.value.trim().length < 20) errors.push('Business justification must be at least 20 characters.');
+      if (!/^SNOW-\d{4,}$/.test(ticketInput.value.trim())) errors.push('Ticket must follow SNOW-#### format.');
+      if (riskInput.value === 'High' && controlInput.value.trim().length < 10) errors.push('High-risk requests need compensating control details.');
+      return errors;
+    }
+
+    function submitRequest(event) {
+      event.preventDefault();
+      const errors = validateForm();
+      if (errors.length) {
+        formMsg.textContent = errors[0];
+        formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const record = {
+        id: nextId(),
+        employee: nameInput.value.trim(),
+        manager: managerInput.value.trim(),
+        system: systemInput.value,
+        entitlement: entitlementInput.value.trim(),
+        risk: riskInput.value,
+        status: 'Pending Manager',
+        submitted: new Date().toISOString(),
+        slaHours: 24,
+        ticket: ticketInput.value.trim(),
+        justification: justificationInput.value.trim(),
+        control: controlInput.value.trim(),
+        sod: riskInput.value === 'High' ? ['Automatic SoD check pending in security review'] : []
+      };
+
+      requests.unshift(record);
+      state.selectedId = record.id;
+      requestForm.reset();
+      formMsg.textContent = `Request ${record.id} submitted to manager queue.`;
+      formMsg.className = 'text-xs text-emerald-300';
+      addAudit(`${record.id} created by Requester and routed to Pending Manager.`);
+      render();
+    }
+
+    function transition(newStatus) {
+      const req = getSelected();
+      const role = roleSelect.value;
+      if (!req) return;
+
+      if (newStatus === 'Pending Security' && !can('sendSecurity', req, role)) return;
+      if (newStatus === 'Approved') {
+        if (!can('approve', req, role)) return;
+        if (req.risk === 'High' && !req.control.trim()) {
+          policyMsg.textContent = 'Approval blocked: high-risk request needs compensating control.';
+          return;
+        }
+      }
+      if (newStatus === 'Rejected' && !can('reject', req, role)) return;
+      if (newStatus === 'Provisioned' && !can('provision', req, role)) return;
+
+      const prev = req.status;
+      req.status = newStatus;
+      addAudit(`${req.id} moved ${prev} → ${newStatus} by ${role}.`);
+      render();
+    }
+
+    function cloneSelected() {
+      const req = getSelected();
+      if (!req || !can('clone', req, roleSelect.value)) return;
+
+      const clone = {
+        ...req,
+        id: nextId(),
+        status: 'Draft',
+        submitted: new Date().toISOString(),
+        ticket: 'SNOW-0000',
+        slaHours: 24,
+        sod: [...req.sod]
+      };
+      requests.unshift(clone);
+      state.selectedId = clone.id;
+      addAudit(`${clone.id} cloned from ${req.id} as Draft by Requester.`);
+      render();
+    }
+
+    function exportCsv() {
+      const rows = getFilteredRequests();
+      const header = ['id', 'employee', 'manager', 'system', 'entitlement', 'risk', 'status', 'ticket', 'submitted', 'slaHours'];
+      const csv = [
+        header.join(','),
+        ...rows.map((r) => header.map((k) => `"${String(r[k]).replaceAll('"', '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `access-request-queue-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      addAudit(`CSV export generated with ${rows.length} request rows.`);
+    }
+
+    function toggleSort(type) {
+      if (state.sortBy === type) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortBy = type;
+        state.sortDir = type === 'submitted' ? 'desc' : 'desc';
+      }
+      renderRows();
+    }
+
+    function render() {
+      renderKPIs();
+      renderRows();
+      renderAudit();
+    }
+
+    roleSelect.addEventListener('change', render);
+    statusFilter.addEventListener('change', renderRows);
+    systemFilter.addEventListener('change', renderRows);
+    riskFilter.addEventListener('change', renderRows);
+    searchInput.addEventListener('input', renderRows);
+
+    document.getElementById('sortDateBtn').addEventListener('click', () => toggleSort('submitted'));
+    document.getElementById('sortRiskBtn').addEventListener('click', () => toggleSort('risk'));
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+    requestForm.addEventListener('submit', submitRequest);
+    sendSecurityBtn.addEventListener('click', () => transition('Pending Security'));
+    approveBtn.addEventListener('click', () => transition('Approved'));
+    rejectBtn.addEventListener('click', () => transition('Rejected'));
+    provisionBtn.addEventListener('click', () => transition('Provisioned'));
+    cloneBtn.addEventListener('click', cloneSelected);
+
+    render();
+  </script>
+</body>
+</html>

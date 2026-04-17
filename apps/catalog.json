@@ -1941,5 +1941,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-17",
+    "day": 87,
+    "slug": "2026-04-17-access-request-entitlement-review-desk",
+    "name": "Access Request Entitlement Review Desk",
+    "description": "IT Ops master-detail workspace for entitlement approvals with policy validation, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Master-Detail",
+    "tags": [
+      "access requests",
+      "it ops",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
