@@ -1965,5 +1965,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-18",
+    "day": 88,
+    "slug": "2026-04-18-cycle-count-variance-kanban",
+    "name": "Cycle Count Variance Kanban",
+    "description": "Supply Chain kanban board to triage cycle-count variances through investigation, approval, and posting with policy checks and audit-ready export.",
+    "category": "Supply Chain",
+    "pattern": "Kanban",
+    "tags": [
+      "cycle count",
+      "inventory",
+      "supply chain",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "drag-and-drop",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

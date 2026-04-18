@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cycle Count Variance Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Cycle Count Variance Kanban</h1>
+        <p class="text-slate-400 mt-2">Supply Chain control board to triage inventory count variances from discovery to posted adjustment, with policy-gated approvals, audit trail, and CSV export.</p>
+      </div>
+      <div class="grid gap-3 w-full lg:w-auto lg:grid-cols-5">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option>Counter</option>
+            <option>Supervisor</option>
+            <option>Finance Controller</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Warehouse</span>
+          <select id="warehouseFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All warehouses</option>
+            <option>WH-DE-01</option>
+            <option>WH-DE-02</option>
+            <option>WH-PL-01</option>
+            <option>WH-NL-01</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Risk</span>
+          <select id="riskFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All risks</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Sort cards</span>
+          <select id="sortSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="value">Highest value impact</option>
+            <option value="risk">Highest risk first</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="ID, SKU, bin, assignee" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+        </label>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div class="xl:col-span-8 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Variance Flow Kanban</h2>
+            <p id="boardMsg" class="text-xs text-slate-400">Drag cards between columns or use card actions.</p>
+          </div>
+          <div id="boardGrid" class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Variance Register</h2>
+            <button id="exportBtn" class="text-xs rounded border border-cyan-600/60 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/45">Export CSV</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[860px]">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-2">ID</th>
+                  <th class="text-left py-2">Warehouse</th>
+                  <th class="text-left py-2">SKU</th>
+                  <th class="text-left py-2">Bin</th>
+                  <th class="text-left py-2">Variance</th>
+                  <th class="text-left py-2">Impact</th>
+                  <th class="text-left py-2">Risk</th>
+                  <th class="text-left py-2">Stage</th>
+                  <th class="text-left py-2">Assignee</th>
+                </tr>
+              </thead>
+              <tbody id="tableRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Log new variance</h2>
+          <form id="varianceForm" class="space-y-3" novalidate>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Warehouse</span>
+                <select name="warehouse" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>WH-DE-01</option>
+                  <option>WH-DE-02</option>
+                  <option>WH-PL-01</option>
+                  <option>WH-NL-01</option>
+                </select>
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">SKU</span>
+                <input name="sku" required placeholder="ABC-1204" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Bin</span>
+                <input name="bin" required placeholder="A-04-07" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Expected Qty</span>
+                <input name="expectedQty" type="number" required min="0" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Counted Qty</span>
+                <input name="countedQty" type="number" required min="0" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Unit Cost (€)</span>
+                <input name="unitCost" type="number" required min="0.01" step="0.01" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+            </div>
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Initial note</span>
+              <textarea name="note" rows="2" placeholder="What likely happened?" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500"></textarea>
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="submit" class="rounded-lg border border-emerald-600/60 bg-emerald-700/30 px-3 py-2 text-sm hover:bg-emerald-700/45">Create variance case</button>
+              <p id="formMsg" class="text-xs text-slate-400"></p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <aside class="xl:col-span-4 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Case Detail</h2>
+            <span id="detailBadge" class="text-xs rounded-full px-2 py-1 border border-slate-600 text-slate-300">No case selected</span>
+          </div>
+          <div id="detailPanel" class="space-y-3 text-sm text-slate-300"></div>
+          <p id="detailMsg" class="text-xs text-slate-400 mt-3"></p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Policy checks</h2>
+          <ul class="space-y-2 text-sm text-slate-300 list-disc pl-4">
+            <li>Only <strong>Supervisor</strong> can submit investigations for approval.</li>
+            <li>Root cause and correction action are mandatory before approval stage.</li>
+            <li>Only <strong>Finance Controller</strong> can post inventory adjustments.</li>
+            <li>Posting requires a valid approval code (minimum 4 characters).</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit trail</h2>
+          <ul id="auditList" class="space-y-2 text-sm max-h-[20rem] overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const riskFilter = document.getElementById('riskFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const searchInput = document.getElementById('searchInput');
+    const kpiGrid = document.getElementById('kpiGrid');
+    const boardGrid = document.getElementById('boardGrid');
+    const boardMsg = document.getElementById('boardMsg');
+    const tableRows = document.getElementById('tableRows');
+    const exportBtn = document.getElementById('exportBtn');
+    const varianceForm = document.getElementById('varianceForm');
+    const formMsg = document.getElementById('formMsg');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailBadge = document.getElementById('detailBadge');
+    const detailMsg = document.getElementById('detailMsg');
+    const auditList = document.getElementById('auditList');
+
+    const STAGES = [
+      { key: 'new', label: 'New Variance', tone: 'border-sky-700/60 bg-sky-900/20' },
+      { key: 'investigating', label: 'Investigating', tone: 'border-amber-700/60 bg-amber-900/20' },
+      { key: 'pending', label: 'Pending Approval', tone: 'border-purple-700/60 bg-purple-900/20' },
+      { key: 'posted', label: 'Posted', tone: 'border-emerald-700/60 bg-emerald-900/20' }
+    ];
+
+    const RISK_ORDER = { High: 3, Medium: 2, Low: 1 };
+
+    const state = {
+      nextId: 117,
+      selectedId: 'CC-0112',
+      entries: [
+        {
+          id: 'CC-0111', createdAt: '2026-04-18T06:45:00Z', warehouse: 'WH-DE-01', sku: 'MOT-8831', bin: 'A-03-11',
+          expectedQty: 240, countedQty: 188, varianceQty: -52, unitCost: 19.8, valueImpact: -1029.6, risk: 'Medium', stage: 'new',
+          assignee: 'Lena Voss', rootCause: '', correctionAction: '', approvalCode: '', note: 'Fast movers near outbound dock.'
+        },
+        {
+          id: 'CC-0112', createdAt: '2026-04-18T07:02:00Z', warehouse: 'WH-DE-02', sku: 'BAT-4402', bin: 'C-08-03',
+          expectedQty: 90, countedQty: 12, varianceQty: -78, unitCost: 82.2, valueImpact: -6411.6, risk: 'High', stage: 'investigating',
+          assignee: 'Armin Koch', rootCause: 'Label mismatch between pick faces.', correctionAction: 'Re-label and recount with dual signoff.', approvalCode: '', note: 'Triggered by blind recount.'
+        },
+        {
+          id: 'CC-0113', createdAt: '2026-04-18T07:10:00Z', warehouse: 'WH-PL-01', sku: 'CAB-9022', bin: 'F-12-01',
+          expectedQty: 510, countedQty: 560, varianceQty: 50, unitCost: 4.25, valueImpact: 212.5, risk: 'Medium', stage: 'pending',
+          assignee: 'Marta Jankowska', rootCause: 'Late GR posting from night shift.', correctionAction: 'Synchronize handheld upload job at 01:00.', approvalCode: '', note: 'Difference is repeat of last week pattern.'
+        },
+        {
+          id: 'CC-0114', createdAt: '2026-04-18T07:15:00Z', warehouse: 'WH-NL-01', sku: 'DRV-1005', bin: 'B-02-09',
+          expectedQty: 44, countedQty: 43, varianceQty: -1, unitCost: 1440, valueImpact: -1440, risk: 'Medium', stage: 'posted',
+          assignee: 'Nora van Dijk', rootCause: 'Packing damage write-off not posted.', correctionAction: 'Add scanner prompt before shipping close.', approvalCode: 'FIN-8841', note: 'Inventory adjustment posted.'
+        },
+        {
+          id: 'CC-0115', createdAt: '2026-04-18T07:22:00Z', warehouse: 'WH-DE-01', sku: 'SNS-3318', bin: 'D-09-02',
+          expectedQty: 300, countedQty: 206, varianceQty: -94, unitCost: 37.5, valueImpact: -3525, risk: 'High', stage: 'new',
+          assignee: 'Lena Voss', rootCause: '', correctionAction: '', approvalCode: '', note: 'Potential unposted transfer to WH-DE-02.'
+        },
+        {
+          id: 'CC-0116', createdAt: '2026-04-18T07:29:00Z', warehouse: 'WH-PL-01', sku: 'PMP-7710', bin: 'G-04-04',
+          expectedQty: 65, countedQty: 71, varianceQty: 6, unitCost: 255, valueImpact: 1530, risk: 'Medium', stage: 'investigating',
+          assignee: 'Jakub Milek', rootCause: '', correctionAction: '', approvalCode: '', note: 'Check return-to-stock flow.'
+        }
+      ],
+      audit: []
+    };
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function stageLabel(stageKey) {
+      return STAGES.find(stage => stage.key === stageKey)?.label || stageKey;
+    }
+
+    function nowStamp() {
+      return new Date().toISOString();
+    }
+
+    function pushAudit(text) {
+      state.audit.unshift({ id: crypto.randomUUID(), at: nowStamp(), text });
+      state.audit = state.audit.slice(0, 50);
+    }
+
+    function computeRisk(varianceQty, valueImpact) {
+      const magnitudeQty = Math.abs(varianceQty);
+      const magnitudeValue = Math.abs(valueImpact);
+      if (magnitudeQty >= 80 || magnitudeValue >= 5000) return 'High';
+      if (magnitudeQty >= 25 || magnitudeValue >= 1500) return 'Medium';
+      return 'Low';
+    }
+
+    function getSorted(entries) {
+      const sort = sortSelect.value;
+      const sorted = [...entries];
+
+      if (sort === 'oldest') {
+        sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      } else if (sort === 'value') {
+        sorted.sort((a, b) => Math.abs(b.valueImpact) - Math.abs(a.valueImpact));
+      } else if (sort === 'risk') {
+        sorted.sort((a, b) => (RISK_ORDER[b.risk] || 0) - (RISK_ORDER[a.risk] || 0));
+      } else {
+        sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+
+      return sorted;
+    }
+
+    function filteredEntries() {
+      const warehouse = warehouseFilter.value;
+      const risk = riskFilter.value;
+      const query = searchInput.value.trim().toLowerCase();
+
+      return state.entries.filter(entry => {
+        const warehouseOk = warehouse === 'all' || entry.warehouse === warehouse;
+        const riskOk = risk === 'all' || entry.risk === risk;
+        const queryOk = !query || [
+          entry.id,
+          entry.sku,
+          entry.bin,
+          entry.assignee,
+          entry.warehouse,
+          entry.stage
+        ].join(' ').toLowerCase().includes(query);
+
+        return warehouseOk && riskOk && queryOk;
+      });
+    }
+
+    function renderKpis() {
+      const openItems = state.entries.filter(entry => entry.stage !== 'posted');
+      const highRiskOpen = openItems.filter(entry => entry.risk === 'High').length;
+      const openExposure = openItems.reduce((sum, entry) => sum + Math.abs(entry.valueImpact), 0);
+      const postedToday = state.entries.filter(entry => entry.stage === 'posted').length;
+
+      const cards = [
+        { label: 'Open variances', value: openItems.length, tone: 'text-sky-300' },
+        { label: 'High-risk open', value: highRiskOpen, tone: 'text-rose-300' },
+        { label: 'Open exposure', value: formatCurrency(openExposure), tone: 'text-amber-300' },
+        { label: 'Posted today', value: postedToday, tone: 'text-emerald-300' }
+      ];
+
+      kpiGrid.innerHTML = cards.map(card => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${card.label}</p>
+          <p class="text-2xl font-semibold mt-1 ${card.tone}">${card.value}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderBoard() {
+      const filtered = getSorted(filteredEntries());
+      boardGrid.innerHTML = STAGES.map(stage => {
+        const stageEntries = filtered.filter(entry => entry.stage === stage.key);
+
+        return `
+          <section data-stage="${stage.key}" class="rounded-xl border ${stage.tone} p-3 min-h-[16rem]" aria-label="${stage.label}">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-sm">${stage.label}</h3>
+              <span class="text-xs text-slate-300">${stageEntries.length}</span>
+            </div>
+            <div class="space-y-2" data-dropzone="${stage.key}">
+              ${stageEntries.map(entry => `
+                <article
+                  tabindex="0"
+                  draggable="true"
+                  data-card-id="${entry.id}"
+                  class="rounded-lg border border-slate-700 bg-slate-950/80 p-3 cursor-grab hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <button data-select-id="${entry.id}" class="text-left font-semibold text-sm hover:underline">${entry.id}</button>
+                    <span class="text-[10px] rounded-full px-2 py-0.5 border ${entry.risk === 'High' ? 'border-rose-500/70 text-rose-200' : entry.risk === 'Medium' ? 'border-amber-500/70 text-amber-200' : 'border-emerald-500/70 text-emerald-200'}">${entry.risk}</span>
+                  </div>
+                  <p class="text-xs text-slate-300 mt-1">${entry.sku} · ${entry.bin}</p>
+                  <p class="text-xs text-slate-400">${entry.warehouse}</p>
+                  <p class="text-xs text-slate-300 mt-2">Variance <strong>${entry.varianceQty > 0 ? '+' : ''}${entry.varianceQty}</strong> | Impact <strong>${formatCurrency(entry.valueImpact)}</strong></p>
+                  <p class="text-[11px] text-slate-400 mt-2 truncate">Owner: ${entry.assignee || 'Unassigned'}</p>
+                </article>
+              `).join('') || '<p class="text-xs text-slate-500">No matching items</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      boardGrid.querySelectorAll('[data-select-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          state.selectedId = button.dataset.selectId;
+          detailMsg.textContent = '';
+          renderDetail();
+          renderTable();
+        });
+      });
+
+      boardGrid.querySelectorAll('[data-card-id]').forEach(card => {
+        card.addEventListener('dragstart', event => {
+          event.dataTransfer.setData('text/plain', card.dataset.cardId);
+        });
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter') {
+            state.selectedId = card.dataset.cardId;
+            renderDetail();
+            renderTable();
+          }
+        });
+      });
+
+      boardGrid.querySelectorAll('[data-dropzone]').forEach(zone => {
+        zone.addEventListener('dragover', event => {
+          event.preventDefault();
+        });
+
+        zone.addEventListener('drop', event => {
+          event.preventDefault();
+          const id = event.dataTransfer.getData('text/plain');
+          const targetStage = zone.dataset.dropzone;
+          if (!id || !targetStage) return;
+          moveCase(id, targetStage, 'drag-and-drop');
+        });
+      });
+    }
+
+    function renderTable() {
+      const filtered = getSorted(filteredEntries());
+      tableRows.innerHTML = filtered.map(entry => {
+        const isSelected = entry.id === state.selectedId;
+        return `
+          <tr data-row-id="${entry.id}" class="border-b border-slate-900 hover:bg-slate-800/60 ${isSelected ? 'bg-slate-800/70' : ''}">
+            <td class="py-2 pr-2"><button class="text-left hover:underline" data-row-select="${entry.id}">${entry.id}</button></td>
+            <td class="py-2 pr-2">${entry.warehouse}</td>
+            <td class="py-2 pr-2">${entry.sku}</td>
+            <td class="py-2 pr-2">${entry.bin}</td>
+            <td class="py-2 pr-2 ${entry.varianceQty < 0 ? 'text-rose-300' : 'text-emerald-300'}">${entry.varianceQty > 0 ? '+' : ''}${entry.varianceQty}</td>
+            <td class="py-2 pr-2">${formatCurrency(entry.valueImpact)}</td>
+            <td class="py-2 pr-2">${entry.risk}</td>
+            <td class="py-2 pr-2">${stageLabel(entry.stage)}</td>
+            <td class="py-2 pr-2">${entry.assignee || '-'}</td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="9" class="py-4 text-center text-slate-500">No records match current filters.</td></tr>';
+
+      tableRows.querySelectorAll('[data-row-select]').forEach(button => {
+        button.addEventListener('click', () => {
+          state.selectedId = button.dataset.rowSelect;
+          detailMsg.textContent = '';
+          renderDetail();
+          renderTable();
+        });
+      });
+    }
+
+    function nextStage(stage) {
+      if (stage === 'new') return 'investigating';
+      if (stage === 'investigating') return 'pending';
+      if (stage === 'pending') return 'posted';
+      return stage;
+    }
+
+    function previousStage(stage) {
+      if (stage === 'investigating') return 'new';
+      if (stage === 'pending') return 'investigating';
+      if (stage === 'posted') return 'pending';
+      return stage;
+    }
+
+    function validateTransition(entry, targetStage) {
+      const role = roleSelect.value;
+      const current = entry.stage;
+
+      if (current === targetStage) return { ok: false, reason: 'Case is already in that stage.' };
+
+      if (targetStage === 'investigating') {
+        if (current !== 'new' && current !== 'pending') {
+          return { ok: false, reason: 'Only new or pending cases can move to investigating.' };
+        }
+        if (!['Counter', 'Supervisor', 'Finance Controller'].includes(role)) {
+          return { ok: false, reason: 'Current role cannot investigate.' };
+        }
+      }
+
+      if (targetStage === 'pending') {
+        if (current !== 'investigating' && current !== 'posted') {
+          return { ok: false, reason: 'Only investigating or posted cases can move to pending.' };
+        }
+        if (role !== 'Supervisor' && role !== 'Finance Controller') {
+          return { ok: false, reason: 'Supervisor role required to submit for approval.' };
+        }
+        if (!entry.rootCause.trim() || !entry.correctionAction.trim()) {
+          return { ok: false, reason: 'Root cause and correction action are required before approval.' };
+        }
+      }
+
+      if (targetStage === 'posted') {
+        if (current !== 'pending') {
+          return { ok: false, reason: 'Only pending cases can be posted.' };
+        }
+        if (role !== 'Finance Controller') {
+          return { ok: false, reason: 'Only Finance Controller can post inventory adjustments.' };
+        }
+        if (!entry.approvalCode.trim() || entry.approvalCode.trim().length < 4) {
+          return { ok: false, reason: 'Approval code (min 4 chars) is required to post.' };
+        }
+      }
+
+      if (targetStage === 'new') {
+        if (current !== 'investigating') {
+          return { ok: false, reason: 'Only investigating cases can be sent back to new.' };
+        }
+        if (role !== 'Supervisor' && role !== 'Finance Controller') {
+          return { ok: false, reason: 'Supervisor role required to reopen a case.' };
+        }
+      }
+
+      return { ok: true };
+    }
+
+    function moveCase(id, targetStage, source = 'action') {
+      const entry = state.entries.find(item => item.id === id);
+      if (!entry) return;
+
+      const validation = validateTransition(entry, targetStage);
+      if (!validation.ok) {
+        boardMsg.textContent = `Policy block: ${validation.reason}`;
+        detailMsg.textContent = validation.reason;
+        return;
+      }
+
+      const previous = entry.stage;
+      entry.stage = targetStage;
+      if (targetStage === 'posted') {
+        entry.postedAt = nowStamp();
+      }
+
+      boardMsg.textContent = `${entry.id} moved to ${stageLabel(targetStage)} via ${source}.`;
+      detailMsg.textContent = '';
+      pushAudit(`${entry.id}: ${stageLabel(previous)} → ${stageLabel(targetStage)} by ${roleSelect.value} (${source}).`);
+
+      renderAll();
+    }
+
+    function renderDetail() {
+      const entry = state.entries.find(item => item.id === state.selectedId);
+      if (!entry) {
+        detailBadge.textContent = 'No case selected';
+        detailPanel.innerHTML = '<p class="text-slate-500">Select a case to review policy fields and update status.</p>';
+        return;
+      }
+
+      detailBadge.textContent = `${entry.id} · ${stageLabel(entry.stage)}`;
+
+      detailPanel.innerHTML = `
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div><span class="text-slate-500">SKU</span><p class="mt-1">${entry.sku}</p></div>
+          <div><span class="text-slate-500">Bin</span><p class="mt-1">${entry.bin}</p></div>
+          <div><span class="text-slate-500">Variance</span><p class="mt-1 ${entry.varianceQty < 0 ? 'text-rose-300' : 'text-emerald-300'}">${entry.varianceQty > 0 ? '+' : ''}${entry.varianceQty}</p></div>
+          <div><span class="text-slate-500">Value impact</span><p class="mt-1">${formatCurrency(entry.valueImpact)}</p></div>
+        </div>
+
+        <label class="text-xs block">
+          <span class="block text-slate-400 mb-1">Assignee</span>
+          <input id="detailAssignee" value="${entry.assignee || ''}" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+        </label>
+
+        <label class="text-xs block">
+          <span class="block text-slate-400 mb-1">Root cause</span>
+          <textarea id="detailRoot" rows="2" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">${entry.rootCause || ''}</textarea>
+        </label>
+
+        <label class="text-xs block">
+          <span class="block text-slate-400 mb-1">Correction action</span>
+          <textarea id="detailAction" rows="2" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">${entry.correctionAction || ''}</textarea>
+        </label>
+
+        <label class="text-xs block">
+          <span class="block text-slate-400 mb-1">Approval code</span>
+          <input id="detailApproval" value="${entry.approvalCode || ''}" placeholder="FIN-####" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+        </label>
+
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button id="saveDetailBtn" class="text-xs rounded border border-cyan-600/60 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/45">Save details</button>
+          <button id="nextStageBtn" class="text-xs rounded border border-emerald-600/60 bg-emerald-700/30 px-2.5 py-1.5 hover:bg-emerald-700/45">Move forward</button>
+          <button id="backStageBtn" class="text-xs rounded border border-amber-600/60 bg-amber-700/30 px-2.5 py-1.5 hover:bg-amber-700/45">Send back</button>
+          <button id="cloneBtn" class="text-xs rounded border border-slate-600 px-2.5 py-1.5 hover:bg-slate-800">Clone as new</button>
+        </div>
+      `;
+
+      document.getElementById('saveDetailBtn').addEventListener('click', () => {
+        entry.assignee = document.getElementById('detailAssignee').value.trim();
+        entry.rootCause = document.getElementById('detailRoot').value.trim();
+        entry.correctionAction = document.getElementById('detailAction').value.trim();
+        entry.approvalCode = document.getElementById('detailApproval').value.trim();
+        entry.risk = computeRisk(entry.varianceQty, entry.valueImpact);
+        detailMsg.textContent = `${entry.id} details saved.`;
+        pushAudit(`${entry.id}: details updated by ${roleSelect.value}.`);
+        renderAll();
+      });
+
+      document.getElementById('nextStageBtn').addEventListener('click', () => {
+        moveCase(entry.id, nextStage(entry.stage));
+      });
+
+      document.getElementById('backStageBtn').addEventListener('click', () => {
+        moveCase(entry.id, previousStage(entry.stage));
+      });
+
+      document.getElementById('cloneBtn').addEventListener('click', () => {
+        const clone = {
+          ...entry,
+          id: `CC-${String(state.nextId++).padStart(4, '0')}`,
+          stage: 'new',
+          createdAt: nowStamp(),
+          approvalCode: '',
+          note: `Cloned from ${entry.id}`
+        };
+        state.entries.unshift(clone);
+        state.selectedId = clone.id;
+        pushAudit(`${clone.id}: cloned from ${entry.id} by ${roleSelect.value}.`);
+        renderAll();
+      });
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = state.audit.map(item => `
+        <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+          <p class="text-slate-300">${item.text}</p>
+          <p class="text-[11px] text-slate-500 mt-1">${new Date(item.at).toLocaleString('en-GB', { hour12: false })}</p>
+        </li>
+      `).join('') || '<li class="text-slate-500">No audit entries yet.</li>';
+    }
+
+    function renderAll() {
+      renderKpis();
+      renderBoard();
+      renderTable();
+      renderDetail();
+      renderAudit();
+    }
+
+    roleSelect.addEventListener('change', () => {
+      boardMsg.textContent = `Role switched to ${roleSelect.value}.`;
+      renderAll();
+    });
+    warehouseFilter.addEventListener('change', renderAll);
+    riskFilter.addEventListener('change', renderAll);
+    sortSelect.addEventListener('change', renderAll);
+    searchInput.addEventListener('input', renderAll);
+
+    varianceForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(varianceForm);
+
+      const warehouse = (data.get('warehouse') || '').toString().trim();
+      const sku = (data.get('sku') || '').toString().trim().toUpperCase();
+      const bin = (data.get('bin') || '').toString().trim().toUpperCase();
+      const expectedQty = Number(data.get('expectedQty'));
+      const countedQty = Number(data.get('countedQty'));
+      const unitCost = Number(data.get('unitCost'));
+      const note = (data.get('note') || '').toString().trim();
+
+      const skuOk = /^[A-Z]{3}-\d{4}$/.test(sku);
+      if (!warehouse || !skuOk || !bin || Number.isNaN(expectedQty) || Number.isNaN(countedQty) || Number.isNaN(unitCost)) {
+        formMsg.textContent = 'Please complete all required fields (SKU format: ABC-1234).';
+        return;
+      }
+
+      if (expectedQty === countedQty) {
+        formMsg.textContent = 'Expected and counted quantities are equal. No variance case needed.';
+        return;
+      }
+
+      if (unitCost <= 0) {
+        formMsg.textContent = 'Unit cost must be greater than zero.';
+        return;
+      }
+
+      const varianceQty = countedQty - expectedQty;
+      const valueImpact = varianceQty * unitCost;
+      const risk = computeRisk(varianceQty, valueImpact);
+      const id = `CC-${String(state.nextId++).padStart(4, '0')}`;
+
+      const entry = {
+        id,
+        createdAt: nowStamp(),
+        warehouse,
+        sku,
+        bin,
+        expectedQty,
+        countedQty,
+        varianceQty,
+        unitCost,
+        valueImpact,
+        risk,
+        stage: 'new',
+        assignee: roleSelect.value === 'Counter' ? 'Warehouse Counter' : 'Unassigned',
+        rootCause: '',
+        correctionAction: '',
+        approvalCode: '',
+        note
+      };
+
+      state.entries.unshift(entry);
+      state.selectedId = id;
+      formMsg.textContent = `${id} created with ${risk} risk classification.`;
+      boardMsg.textContent = `${id} added to New Variance.`;
+      pushAudit(`${id}: case created by ${roleSelect.value} (${warehouse}, ${sku}, variance ${varianceQty}).`);
+      varianceForm.reset();
+      renderAll();
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const rows = getSorted(filteredEntries());
+      if (!rows.length) {
+        boardMsg.textContent = 'Nothing to export for current filters.';
+        return;
+      }
+
+      const header = ['id', 'warehouse', 'sku', 'bin', 'expectedQty', 'countedQty', 'varianceQty', 'unitCost', 'valueImpact', 'risk', 'stage', 'assignee', 'approvalCode'];
+      const csv = [header.join(','), ...rows.map(row => header.map(key => {
+        const value = row[key] ?? '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      }).join(','))].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'cycle-count-variance-register.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      boardMsg.textContent = `Exported ${rows.length} rows to CSV.`;
+      pushAudit(`CSV export by ${roleSelect.value} (${rows.length} rows).`);
+      renderAudit();
+    });
+
+    pushAudit('Dashboard initialized with overnight variance feed.');
+    pushAudit('Policy: only Finance Controller can post adjustments.');
+    renderAll();
+  </script>
+</body>
+</html>
