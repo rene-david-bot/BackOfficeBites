@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Cycle Count Variance Kanban** — dark-mode Supply Chain kanban board for inventory variance triage with policy-gated approvals, audit trail, and CSV export.
+**AP Hold Release Command Center** — dark-mode Finance dashboard with charts for invoice hold triage, policy-gated approvals, controlled release, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

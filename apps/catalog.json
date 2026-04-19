@@ -1989,5 +1989,30 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-19",
+    "day": 89,
+    "slug": "2026-04-19-ap-hold-release-command-center",
+    "name": "AP Hold Release Command Center",
+    "description": "Finance dashboard for invoice holds with policy-gated approvals, controlled release, audit trail, and CSV export.",
+    "category": "Finance",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "ap dashboard",
+      "finance",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
