@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risk Register Mitigation Pulseboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <p class="text-xs text-amber-300 mb-2"><a class="hover:underline" href="../../index.html">BackOfficeBites 🍔</a></p>
+
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Risk Register Mitigation Pulseboard</h1>
+        <p class="text-slate-400 mt-2">Planning dashboard for enterprise risk mitigation with role-based approvals, policy checks, audit history, and CSV handoff.</p>
+      </div>
+      <div class="grid gap-3 w-full lg:w-auto lg:grid-cols-5">
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Role view</span>
+          <select id="roleSelect" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option>Analyst</option>
+            <option>Risk Owner</option>
+            <option>PMO Director</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Severity</span>
+          <select id="severityFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All</option>
+            <option>Critical</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Status</span>
+          <select id="statusFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All</option>
+            <option>Draft</option>
+            <option>Needs Review</option>
+            <option>Pending Approval</option>
+            <option>Approved</option>
+            <option>Mitigating</option>
+            <option>Closed</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Team</span>
+          <select id="teamFilter" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="all">All teams</option>
+            <option>Platform</option>
+            <option>Finance Systems</option>
+            <option>Supply Chain Ops</option>
+            <option>People Ops</option>
+            <option>Revenue Ops</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block text-slate-400 mb-1">Search</span>
+          <input id="searchInput" type="text" placeholder="Risk ID, owner, title" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 placeholder:text-slate-500" />
+        </label>
+      </div>
+    </div>
+
+    <section id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div class="xl:col-span-7 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Portfolio heatmap</h2>
+            <button id="exportBtn" class="text-xs rounded border border-cyan-600/50 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/40">Export CSV</button>
+          </div>
+          <div id="severityBars" class="space-y-2 mb-4"></div>
+          <div id="statusBars" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Risk register queue</h2>
+            <div class="flex items-center gap-2">
+              <button id="sortScoreBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort score ↕</button>
+              <button id="sortDueBtn" class="text-xs rounded border border-slate-700 px-2.5 py-1.5 hover:bg-slate-800">Sort due ↕</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[760px]">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="text-left py-2">Risk ID</th>
+                  <th class="text-left py-2">Title</th>
+                  <th class="text-left py-2">Owner</th>
+                  <th class="text-left py-2">Severity</th>
+                  <th class="text-left py-2">Score</th>
+                  <th class="text-left py-2">Status</th>
+                  <th class="text-left py-2">Due</th>
+                </tr>
+              </thead>
+              <tbody id="riskRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">New risk intake</h2>
+          <form id="riskForm" class="space-y-3" novalidate>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Risk title</span>
+                <input id="titleInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Owner</span>
+                <input id="ownerInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Team</span>
+                <select id="teamInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>Platform</option>
+                  <option>Finance Systems</option>
+                  <option>Supply Chain Ops</option>
+                  <option>People Ops</option>
+                  <option>Revenue Ops</option>
+                </select>
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Severity</span>
+                <select id="severityInput" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2">
+                  <option value="">Select</option>
+                  <option>Critical</option>
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Likelihood (1-5)</span>
+                <input id="likelihoodInput" type="number" min="1" max="5" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Impact (1-5)</span>
+                <input id="impactInput" type="number" min="1" max="5" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+              <label class="text-sm block">
+                <span class="block text-slate-400 mb-1">Mitigation due date</span>
+                <input id="dueInput" type="date" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+              </label>
+            </div>
+
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Mitigation plan</span>
+              <textarea id="planInput" required rows="3" placeholder="Describe containment and long-term actions" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 placeholder:text-slate-500"></textarea>
+            </label>
+
+            <label class="text-sm block">
+              <span class="block text-slate-400 mb-1">Requested mitigation budget (€)</span>
+              <input id="budgetInput" type="number" min="0" step="500" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2" />
+            </label>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="submit" class="rounded-lg border border-emerald-600/60 bg-emerald-700/30 px-3 py-2 text-sm hover:bg-emerald-700/40">Create risk</button>
+              <p id="formMsg" class="text-xs text-slate-400"></p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <aside class="xl:col-span-5 space-y-6">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Risk detail</h2>
+            <span id="detailBadge" class="text-xs rounded-full px-2 py-1 border border-slate-600 text-slate-300">No risk selected</span>
+          </div>
+          <div id="detailPanel" class="space-y-3 text-sm text-slate-300"></div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="submitReviewBtn" class="text-xs rounded border border-indigo-600/60 bg-indigo-700/30 px-2.5 py-1.5 hover:bg-indigo-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Submit for review</button>
+            <button id="requestApprovalBtn" class="text-xs rounded border border-sky-600/60 bg-sky-700/30 px-2.5 py-1.5 hover:bg-sky-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Request approval</button>
+            <button id="approveBtn" class="text-xs rounded border border-emerald-600/60 bg-emerald-700/30 px-2.5 py-1.5 hover:bg-emerald-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Approve</button>
+            <button id="startBtn" class="text-xs rounded border border-fuchsia-600/60 bg-fuchsia-700/30 px-2.5 py-1.5 hover:bg-fuchsia-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Start mitigation</button>
+            <button id="closeBtn" class="text-xs rounded border border-cyan-600/60 bg-cyan-700/30 px-2.5 py-1.5 hover:bg-cyan-700/45 disabled:opacity-40 disabled:cursor-not-allowed">Close risk</button>
+          </div>
+          <p id="policyMsg" class="text-xs text-slate-400 mt-3"></p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Governance guardrails</h2>
+          <ul class="space-y-2 text-sm text-slate-300 list-disc pl-4">
+            <li>Analyst can submit Draft risks into review.</li>
+            <li>Risk Owner can request approval after review.</li>
+            <li>PMO Director approves mitigation budget and stage.</li>
+            <li>Critical/High risks require mitigation due date within 45 days and plan length of at least 20 chars.</li>
+            <li>Risk can close only after mitigation starts and approved budget is at least 50% of request.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <h2 class="text-lg font-semibold mb-3">Audit trail</h2>
+          <ul id="auditList" class="space-y-2 text-sm max-h-[20rem] overflow-auto pr-1"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const roleSelect = document.getElementById('roleSelect');
+    const severityFilter = document.getElementById('severityFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const teamFilter = document.getElementById('teamFilter');
+    const searchInput = document.getElementById('searchInput');
+    const riskRows = document.getElementById('riskRows');
+    const severityBars = document.getElementById('severityBars');
+    const statusBars = document.getElementById('statusBars');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailBadge = document.getElementById('detailBadge');
+    const policyMsg = document.getElementById('policyMsg');
+    const auditList = document.getElementById('auditList');
+    const kpiGrid = document.getElementById('kpiGrid');
+
+    const riskForm = document.getElementById('riskForm');
+    const titleInput = document.getElementById('titleInput');
+    const ownerInput = document.getElementById('ownerInput');
+    const teamInput = document.getElementById('teamInput');
+    const severityInput = document.getElementById('severityInput');
+    const likelihoodInput = document.getElementById('likelihoodInput');
+    const impactInput = document.getElementById('impactInput');
+    const dueInput = document.getElementById('dueInput');
+    const planInput = document.getElementById('planInput');
+    const budgetInput = document.getElementById('budgetInput');
+    const formMsg = document.getElementById('formMsg');
+
+    const submitReviewBtn = document.getElementById('submitReviewBtn');
+    const requestApprovalBtn = document.getElementById('requestApprovalBtn');
+    const approveBtn = document.getElementById('approveBtn');
+    const startBtn = document.getElementById('startBtn');
+    const closeBtn = document.getElementById('closeBtn');
+
+    const risks = [
+      {
+        id: 'RR-3411',
+        title: 'Data residency gap for analytics exports',
+        owner: 'L. Berger',
+        team: 'Platform',
+        severity: 'Critical',
+        likelihood: 4,
+        impact: 5,
+        status: 'Pending Approval',
+        dueDate: '2026-05-03',
+        mitigationPlan: 'Route EU data export through sovereign storage and block non-compliant regions via policy engine.',
+        requestedBudget: 48000,
+        approvedBudget: 0,
+        submitted: '2026-04-18T08:40:00Z'
+      },
+      {
+        id: 'RR-3412',
+        title: 'Quarter close delay from invoice ingestion backlog',
+        owner: 'N. Hahn',
+        team: 'Finance Systems',
+        severity: 'High',
+        likelihood: 3,
+        impact: 5,
+        status: 'Needs Review',
+        dueDate: '2026-05-14',
+        mitigationPlan: 'Auto-prioritize invoice queues by cash impact and add daily review checkpoints with AP leads.',
+        requestedBudget: 28000,
+        approvedBudget: 0,
+        submitted: '2026-04-18T11:20:00Z'
+      },
+      {
+        id: 'RR-3413',
+        title: 'Warehouse scanner firmware drift',
+        owner: 'P. Winter',
+        team: 'Supply Chain Ops',
+        severity: 'Medium',
+        likelihood: 4,
+        impact: 3,
+        status: 'Mitigating',
+        dueDate: '2026-05-22',
+        mitigationPlan: 'Stage firmware rollout by region with rollback checkpoints and nightly verification logs.',
+        requestedBudget: 16000,
+        approvedBudget: 14000,
+        submitted: '2026-04-17T15:50:00Z'
+      },
+      {
+        id: 'RR-3414',
+        title: 'Attrition spike in support hiring funnel',
+        owner: 'S. Kruger',
+        team: 'People Ops',
+        severity: 'Medium',
+        likelihood: 3,
+        impact: 4,
+        status: 'Approved',
+        dueDate: '2026-06-01',
+        mitigationPlan: 'Launch targeted retention sprint, add manager check-ins, and instrument early warning indicators.',
+        requestedBudget: 22000,
+        approvedBudget: 18000,
+        submitted: '2026-04-16T10:05:00Z'
+      },
+      {
+        id: 'RR-3415',
+        title: 'Renewal forecast misses for top accounts',
+        owner: 'A. Dietz',
+        team: 'Revenue Ops',
+        severity: 'Low',
+        likelihood: 2,
+        impact: 2,
+        status: 'Closed',
+        dueDate: '2026-04-30',
+        mitigationPlan: 'Enforce 60-day renewal prep checkpoint and exception alerts for discount outliers.',
+        requestedBudget: 9000,
+        approvedBudget: 9000,
+        submitted: '2026-04-14T09:30:00Z'
+      },
+      {
+        id: 'RR-3416',
+        title: 'Legacy backup retention non-compliance',
+        owner: 'J. Stark',
+        team: 'Platform',
+        severity: 'High',
+        likelihood: 3,
+        impact: 4,
+        status: 'Draft',
+        dueDate: '2026-05-11',
+        mitigationPlan: 'Replace legacy schedules with policy-driven retention tiers and immutable backup snapshots.',
+        requestedBudget: 30000,
+        approvedBudget: 0,
+        submitted: '2026-04-19T07:10:00Z'
+      }
+    ];
+
+    const audit = [
+      { ts: '07:42', text: 'Overnight sync loaded 6 active risks from planning register.' },
+      { ts: '07:47', text: 'RR-3411 flagged as critical and waiting PMO budget approval.' },
+      { ts: '07:55', text: 'RR-3413 mitigation sprint checkpoint marked green by owner.' }
+    ];
+
+    const severityRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+    const state = {
+      selectedId: risks[0]?.id || null,
+      sortBy: 'score',
+      sortDir: 'desc'
+    };
+
+    function score(item) {
+      return item.likelihood * item.impact;
+    }
+
+    function fmtDate(value) {
+      return new Date(value).toLocaleDateString([], { month: 'short', day: '2-digit' });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function statusClass(status) {
+      const map = {
+        'Draft': 'border-slate-600 text-slate-300',
+        'Needs Review': 'border-indigo-600/60 text-indigo-300',
+        'Pending Approval': 'border-amber-600/60 text-amber-300',
+        'Approved': 'border-emerald-600/60 text-emerald-300',
+        'Mitigating': 'border-fuchsia-600/60 text-fuchsia-300',
+        'Closed': 'border-cyan-600/60 text-cyan-300'
+      };
+      return map[status] || 'border-slate-600 text-slate-300';
+    }
+
+    function severityClass(level) {
+      if (level === 'Critical') return 'text-rose-300';
+      if (level === 'High') return 'text-orange-300';
+      if (level === 'Medium') return 'text-amber-300';
+      return 'text-emerald-300';
+    }
+
+    function getFilteredRisks() {
+      const q = searchInput.value.trim().toLowerCase();
+      const rows = risks.filter((item) => {
+        if (severityFilter.value !== 'all' && item.severity !== severityFilter.value) return false;
+        if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+        if (teamFilter.value !== 'all' && item.team !== teamFilter.value) return false;
+        if (!q) return true;
+        return [item.id, item.title, item.owner, item.team].join(' ').toLowerCase().includes(q);
+      });
+
+      rows.sort((a, b) => {
+        let cmp = 0;
+        if (state.sortBy === 'due') {
+          cmp = new Date(a.dueDate) - new Date(b.dueDate);
+        } else {
+          cmp = score(a) - score(b);
+          if (cmp === 0) cmp = severityRank[a.severity] - severityRank[b.severity];
+        }
+        return state.sortDir === 'asc' ? cmp : -cmp;
+      });
+
+      return rows;
+    }
+
+    function ensureSelected(rows) {
+      if (!rows.length) {
+        state.selectedId = null;
+        return;
+      }
+      if (!rows.find((r) => r.id === state.selectedId)) state.selectedId = rows[0].id;
+    }
+
+    function renderKPIs() {
+      const open = risks.filter((r) => !['Closed'].includes(r.status)).length;
+      const criticalHigh = risks.filter((r) => ['Critical', 'High'].includes(r.severity) && r.status !== 'Closed').length;
+      const pendingApproval = risks.filter((r) => r.status === 'Pending Approval').length;
+      const dueSoon = risks.filter((r) => {
+        const days = (new Date(r.dueDate) - new Date()) / 86400000;
+        return r.status !== 'Closed' && days <= 14;
+      }).length;
+
+      const cards = [
+        { label: 'Open risks', value: open, tone: 'text-cyan-300' },
+        { label: 'Critical / High open', value: criticalHigh, tone: 'text-rose-300' },
+        { label: 'Pending approval', value: pendingApproval, tone: 'text-amber-300' },
+        { label: 'Due in <=14 days', value: dueSoon, tone: 'text-fuchsia-300' }
+      ];
+
+      kpiGrid.innerHTML = cards.map((c) => `<article class="rounded-xl border border-slate-800 bg-slate-900/80 p-3"><p class="text-xs text-slate-400">${c.label}</p><p class="text-2xl font-semibold mt-1 ${c.tone}">${c.value}</p></article>`).join('');
+    }
+
+    function renderBars() {
+      const sevLevels = ['Critical', 'High', 'Medium', 'Low'];
+      const maxSev = Math.max(1, ...sevLevels.map((s) => risks.filter((r) => r.severity === s).length));
+      severityBars.innerHTML = sevLevels.map((s) => {
+        const count = risks.filter((r) => r.severity === s).length;
+        const width = Math.round((count / maxSev) * 100);
+        return `<div>
+          <div class="flex justify-between text-xs text-slate-400 mb-1"><span>${s}</span><span>${count}</span></div>
+          <div class="h-2 rounded bg-slate-800 overflow-hidden"><div class="h-full ${s === 'Critical' ? 'bg-rose-500' : s === 'High' ? 'bg-orange-500' : s === 'Medium' ? 'bg-amber-500' : 'bg-emerald-500'}" style="width:${width}%"></div></div>
+        </div>`;
+      }).join('');
+
+      const statuses = ['Draft', 'Needs Review', 'Pending Approval', 'Approved', 'Mitigating', 'Closed'];
+      const maxStatus = Math.max(1, ...statuses.map((s) => risks.filter((r) => r.status === s).length));
+      statusBars.innerHTML = statuses.map((s) => {
+        const count = risks.filter((r) => r.status === s).length;
+        const width = Math.round((count / maxStatus) * 100);
+        return `<div>
+          <div class="flex justify-between text-xs text-slate-400 mb-1"><span>${s}</span><span>${count}</span></div>
+          <div class="h-2 rounded bg-slate-800 overflow-hidden"><div class="h-full bg-cyan-500" style="width:${width}%"></div></div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderRows() {
+      const rows = getFilteredRisks();
+      ensureSelected(rows);
+
+      if (!rows.length) {
+        riskRows.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">No risks match current filters.</td></tr>';
+        renderDetail();
+        return;
+      }
+
+      riskRows.innerHTML = rows.map((item) => {
+        const selected = item.id === state.selectedId;
+        return `<tr data-id="${item.id}" tabindex="0" class="cursor-pointer border-b border-slate-900 hover:bg-slate-800/70 focus:outline-none focus:ring-1 focus:ring-cyan-500 ${selected ? 'bg-slate-800/80' : ''}">
+          <td class="py-2 font-medium">${item.id}</td>
+          <td class="py-2">${escapeHtml(item.title)}</td>
+          <td class="py-2">${escapeHtml(item.owner)}</td>
+          <td class="py-2 ${severityClass(item.severity)}">${item.severity}</td>
+          <td class="py-2">${score(item)}</td>
+          <td class="py-2"><span class="inline-flex rounded-full border px-2 py-0.5 text-xs ${statusClass(item.status)}">${item.status}</span></td>
+          <td class="py-2">${fmtDate(item.dueDate)}</td>
+        </tr>`;
+      }).join('');
+
+      riskRows.querySelectorAll('tr[data-id]').forEach((tr) => {
+        tr.addEventListener('click', () => {
+          state.selectedId = tr.dataset.id;
+          render();
+        });
+        tr.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            state.selectedId = tr.dataset.id;
+            render();
+          }
+        });
+      });
+
+      renderDetail();
+    }
+
+    function getSelected() {
+      return risks.find((r) => r.id === state.selectedId) || null;
+    }
+
+    function can(action, risk, role) {
+      if (!risk) return false;
+      if (action === 'submitReview') return role === 'Analyst' && risk.status === 'Draft';
+      if (action === 'requestApproval') return role === 'Risk Owner' && risk.status === 'Needs Review';
+      if (action === 'approve') return role === 'PMO Director' && risk.status === 'Pending Approval';
+      if (action === 'start') return role === 'Risk Owner' && risk.status === 'Approved';
+      if (action === 'close') return role === 'Risk Owner' && risk.status === 'Mitigating';
+      return false;
+    }
+
+    function setActionState(risk) {
+      const role = roleSelect.value;
+      submitReviewBtn.disabled = !can('submitReview', risk, role);
+      requestApprovalBtn.disabled = !can('requestApproval', risk, role);
+      approveBtn.disabled = !can('approve', risk, role);
+      startBtn.disabled = !can('start', risk, role);
+      closeBtn.disabled = !can('close', risk, role);
+    }
+
+    function renderDetail() {
+      const risk = getSelected();
+      const role = roleSelect.value;
+
+      if (!risk) {
+        detailBadge.textContent = 'No risk selected';
+        detailBadge.className = 'text-xs rounded-full px-2 py-1 border border-slate-600 text-slate-300';
+        detailPanel.innerHTML = '<p class="text-slate-400">Select a risk to inspect policy details and workflow actions.</p>';
+        setActionState(null);
+        policyMsg.textContent = '';
+        return;
+      }
+
+      detailBadge.textContent = risk.id;
+      detailBadge.className = `text-xs rounded-full px-2 py-1 border ${statusClass(risk.status)}`;
+
+      detailPanel.innerHTML = `
+        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+          <p>Owner</p><p class="text-slate-200">${escapeHtml(risk.owner)}</p>
+          <p>Team</p><p class="text-slate-200">${escapeHtml(risk.team)}</p>
+          <p>Severity</p><p class="text-slate-200">${risk.severity}</p>
+          <p>Score</p><p class="text-slate-200">${score(risk)}</p>
+          <p>Due</p><p class="text-slate-200">${fmtDate(risk.dueDate)}</p>
+          <p>Budget</p><p class="text-slate-200">€${risk.requestedBudget.toLocaleString()} (approved: €${risk.approvedBudget.toLocaleString()})</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">Risk title</p>
+          <p class="text-sm text-slate-200">${escapeHtml(risk.title)}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-1">Mitigation plan</p>
+          <p class="text-sm text-slate-200">${escapeHtml(risk.mitigationPlan)}</p>
+        </div>
+      `;
+
+      const hints = [];
+      const daysToDue = Math.ceil((new Date(risk.dueDate) - new Date()) / 86400000);
+      if (['Critical', 'High'].includes(risk.severity) && daysToDue > 45) {
+        hints.push('Policy breach: critical/high risks require due date within 45 days.');
+      }
+      if (risk.mitigationPlan.trim().length < 20) {
+        hints.push('Policy breach: mitigation plan must be at least 20 characters.');
+      }
+      if (risk.status === 'Pending Approval' && role !== 'PMO Director') {
+        hints.push('PMO Director role required to approve budget and move to Approved.');
+      }
+      if (risk.status === 'Mitigating' && risk.approvedBudget < Math.ceil(risk.requestedBudget * 0.5)) {
+        hints.push('Cannot close: approved budget must be at least 50% of request.');
+      }
+      policyMsg.textContent = hints.join(' ');
+
+      setActionState(risk);
+    }
+
+    function addAudit(text) {
+      const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      audit.unshift({ ts, text });
+      renderAudit();
+    }
+
+    function renderAudit() {
+      auditList.innerHTML = audit
+        .slice(0, 18)
+        .map((item) => `<li class="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2"><p class="text-[11px] text-slate-500">${item.ts}</p><p class="text-slate-200">${escapeHtml(item.text)}</p></li>`)
+        .join('');
+    }
+
+    function nextId() {
+      const next = Math.max(...risks.map((r) => Number(r.id.split('-')[1]))) + 1;
+      return `RR-${next}`;
+    }
+
+    function validateForm() {
+      const errors = [];
+      if (!titleInput.value.trim()) errors.push('Risk title is required.');
+      if (!ownerInput.value.trim()) errors.push('Owner is required.');
+      if (!teamInput.value) errors.push('Team is required.');
+      if (!severityInput.value) errors.push('Severity is required.');
+      const l = Number(likelihoodInput.value);
+      const i = Number(impactInput.value);
+      if (!Number.isInteger(l) || l < 1 || l > 5) errors.push('Likelihood must be between 1 and 5.');
+      if (!Number.isInteger(i) || i < 1 || i > 5) errors.push('Impact must be between 1 and 5.');
+      if (!dueInput.value) errors.push('Mitigation due date is required.');
+      if (planInput.value.trim().length < 20) errors.push('Mitigation plan must be at least 20 characters.');
+      const budget = Number(budgetInput.value);
+      if (!Number.isFinite(budget) || budget < 0) errors.push('Requested budget must be 0 or greater.');
+
+      if (['Critical', 'High'].includes(severityInput.value) && dueInput.value) {
+        const days = (new Date(dueInput.value) - new Date()) / 86400000;
+        if (days > 45) errors.push('Critical/High risks must be due within 45 days.');
+      }
+      return errors;
+    }
+
+    function submitRisk(event) {
+      event.preventDefault();
+      const errors = validateForm();
+      if (errors.length) {
+        formMsg.textContent = errors[0];
+        formMsg.className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const item = {
+        id: nextId(),
+        title: titleInput.value.trim(),
+        owner: ownerInput.value.trim(),
+        team: teamInput.value,
+        severity: severityInput.value,
+        likelihood: Number(likelihoodInput.value),
+        impact: Number(impactInput.value),
+        status: 'Draft',
+        dueDate: dueInput.value,
+        mitigationPlan: planInput.value.trim(),
+        requestedBudget: Number(budgetInput.value),
+        approvedBudget: 0,
+        submitted: new Date().toISOString()
+      };
+
+      risks.unshift(item);
+      state.selectedId = item.id;
+      riskForm.reset();
+      formMsg.textContent = `${item.id} created as Draft.`;
+      formMsg.className = 'text-xs text-emerald-300';
+      addAudit(`${item.id} created by Analyst in Draft stage.`);
+      render();
+    }
+
+    function transition(nextStatus) {
+      const risk = getSelected();
+      const role = roleSelect.value;
+      if (!risk) return;
+
+      const daysToDue = Math.ceil((new Date(risk.dueDate) - new Date()) / 86400000);
+      if (['Critical', 'High'].includes(risk.severity) && daysToDue > 45) {
+        policyMsg.textContent = 'Transition blocked: due date policy violated for Critical/High risk.';
+        return;
+      }
+      if (risk.mitigationPlan.trim().length < 20) {
+        policyMsg.textContent = 'Transition blocked: mitigation plan too short.';
+        return;
+      }
+
+      if (nextStatus === 'Needs Review' && !can('submitReview', risk, role)) return;
+      if (nextStatus === 'Pending Approval' && !can('requestApproval', risk, role)) return;
+      if (nextStatus === 'Approved') {
+        if (!can('approve', risk, role)) return;
+        risk.approvedBudget = Math.max(risk.approvedBudget, Math.ceil(risk.requestedBudget * 0.75));
+      }
+      if (nextStatus === 'Mitigating' && !can('start', risk, role)) return;
+      if (nextStatus === 'Closed') {
+        if (!can('close', risk, role)) return;
+        if (risk.approvedBudget < Math.ceil(risk.requestedBudget * 0.5)) {
+          policyMsg.textContent = 'Close blocked: approved budget is below 50% threshold.';
+          return;
+        }
+      }
+
+      const prev = risk.status;
+      risk.status = nextStatus;
+      addAudit(`${risk.id} moved ${prev} → ${nextStatus} by ${role}.`);
+      render();
+    }
+
+    function exportCsv() {
+      const rows = getFilteredRisks();
+      const header = ['id', 'title', 'owner', 'team', 'severity', 'likelihood', 'impact', 'score', 'status', 'dueDate', 'requestedBudget', 'approvedBudget'];
+      const csv = [
+        header.join(','),
+        ...rows.map((r) => {
+          const row = {
+            ...r,
+            score: score(r)
+          };
+          return header.map((k) => `"${String(row[k]).replaceAll('"', '""')}"`).join(',');
+        })
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `risk-register-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      addAudit(`CSV export generated with ${rows.length} risk rows.`);
+    }
+
+    function toggleSort(type) {
+      if (state.sortBy === type) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortBy = type;
+        state.sortDir = type === 'due' ? 'asc' : 'desc';
+      }
+      renderRows();
+    }
+
+    function render() {
+      renderKPIs();
+      renderBars();
+      renderRows();
+      renderAudit();
+    }
+
+    roleSelect.addEventListener('change', render);
+    severityFilter.addEventListener('change', renderRows);
+    statusFilter.addEventListener('change', renderRows);
+    teamFilter.addEventListener('change', renderRows);
+    searchInput.addEventListener('input', renderRows);
+
+    document.getElementById('sortScoreBtn').addEventListener('click', () => toggleSort('score'));
+    document.getElementById('sortDueBtn').addEventListener('click', () => toggleSort('due'));
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+    riskForm.addEventListener('submit', submitRisk);
+    submitReviewBtn.addEventListener('click', () => transition('Needs Review'));
+    requestApprovalBtn.addEventListener('click', () => transition('Pending Approval'));
+    approveBtn.addEventListener('click', () => transition('Approved'));
+    startBtn.addEventListener('click', () => transition('Mitigating'));
+    closeBtn.addEventListener('click', () => transition('Closed'));
+
+    render();
+  </script>
+</body>
+</html>

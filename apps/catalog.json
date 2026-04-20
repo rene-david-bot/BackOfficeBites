@@ -2014,5 +2014,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-20",
+    "day": 90,
+    "slug": "2026-04-20-risk-register-mitigation-pulseboard",
+    "name": "Risk Register Mitigation Pulseboard",
+    "description": "Planning dashboard for risk mitigation with role-based approvals, policy checks, audit history, and CSV export.",
+    "category": "Planning",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "risk register",
+      "planning",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

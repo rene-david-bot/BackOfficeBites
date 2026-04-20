@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**AP Hold Release Command Center** — dark-mode Finance dashboard with charts for invoice hold triage, policy-gated approvals, controlled release, and CSV export.
+**Risk Register Mitigation Pulseboard** — dark-mode Planning dashboard for risk mitigation approvals, policy checks, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
