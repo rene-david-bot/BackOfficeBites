@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Review Calibration Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#020617'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Performance Review Calibration Timeline</h1>
+    <p class="text-slate-400 mt-2">HR timeline workspace for cross-team review calibration, policy validation, approval workflow, and audit-ready export.</p>
+
+    <section class="mt-6 grid lg:grid-cols-4 gap-3">
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+        <input id="searchInput" type="text" placeholder="Employee, manager, department" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Department</span>
+        <select id="departmentFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Workflow State</span>
+        <select id="stateFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+        <select id="sortBy" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="dateAsc">Calibration Date (Earliest)</option>
+          <option value="dateDesc">Calibration Date (Latest)</option>
+          <option value="riskDesc">Policy Risk (Highest)</option>
+          <option value="nameAsc">Employee (A-Z)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="mt-4 grid md:grid-cols-3 gap-3">
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Role View</span>
+        <select id="roleView" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option>HRBP</option>
+          <option>Manager</option>
+          <option>Calibration Chair</option>
+        </select>
+      </label>
+      <div class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">Policy Alerts</p>
+          <p id="policySummary" class="text-sm text-amber-300 mt-1">0 records flagged</p>
+        </div>
+        <button id="exportBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-6 grid xl:grid-cols-12 gap-4">
+      <div class="xl:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold">Calibration Timeline</h2>
+        <p class="text-xs text-slate-400 mt-1">Keyboard tip: use Tab + Enter on timeline cards to open details.</p>
+        <div id="timeline" class="mt-4 space-y-3"></div>
+      </div>
+
+      <div class="xl:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold">Review Detail</h2>
+        <div id="emptyDetail" class="mt-4 text-slate-400 text-sm">Select an employee review from the timeline.</div>
+        <div id="detailPane" class="hidden mt-4 space-y-4">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <h3 id="employeeTitle" class="text-lg font-semibold"></h3>
+              <span id="stateBadge" class="text-xs px-2 py-1 rounded-full"></span>
+            </div>
+            <p id="metaLine" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <form id="ratingForm" class="space-y-3" novalidate>
+            <div>
+              <label for="ratingSelect" class="text-sm">Proposed Rating</label>
+              <select id="ratingSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm">
+                <option>Exceptional</option>
+                <option>Strong</option>
+                <option selected>Successful</option>
+                <option>Developing</option>
+                <option>Needs Support</option>
+              </select>
+            </div>
+            <div>
+              <label for="justification" class="text-sm">Justification</label>
+              <textarea id="justification" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Required for Exceptional or Needs Support ratings"></textarea>
+              <p id="formError" class="text-rose-300 text-xs mt-1 hidden"></p>
+            </div>
+            <button type="submit" class="w-full px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-medium">Save Proposal</button>
+          </form>
+
+          <div class="grid sm:grid-cols-3 gap-2">
+            <button data-action="submit" class="wf-action px-3 py-2 rounded bg-sky-700 hover:bg-sky-600 text-sm">Submit for Calibration</button>
+            <button data-action="approve" class="wf-action px-3 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-sm">Approve</button>
+            <button data-action="rework" class="wf-action px-3 py-2 rounded bg-amber-700 hover:bg-amber-600 text-sm">Request Rework</button>
+          </div>
+
+          <div>
+            <h4 class="font-medium">Audit Trail</h4>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const reviews = [
+      { id: 'PR-241', employee: 'Aylin Weber', manager: 'Jonas Krüger', department: 'Engineering', roleLevel: 'IC4', date: '2026-04-23', state: 'Ready for Calibration', risk: 82, rating: 'Exceptional', justification: 'Drove two platform launches with measurable impact.', flags: ['Span-of-control exception'], audit: ['2026-04-17 Manager submitted draft', '2026-04-18 HRBP flagged calibration variance'] },
+      { id: 'PR-242', employee: 'Daniel Richter', manager: 'Mila Novak', department: 'Sales', roleLevel: 'M2', date: '2026-04-22', state: 'In Review', risk: 56, rating: 'Strong', justification: 'Exceeded retention targets by 11%.', flags: [], audit: ['2026-04-16 Manager proposal saved', '2026-04-19 Calibration chair requested data check'] },
+      { id: 'PR-243', employee: 'Nora Stein', manager: 'Felix Hahn', department: 'Finance', roleLevel: 'IC3', date: '2026-04-25', state: 'Draft', risk: 38, rating: 'Successful', justification: 'Solid delivery on close-cycle automation.', flags: [], audit: ['2026-04-20 Draft created'] },
+      { id: 'PR-244', employee: 'Kilian Brandt', manager: 'Lea Voss', department: 'Operations', roleLevel: 'IC2', date: '2026-04-24', state: 'Needs Rework', risk: 74, rating: 'Needs Support', justification: 'Repeated SLA misses and quality escalations.', flags: ['Missing development plan'], audit: ['2026-04-18 Calibration panel requested rework'] },
+      { id: 'PR-245', employee: 'Elena Wolf', manager: 'Amir Kaya', department: 'HR', roleLevel: 'M1', date: '2026-04-21', state: 'Approved', risk: 19, rating: 'Strong', justification: 'Built manager enablement program across regions.', flags: [], audit: ['2026-04-15 Submitted for calibration', '2026-04-19 Approved by calibration chair'] },
+      { id: 'PR-246', employee: 'Tom Beck', manager: 'Ava Schmid', department: 'Engineering', roleLevel: 'IC5', date: '2026-04-26', state: 'Ready for Calibration', risk: 67, rating: 'Strong', justification: 'Improved service reliability with systemic fixes.', flags: ['Outlier against peer benchmark'], audit: ['2026-04-19 HRBP flagged benchmarking variance'] }
+    ];
+
+    const states = ['All States', 'Draft', 'Ready for Calibration', 'In Review', 'Approved', 'Needs Rework'];
+    const departments = ['All Departments', ...new Set(reviews.map(r => r.department))];
+
+    const els = {
+      searchInput: document.getElementById('searchInput'),
+      departmentFilter: document.getElementById('departmentFilter'),
+      stateFilter: document.getElementById('stateFilter'),
+      sortBy: document.getElementById('sortBy'),
+      roleView: document.getElementById('roleView'),
+      timeline: document.getElementById('timeline'),
+      policySummary: document.getElementById('policySummary'),
+      exportBtn: document.getElementById('exportBtn'),
+      emptyDetail: document.getElementById('emptyDetail'),
+      detailPane: document.getElementById('detailPane'),
+      employeeTitle: document.getElementById('employeeTitle'),
+      stateBadge: document.getElementById('stateBadge'),
+      metaLine: document.getElementById('metaLine'),
+      ratingForm: document.getElementById('ratingForm'),
+      ratingSelect: document.getElementById('ratingSelect'),
+      justification: document.getElementById('justification'),
+      formError: document.getElementById('formError'),
+      auditTrail: document.getElementById('auditTrail')
+    };
+
+    let selectedId = null;
+
+    function fillSelect(select, values) {
+      select.innerHTML = values.map(v => `<option>${v}</option>`).join('');
+    }
+
+    function badgeClass(state) {
+      const map = {
+        'Draft': 'bg-slate-700 text-slate-200',
+        'Ready for Calibration': 'bg-sky-900 text-sky-200',
+        'In Review': 'bg-indigo-900 text-indigo-200',
+        'Approved': 'bg-emerald-900 text-emerald-200',
+        'Needs Rework': 'bg-amber-900 text-amber-200'
+      };
+      return map[state] || 'bg-slate-700 text-slate-100';
+    }
+
+    function applyFilters() {
+      const q = els.searchInput.value.trim().toLowerCase();
+      const d = els.departmentFilter.value;
+      const s = els.stateFilter.value;
+      const sort = els.sortBy.value;
+
+      let list = reviews.filter(r => {
+        const hitsQuery = !q || [r.employee, r.manager, r.department, r.id].join(' ').toLowerCase().includes(q);
+        const hitsDept = d === 'All Departments' || r.department === d;
+        const hitsState = s === 'All States' || r.state === s;
+        return hitsQuery && hitsDept && hitsState;
+      });
+
+      const sorter = {
+        dateAsc: (a, b) => a.date.localeCompare(b.date),
+        dateDesc: (a, b) => b.date.localeCompare(a.date),
+        riskDesc: (a, b) => b.risk - a.risk,
+        nameAsc: (a, b) => a.employee.localeCompare(b.employee)
+      };
+      list.sort(sorter[sort]);
+
+      renderTimeline(list);
+      const flagged = list.filter(r => r.risk >= 70 || r.flags.length).length;
+      els.policySummary.textContent = `${flagged} record${flagged === 1 ? '' : 's'} flagged for policy review`;
+      return list;
+    }
+
+    function renderTimeline(list) {
+      if (!list.length) {
+        els.timeline.innerHTML = `<div class="text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg p-4">No records match current filters.</div>`;
+        return;
+      }
+
+      els.timeline.innerHTML = list.map(r => `
+        <button data-id="${r.id}" class="timeline-card w-full text-left border border-slate-800 rounded-lg p-3 hover:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${selectedId === r.id ? 'ring-2 ring-emerald-500 border-emerald-600' : ''}">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-medium">${r.employee}</p>
+              <p class="text-xs text-slate-400 mt-1">${r.id} • ${r.department} • ${r.roleLevel}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full ${badgeClass(r.state)}">${r.state}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs">
+            <span class="text-slate-300">Calibration: ${r.date}</span>
+            <span class="${r.risk >= 70 ? 'text-amber-300' : 'text-slate-400'}">Risk ${r.risk}</span>
+          </div>
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.timeline-card').forEach(card => {
+        card.addEventListener('click', () => selectReview(card.dataset.id));
+      });
+    }
+
+    function selectReview(id) {
+      selectedId = id;
+      const item = reviews.find(r => r.id === id);
+      if (!item) return;
+
+      els.emptyDetail.classList.add('hidden');
+      els.detailPane.classList.remove('hidden');
+
+      els.employeeTitle.textContent = item.employee;
+      els.stateBadge.textContent = item.state;
+      els.stateBadge.className = `text-xs px-2 py-1 rounded-full ${badgeClass(item.state)}`;
+      els.metaLine.textContent = `${item.id} • Manager: ${item.manager} • ${item.department} • Calibration ${item.date}`;
+
+      els.ratingSelect.value = item.rating;
+      els.justification.value = item.justification;
+      renderAudit(item);
+      applyFilters();
+      applyRolePermissions();
+    }
+
+    function renderAudit(item) {
+      const rows = [...item.audit];
+      if (item.flags.length) rows.push(`Policy flags: ${item.flags.join(', ')}`);
+      els.auditTrail.innerHTML = rows.map(line => `<li class="bg-slate-950 border border-slate-800 rounded p-2 text-slate-300">${line}</li>`).join('');
+    }
+
+    function validateForm(rating, text) {
+      const strict = ['Exceptional', 'Needs Support'];
+      if (strict.includes(rating) && text.trim().length < 18) {
+        return 'Provide at least 18 characters of justification for this rating.';
+      }
+      return '';
+    }
+
+    function transitionState(item, action) {
+      const transitions = {
+        submit: { Draft: 'Ready for Calibration', 'Needs Rework': 'Ready for Calibration', 'In Review': 'In Review', 'Ready for Calibration': 'In Review', Approved: 'Approved' },
+        approve: { 'In Review': 'Approved', 'Ready for Calibration': 'Approved', Draft: 'Draft', 'Needs Rework': 'Needs Rework', Approved: 'Approved' },
+        rework: { Draft: 'Needs Rework', 'Ready for Calibration': 'Needs Rework', 'In Review': 'Needs Rework', Approved: 'Needs Rework', 'Needs Rework': 'Needs Rework' }
+      };
+      item.state = transitions[action][item.state] || item.state;
+    }
+
+    function applyRolePermissions() {
+      const role = els.roleView.value;
+      const item = reviews.find(r => r.id === selectedId);
+      const buttons = document.querySelectorAll('.wf-action');
+      buttons.forEach(btn => {
+        const a = btn.dataset.action;
+        let allowed = true;
+        if (role === 'Manager' && (a === 'approve')) allowed = false;
+        if (role === 'Calibration Chair' && (a === 'submit')) allowed = false;
+        if (role === 'HRBP' && a === 'approve') allowed = false;
+        btn.disabled = !allowed || !item;
+        btn.classList.toggle('opacity-40', btn.disabled);
+        btn.classList.toggle('cursor-not-allowed', btn.disabled);
+      });
+    }
+
+    function exportCsv(rows) {
+      const headers = ['id','employee','manager','department','roleLevel','date','state','risk','rating'];
+      const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${String(r[h]).replaceAll('"', '""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'performance-review-calibration-timeline.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    fillSelect(els.departmentFilter, departments);
+    fillSelect(els.stateFilter, states);
+
+    ['input', 'change'].forEach(evt => {
+      els.searchInput.addEventListener(evt, applyFilters);
+      els.departmentFilter.addEventListener(evt, applyFilters);
+      els.stateFilter.addEventListener(evt, applyFilters);
+      els.sortBy.addEventListener(evt, applyFilters);
+    });
+
+    els.roleView.addEventListener('change', applyRolePermissions);
+
+    els.ratingForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const item = reviews.find(r => r.id === selectedId);
+      if (!item) return;
+      const rating = els.ratingSelect.value;
+      const text = els.justification.value;
+      const err = validateForm(rating, text);
+      if (err) {
+        els.formError.textContent = err;
+        els.formError.classList.remove('hidden');
+        return;
+      }
+      els.formError.classList.add('hidden');
+      item.rating = rating;
+      item.justification = text.trim();
+      item.audit.unshift(`${new Date().toISOString().slice(0,10)} ${els.roleView.value} updated rating to ${rating}`);
+      renderAudit(item);
+      applyFilters();
+    });
+
+    document.querySelectorAll('.wf-action').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = reviews.find(r => r.id === selectedId);
+        if (!item || btn.disabled) return;
+        const label = { submit: 'submitted for calibration', approve: 'approved', rework: 'returned for rework' }[btn.dataset.action];
+        transitionState(item, btn.dataset.action);
+        item.audit.unshift(`${new Date().toISOString().slice(0,10)} ${els.roleView.value} ${label}`);
+        selectReview(item.id);
+      });
+    });
+
+    els.exportBtn.addEventListener('click', () => {
+      const filtered = applyFilters();
+      exportCsv(filtered);
+    });
+
+    const initial = applyFilters();
+    if (initial.length) selectReview(initial[0].id);
+  </script>
+</body>
+</html>
