@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Performance Review Calibration Timeline** — dark-mode HR timeline workspace for calibration approvals, policy validation, audit trail, and CSV export.
+**Invoice Matching Tolerance Workbench** — dark-mode finance master-detail desk for 3-way match exceptions, policy-gated approvals, and audit-ready export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

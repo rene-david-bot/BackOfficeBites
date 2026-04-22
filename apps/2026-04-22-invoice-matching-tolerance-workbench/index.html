@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Matching Tolerance Workbench</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#020617'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Invoice Matching Tolerance Workbench</h1>
+    <p class="text-slate-400 mt-2">Finance master-detail desk for 3-way match exceptions with role-based approvals, policy validation, and audit-ready export.</p>
+
+    <section class="mt-6 grid lg:grid-cols-5 gap-3">
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block lg:col-span-2">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+        <input id="searchInput" type="text" placeholder="Invoice, PO, GRN, vendor" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Vendor</span>
+        <select id="vendorFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Status</span>
+        <select id="statusFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+        <select id="sortBy" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="dueAsc">Due Date (Earliest)</option>
+          <option value="varianceDesc">Variance (Highest)</option>
+          <option value="amountDesc">Invoice Amount (Highest)</option>
+          <option value="vendorAsc">Vendor (A-Z)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="mt-4 grid md:grid-cols-4 gap-3">
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Role View</span>
+        <select id="roleView" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option>AP Analyst</option>
+          <option>AP Manager</option>
+          <option>Controller</option>
+        </select>
+      </label>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Open Value</p>
+        <p id="openValue" class="text-xl font-semibold mt-1">€0</p>
+      </article>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">High Risk Cases</p>
+        <p id="highRiskCount" class="text-xl font-semibold mt-1 text-amber-300">0</p>
+      </article>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">Pending Approval</p>
+          <p id="pendingCount" class="text-xl font-semibold mt-1">0</p>
+        </div>
+        <button id="exportBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Export CSV</button>
+      </article>
+    </section>
+
+    <section class="mt-6 grid xl:grid-cols-12 gap-4">
+      <div class="xl:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold">Exception Queue</h2>
+        <p class="text-xs text-slate-400 mt-1">Tip: use Tab + Enter to select a record and open details.</p>
+        <div id="queue" class="mt-4 space-y-3"></div>
+      </div>
+
+      <div class="xl:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold">Match Detail</h2>
+        <div id="emptyDetail" class="mt-4 text-slate-400 text-sm">Select a matching case from the queue.</div>
+
+        <div id="detailPane" class="hidden mt-4 space-y-4">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <h3 id="detailTitle" class="text-lg font-semibold"></h3>
+              <span id="statusBadge" class="text-xs px-2 py-1 rounded-full"></span>
+            </div>
+            <p id="detailMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="bg-slate-950 border border-slate-800 rounded p-2">
+              <p class="text-slate-400">Invoice</p>
+              <p id="invoiceAmount" class="font-medium"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded p-2">
+              <p class="text-slate-400">PO</p>
+              <p id="poAmount" class="font-medium"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded p-2">
+              <p class="text-slate-400">Variance</p>
+              <p id="varianceAmount" class="font-medium"></p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded p-2">
+              <p class="text-slate-400">Tolerance</p>
+              <p id="toleranceValue" class="font-medium"></p>
+            </div>
+          </div>
+
+          <form id="decisionForm" class="space-y-2" novalidate>
+            <label for="reasonInput" class="text-sm">Decision Reason</label>
+            <textarea id="reasonInput" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Required for variance approvals outside tolerance"></textarea>
+            <p id="formError" class="text-xs text-rose-300 hidden"></p>
+          </form>
+
+          <div class="grid sm:grid-cols-2 gap-2">
+            <button data-action="queueApproval" class="wf-action px-3 py-2 rounded bg-sky-700 hover:bg-sky-600 text-sm">Queue Approval</button>
+            <button data-action="approveVariance" class="wf-action px-3 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-sm">Approve Variance</button>
+            <button data-action="requestCredit" class="wf-action px-3 py-2 rounded bg-indigo-700 hover:bg-indigo-600 text-sm">Request Credit Note</button>
+            <button data-action="blockPayment" class="wf-action px-3 py-2 rounded bg-rose-700 hover:bg-rose-600 text-sm">Block Payment</button>
+          </div>
+
+          <div>
+            <h4 class="font-medium">Line Item Findings</h4>
+            <ul id="lineFindings" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+
+          <div>
+            <h4 class="font-medium">Audit Trail</h4>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const records = [
+      {
+        id: 'IM-6104',
+        invoice: 'INV-88412',
+        po: 'PO-77219',
+        grn: 'GR-12943',
+        vendor: 'Nordlicht Logistics',
+        owner: 'Maja Klein',
+        dueDate: '2026-04-28',
+        invoiceAmount: 12480,
+        poAmount: 12220,
+        tolerancePct: 1.5,
+        status: 'Needs Review',
+        lineFindings: ['Fuel surcharge posted without approved addendum', 'Two pallet fees duplicated'],
+        audit: ['2026-04-21 OCR match completed', '2026-04-21 Analyst flagged tolerance breach']
+      },
+      {
+        id: 'IM-6105',
+        invoice: 'INV-99304',
+        po: 'PO-66217',
+        grn: 'GR-12955',
+        vendor: 'Alpen Components',
+        owner: 'Noah Brandt',
+        dueDate: '2026-04-24',
+        invoiceAmount: 8850,
+        poAmount: 8850,
+        tolerancePct: 1,
+        status: 'Auto-Matched',
+        lineFindings: ['No discrepancy detected'],
+        audit: ['2026-04-20 3-way match passed', '2026-04-20 Posted to AP queue']
+      },
+      {
+        id: 'IM-6106',
+        invoice: 'INV-77190',
+        po: 'PO-77103',
+        grn: 'GR-12980',
+        vendor: 'Helios IT Services',
+        owner: 'Maja Klein',
+        dueDate: '2026-04-25',
+        invoiceAmount: 19320,
+        poAmount: 18700,
+        tolerancePct: 2,
+        status: 'Pending Approval',
+        lineFindings: ['Hourly rate index updated after PO release', 'Change order exists but not linked in ERP'],
+        audit: ['2026-04-21 Analyst queued approval', '2026-04-21 AP Manager requested updated justification']
+      },
+      {
+        id: 'IM-6107',
+        invoice: 'INV-44811',
+        po: 'PO-67021',
+        grn: 'GR-12988',
+        vendor: 'Rhein Office Supply',
+        owner: 'Noah Brandt',
+        dueDate: '2026-04-27',
+        invoiceAmount: 5320,
+        poAmount: 5100,
+        tolerancePct: 1,
+        status: 'Needs Review',
+        lineFindings: ['Packaging charge not included in PO terms'],
+        audit: ['2026-04-21 Supplier invoice received']
+      },
+      {
+        id: 'IM-6108',
+        invoice: 'INV-55991',
+        po: 'PO-70002',
+        grn: 'GR-12995',
+        vendor: 'BluePeak Facilities',
+        owner: 'Elif Kaya',
+        dueDate: '2026-04-23',
+        invoiceAmount: 7420,
+        poAmount: 7290,
+        tolerancePct: 2,
+        status: 'Approved Variance',
+        lineFindings: ['Emergency maintenance call-out fee documented'],
+        audit: ['2026-04-20 AP Manager approved variance']
+      },
+      {
+        id: 'IM-6109',
+        invoice: 'INV-90201',
+        po: 'PO-77310',
+        grn: 'GR-13001',
+        vendor: 'Nordlicht Logistics',
+        owner: 'Elif Kaya',
+        dueDate: '2026-04-29',
+        invoiceAmount: 16350,
+        poAmount: 15800,
+        tolerancePct: 1,
+        status: 'Blocked',
+        lineFindings: ['Missing signed delivery note', 'Unapproved weekend surcharge'],
+        audit: ['2026-04-21 Controller blocked payment pending legal review']
+      }
+    ];
+
+    const statuses = ['All Statuses', 'Needs Review', 'Pending Approval', 'Approved Variance', 'Auto-Matched', 'Blocked'];
+    const vendors = ['All Vendors', ...new Set(records.map(record => record.vendor))];
+
+    const els = {
+      searchInput: document.getElementById('searchInput'),
+      vendorFilter: document.getElementById('vendorFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      sortBy: document.getElementById('sortBy'),
+      roleView: document.getElementById('roleView'),
+      openValue: document.getElementById('openValue'),
+      highRiskCount: document.getElementById('highRiskCount'),
+      pendingCount: document.getElementById('pendingCount'),
+      queue: document.getElementById('queue'),
+      exportBtn: document.getElementById('exportBtn'),
+      emptyDetail: document.getElementById('emptyDetail'),
+      detailPane: document.getElementById('detailPane'),
+      detailTitle: document.getElementById('detailTitle'),
+      statusBadge: document.getElementById('statusBadge'),
+      detailMeta: document.getElementById('detailMeta'),
+      invoiceAmount: document.getElementById('invoiceAmount'),
+      poAmount: document.getElementById('poAmount'),
+      varianceAmount: document.getElementById('varianceAmount'),
+      toleranceValue: document.getElementById('toleranceValue'),
+      reasonInput: document.getElementById('reasonInput'),
+      formError: document.getElementById('formError'),
+      lineFindings: document.getElementById('lineFindings'),
+      auditTrail: document.getElementById('auditTrail')
+    };
+
+    let selectedId = null;
+
+    function toMoney(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+    }
+
+    function varianceValue(record) {
+      return Number((record.invoiceAmount - record.poAmount).toFixed(2));
+    }
+
+    function variancePct(record) {
+      if (!record.poAmount) return 0;
+      return (Math.abs(varianceValue(record)) / record.poAmount) * 100;
+    }
+
+    function isHighRisk(record) {
+      return variancePct(record) > record.tolerancePct || ['Blocked', 'Pending Approval'].includes(record.status);
+    }
+
+    function fillSelect(select, values) {
+      select.innerHTML = values.map(value => `<option>${value}</option>`).join('');
+    }
+
+    function statusStyle(status) {
+      const styles = {
+        'Needs Review': 'bg-amber-900 text-amber-200',
+        'Pending Approval': 'bg-sky-900 text-sky-200',
+        'Approved Variance': 'bg-emerald-900 text-emerald-200',
+        'Auto-Matched': 'bg-slate-700 text-slate-200',
+        'Blocked': 'bg-rose-900 text-rose-200'
+      };
+      return styles[status] || 'bg-slate-700 text-slate-100';
+    }
+
+    function getFilteredRecords() {
+      const query = els.searchInput.value.trim().toLowerCase();
+      const vendor = els.vendorFilter.value;
+      const status = els.statusFilter.value;
+      const sort = els.sortBy.value;
+
+      const filtered = records.filter(record => {
+        const haystack = [record.id, record.invoice, record.po, record.grn, record.vendor, record.owner].join(' ').toLowerCase();
+        const queryMatch = !query || haystack.includes(query);
+        const vendorMatch = vendor === 'All Vendors' || record.vendor === vendor;
+        const statusMatch = status === 'All Statuses' || record.status === status;
+        return queryMatch && vendorMatch && statusMatch;
+      });
+
+      const sorters = {
+        dueAsc: (a, b) => a.dueDate.localeCompare(b.dueDate),
+        varianceDesc: (a, b) => Math.abs(varianceValue(b)) - Math.abs(varianceValue(a)),
+        amountDesc: (a, b) => b.invoiceAmount - a.invoiceAmount,
+        vendorAsc: (a, b) => a.vendor.localeCompare(b.vendor)
+      };
+      filtered.sort(sorters[sort]);
+      return filtered;
+    }
+
+    function renderQueue(list) {
+      if (!list.length) {
+        els.queue.innerHTML = '<div class="text-sm text-slate-400 border border-dashed border-slate-700 rounded-lg p-4">No records match current filters.</div>';
+        return;
+      }
+
+      els.queue.innerHTML = list.map(record => {
+        const variance = varianceValue(record);
+        const varianceLabel = `${variance >= 0 ? '+' : '-'}${toMoney(Math.abs(variance))}`;
+        return `
+          <button data-id="${record.id}" class="queue-card w-full text-left border border-slate-800 rounded-lg p-3 hover:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${selectedId === record.id ? 'ring-2 ring-emerald-500 border-emerald-600' : ''}">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-medium">${record.invoice} · ${record.vendor}</p>
+                <p class="text-xs text-slate-400 mt-1">${record.id} · ${record.po} · ${record.grn}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full ${statusStyle(record.status)}">${record.status}</span>
+            </div>
+            <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <div class="text-slate-300">Due: ${record.dueDate}</div>
+              <div class="text-slate-300">Invoice: ${toMoney(record.invoiceAmount)}</div>
+              <div class="${isHighRisk(record) ? 'text-amber-300' : 'text-slate-400'}">Variance: ${varianceLabel}</div>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.queue-card').forEach(card => {
+        card.addEventListener('click', () => selectRecord(card.dataset.id));
+      });
+    }
+
+    function updateMetrics(list) {
+      const openValue = list
+        .filter(record => !['Auto-Matched', 'Approved Variance'].includes(record.status))
+        .reduce((sum, record) => sum + record.invoiceAmount, 0);
+      const highRisk = list.filter(isHighRisk).length;
+      const pending = list.filter(record => record.status === 'Pending Approval').length;
+
+      els.openValue.textContent = toMoney(openValue);
+      els.highRiskCount.textContent = String(highRisk);
+      els.pendingCount.textContent = String(pending);
+    }
+
+    function renderListAndMetrics() {
+      const list = getFilteredRecords();
+      renderQueue(list);
+      updateMetrics(list);
+      return list;
+    }
+
+    function selectRecord(id) {
+      selectedId = id;
+      const record = records.find(item => item.id === id);
+      if (!record) return;
+
+      els.emptyDetail.classList.add('hidden');
+      els.detailPane.classList.remove('hidden');
+
+      const variance = varianceValue(record);
+      const varianceLabel = `${variance >= 0 ? '+' : '-'}${toMoney(Math.abs(variance))}`;
+
+      els.detailTitle.textContent = `${record.invoice} · ${record.vendor}`;
+      els.statusBadge.textContent = record.status;
+      els.statusBadge.className = `text-xs px-2 py-1 rounded-full ${statusStyle(record.status)}`;
+      els.detailMeta.textContent = `${record.id} · ${record.po} · ${record.grn} · Owner: ${record.owner} · Due ${record.dueDate}`;
+      els.invoiceAmount.textContent = toMoney(record.invoiceAmount);
+      els.poAmount.textContent = toMoney(record.poAmount);
+      els.varianceAmount.textContent = varianceLabel;
+      els.toleranceValue.textContent = `${record.tolerancePct.toFixed(1)}%`;
+
+      els.lineFindings.innerHTML = record.lineFindings
+        .map(item => `<li class="bg-slate-950 border border-slate-800 rounded p-2 text-slate-300">${item}</li>`)
+        .join('');
+      els.auditTrail.innerHTML = record.audit
+        .slice()
+        .reverse()
+        .map(item => `<li class="bg-slate-950 border border-slate-800 rounded p-2 text-slate-300">${item}</li>`)
+        .join('');
+
+      applyRolePermissions();
+      renderListAndMetrics();
+    }
+
+    function rolePermissions(role) {
+      const matrix = {
+        'AP Analyst': new Set(['queueApproval', 'requestCredit']),
+        'AP Manager': new Set(['queueApproval', 'approveVariance', 'requestCredit', 'blockPayment']),
+        'Controller': new Set(['approveVariance', 'blockPayment'])
+      };
+      return matrix[role] || new Set();
+    }
+
+    function applyRolePermissions() {
+      const allowed = rolePermissions(els.roleView.value);
+      document.querySelectorAll('.wf-action').forEach(button => {
+        const enabled = allowed.has(button.dataset.action);
+        button.disabled = !enabled;
+        button.classList.toggle('opacity-40', !enabled);
+        button.classList.toggle('cursor-not-allowed', !enabled);
+      });
+    }
+
+    function policyError(record, action, reason) {
+      const pct = variancePct(record);
+      if (action === 'approveVariance' && pct > record.tolerancePct && reason.trim().length < 20) {
+        return `Variance is ${pct.toFixed(2)}% and exceeds tolerance. Add at least 20 characters of justification.`;
+      }
+      if (action === 'queueApproval' && record.status === 'Auto-Matched') {
+        return 'Auto-matched records cannot be queued for approval.';
+      }
+      return '';
+    }
+
+    function actionLabel(action) {
+      const labels = {
+        queueApproval: 'Queued for approval',
+        approveVariance: 'Variance approved',
+        requestCredit: 'Credit note requested',
+        blockPayment: 'Payment blocked'
+      };
+      return labels[action] || 'Action applied';
+    }
+
+    function nextStatus(action, currentStatus) {
+      const transitions = {
+        queueApproval: 'Pending Approval',
+        approveVariance: 'Approved Variance',
+        requestCredit: 'Needs Review',
+        blockPayment: 'Blocked'
+      };
+      return transitions[action] || currentStatus;
+    }
+
+    function handleAction(action) {
+      const record = records.find(item => item.id === selectedId);
+      if (!record) return;
+
+      const reason = els.reasonInput.value;
+      const error = policyError(record, action, reason);
+      if (error) {
+        els.formError.textContent = error;
+        els.formError.classList.remove('hidden');
+        return;
+      }
+
+      els.formError.classList.add('hidden');
+      record.status = nextStatus(action, record.status);
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const reasonSuffix = reason.trim() ? ` Reason: ${reason.trim()}` : '';
+      record.audit.push(`${timestamp} ${els.roleView.value} ${actionLabel(action)}.${reasonSuffix}`);
+      if (action === 'requestCredit') {
+        record.lineFindings.push('Credit note request sent to vendor portal');
+      }
+
+      selectRecord(record.id);
+    }
+
+    function exportCsv() {
+      const list = getFilteredRecords();
+      const rows = [
+        ['ID', 'Invoice', 'PO', 'GRN', 'Vendor', 'Status', 'Invoice Amount', 'PO Amount', 'Variance', 'Variance %', 'Tolerance %', 'Due Date', 'Owner']
+      ];
+      list.forEach(record => {
+        rows.push([
+          record.id,
+          record.invoice,
+          record.po,
+          record.grn,
+          record.vendor,
+          record.status,
+          record.invoiceAmount.toFixed(2),
+          record.poAmount.toFixed(2),
+          varianceValue(record).toFixed(2),
+          variancePct(record).toFixed(2),
+          record.tolerancePct.toFixed(2),
+          record.dueDate,
+          record.owner
+        ]);
+      });
+
+      const csv = rows
+        .map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'invoice-matching-tolerance-workbench.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function init() {
+      fillSelect(els.vendorFilter, vendors);
+      fillSelect(els.statusFilter, statuses);
+
+      [els.searchInput, els.vendorFilter, els.statusFilter, els.sortBy].forEach(control => {
+        control.addEventListener('input', renderListAndMetrics);
+        control.addEventListener('change', renderListAndMetrics);
+      });
+
+      els.roleView.addEventListener('change', applyRolePermissions);
+
+      document.querySelectorAll('.wf-action').forEach(button => {
+        button.addEventListener('click', () => handleAction(button.dataset.action));
+      });
+
+      els.exportBtn.addEventListener('click', exportCsv);
+
+      const initialList = renderListAndMetrics();
+      if (initialList.length) selectRecord(initialList[0].id);
+    }
+
+    init();
+  </script>
+</body>
+</html>
