@@ -2111,5 +2111,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-24",
+    "day": 94,
+    "slug": "2026-04-24-shipment-dock-slot-calendar",
+    "name": "Shipment Dock Slot Calendar",
+    "description": "Supply chain calendar for inbound dock slots with policy-gated status transitions, role-based handoffs, and audit-ready export.",
+    "category": "Supply Chain",
+    "pattern": "Calendar",
+    "tags": [
+      "shipment tracker",
+      "supply chain",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "state machine",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]

@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Compliance Checklist Evidence Dragboard** — dark-mode legal dragboard for checklist evidence, policy-gated approvals, and audit-ready traceability.
+**Shipment Dock Slot Calendar** — dark-mode supply chain calendar for dock slot scheduling, policy-gated status transitions, and audit-ready handoffs.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shipment Dock Slot Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 950: '#020617' }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-[1500px] mx-auto px-4 py-6 md:py-8">
+    <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Shipment Dock Slot Calendar</h1>
+    <p class="text-slate-400 mt-2">Supply chain dock calendar for inbound slot control, delay triage, role-based approvals, and audit-ready handoffs.</p>
+
+    <section class="mt-6 grid lg:grid-cols-8 gap-3">
+      <label class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Search</span>
+        <input id="searchInput" type="text" placeholder="PO, supplier, shipment ID" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Lane</span>
+        <select id="laneFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Status</span>
+        <select id="statusFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Sort</span>
+        <select id="sortBy" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="etaAsc">ETA (Earliest)</option>
+          <option value="priorityDesc">Priority (Highest)</option>
+          <option value="supplierAsc">Supplier (A-Z)</option>
+          <option value="palletDesc">Pallets (Most)</option>
+        </select>
+      </label>
+      <label class="bg-slate-900 border border-slate-800 rounded-lg p-3 block">
+        <span class="text-xs uppercase tracking-wide text-slate-400">Role View</span>
+        <select id="roleView" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option>Dock Planner</option>
+          <option>Shift Lead</option>
+          <option>Carrier Desk</option>
+        </select>
+      </label>
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-end">
+        <button id="exportBtn" class="w-full px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="mt-4 grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Today Arrivals</p>
+        <p id="todayCount" class="text-xl font-semibold mt-1">0</p>
+      </article>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">At Risk / Delayed</p>
+        <p id="riskCount" class="text-xl font-semibold mt-1 text-amber-300">0</p>
+      </article>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Arrived Pending Close</p>
+        <p id="arrivedCount" class="text-xl font-semibold mt-1 text-sky-300">0</p>
+      </article>
+      <article class="bg-slate-900 border border-slate-800 rounded-lg p-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400">Closed This Week</p>
+        <p id="closedCount" class="text-xl font-semibold mt-1 text-emerald-300">0</p>
+      </article>
+    </section>
+
+    <section class="mt-6 grid xl:grid-cols-12 gap-4 items-start">
+      <div class="xl:col-span-8">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 class="font-semibold">14-Day Dock Calendar</h2>
+            <p class="text-xs text-slate-400">Click a day to focus details and transitions.</p>
+          </div>
+          <div id="calendarGrid" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <div class="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <h2 class="font-semibold">Shipments for <span id="selectedDateLabel"></span></h2>
+          <p class="text-xs text-slate-400 mt-1">Select one shipment to update status, validate policy, and append audit logs.</p>
+          <div id="dayShipments" class="mt-3 grid md:grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+
+      <aside class="xl:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="font-semibold">Shipment Detail</h2>
+        <p id="emptyDetail" class="text-sm text-slate-400 mt-3">Pick a shipment card to review slot data, validate handoff, and update status.</p>
+
+        <div id="detailPane" class="hidden mt-3 space-y-4">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <h3 id="detailTitle" class="text-lg font-semibold"></h3>
+              <span id="detailStatus" class="text-xs px-2 py-1 rounded-full"></span>
+            </div>
+            <p id="detailMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-2 text-sm">
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded px-3 py-2">
+              <input id="docsComplete" type="checkbox" class="accent-emerald-500" /> ASN / docs verified
+            </label>
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded px-3 py-2">
+              <input id="qualityCheck" type="checkbox" class="accent-emerald-500" /> Quality gate done
+            </label>
+          </div>
+
+          <div>
+            <label for="actionNote" class="text-sm font-medium">Transition Note</label>
+            <textarea id="actionNote" rows="3" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Required for delay and close actions."></textarea>
+            <p id="policyError" class="text-xs text-rose-300 mt-1 hidden"></p>
+          </div>
+
+          <div>
+            <h4 class="font-medium">State Actions</h4>
+            <div id="stateActions" class="mt-2 grid sm:grid-cols-2 gap-2"></div>
+          </div>
+
+          <div>
+            <h4 class="font-medium">Audit Trail</h4>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h2 class="font-semibold">Add Inbound Shipment</h2>
+      <form id="newShipmentForm" class="mt-3 grid md:grid-cols-6 gap-3" novalidate>
+        <label class="md:col-span-2 block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Supplier</span>
+          <input id="newSupplier" required class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Supplier name" />
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">PO</span>
+          <input id="newPo" required class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="PO-xxxx" />
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Lane</span>
+          <select id="newLane" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm">
+            <option>Electronics</option>
+            <option>Cold Chain</option>
+            <option>Packaging</option>
+            <option>Components</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Carrier</span>
+          <input id="newCarrier" required class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="Carrier" />
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Pallets</span>
+          <input id="newPallets" required type="number" min="1" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" placeholder="12" />
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">ETA Date</span>
+          <input id="newEtaDate" required type="date" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Dock Slot</span>
+          <input id="newSlot" required type="time" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm" />
+        </label>
+        <label class="md:col-span-2 block">
+          <span class="text-xs uppercase tracking-wide text-slate-400">Priority</span>
+          <select id="newPriority" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm">
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+            <option>Critical</option>
+          </select>
+        </label>
+        <div class="md:col-span-6 flex items-center gap-3">
+          <button class="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-medium" type="submit">Create Shipment</button>
+          <p id="newShipmentError" class="text-xs text-rose-300 hidden"></p>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const statusOrder = ['Scheduled', 'At Risk', 'Delayed', 'Arrived', 'Closed'];
+    const statusBadge = {
+      'Scheduled': 'bg-slate-700 text-slate-100',
+      'At Risk': 'bg-amber-900 text-amber-200',
+      'Delayed': 'bg-rose-900 text-rose-200',
+      'Arrived': 'bg-sky-900 text-sky-200',
+      'Closed': 'bg-emerald-900 text-emerald-200'
+    };
+    const priorityOrder = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+    const transitions = {
+      'Scheduled': ['At Risk', 'Delayed', 'Arrived'],
+      'At Risk': ['Delayed', 'Arrived'],
+      'Delayed': ['Scheduled', 'Arrived'],
+      'Arrived': ['Closed'],
+      'Closed': []
+    };
+
+    const shipments = [
+      {
+        id: 'SHP-7811',
+        supplier: 'Nordline Electronics',
+        po: 'PO-55210',
+        lane: 'Electronics',
+        carrier: 'DHL Freight',
+        pallets: 28,
+        etaDate: '2026-04-24',
+        slot: '07:30',
+        priority: 'High',
+        status: 'Scheduled',
+        docsComplete: true,
+        qualityCheck: false,
+        audit: ['2026-04-22 Slot booked by Dock Planner.']
+      },
+      {
+        id: 'SHP-7812',
+        supplier: 'FreshArc Foods',
+        po: 'PO-55214',
+        lane: 'Cold Chain',
+        carrier: 'Kuehne+Nagel',
+        pallets: 16,
+        etaDate: '2026-04-24',
+        slot: '09:00',
+        priority: 'Critical',
+        status: 'At Risk',
+        docsComplete: false,
+        qualityCheck: false,
+        audit: ['2026-04-23 Carrier flagged border delay risk.']
+      },
+      {
+        id: 'SHP-7813',
+        supplier: 'PackFox GmbH',
+        po: 'PO-55233',
+        lane: 'Packaging',
+        carrier: 'DB Schenker',
+        pallets: 34,
+        etaDate: '2026-04-25',
+        slot: '10:30',
+        priority: 'Medium',
+        status: 'Scheduled',
+        docsComplete: true,
+        qualityCheck: false,
+        audit: ['2026-04-23 ASN validated.']
+      },
+      {
+        id: 'SHP-7814',
+        supplier: 'Voltiva Components',
+        po: 'PO-55239',
+        lane: 'Components',
+        carrier: 'GEFCO',
+        pallets: 22,
+        etaDate: '2026-04-26',
+        slot: '11:15',
+        priority: 'High',
+        status: 'Delayed',
+        docsComplete: true,
+        qualityCheck: false,
+        audit: ['2026-04-23 Delay note: axle issue on trailer.']
+      },
+      {
+        id: 'SHP-7815',
+        supplier: 'BioWrap Europe',
+        po: 'PO-55248',
+        lane: 'Packaging',
+        carrier: 'Dachser',
+        pallets: 9,
+        etaDate: '2026-04-27',
+        slot: '08:45',
+        priority: 'Low',
+        status: 'Arrived',
+        docsComplete: true,
+        qualityCheck: true,
+        audit: ['2026-04-24 Gate-in complete at Dock 4.']
+      },
+      {
+        id: 'SHP-7816',
+        supplier: 'CryoBox Ltd',
+        po: 'PO-55255',
+        lane: 'Cold Chain',
+        carrier: 'Hellmann',
+        pallets: 11,
+        etaDate: '2026-04-28',
+        slot: '12:15',
+        priority: 'Critical',
+        status: 'Scheduled',
+        docsComplete: false,
+        qualityCheck: false,
+        audit: ['2026-04-24 Missing temp certificate pending.']
+      },
+      {
+        id: 'SHP-7817',
+        supplier: 'Nordline Electronics',
+        po: 'PO-55270',
+        lane: 'Electronics',
+        carrier: 'DHL Freight',
+        pallets: 31,
+        etaDate: '2026-04-29',
+        slot: '15:00',
+        priority: 'High',
+        status: 'Closed',
+        docsComplete: true,
+        qualityCheck: true,
+        audit: ['2026-04-23 Closed by Shift Lead after GRN sync.']
+      }
+    ];
+
+    const searchInput = document.getElementById('searchInput');
+    const laneFilter = document.getElementById('laneFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const sortBy = document.getElementById('sortBy');
+    const roleView = document.getElementById('roleView');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const dayShipments = document.getElementById('dayShipments');
+    const selectedDateLabel = document.getElementById('selectedDateLabel');
+    const detailPane = document.getElementById('detailPane');
+    const emptyDetail = document.getElementById('emptyDetail');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailStatus = document.getElementById('detailStatus');
+    const detailMeta = document.getElementById('detailMeta');
+    const docsComplete = document.getElementById('docsComplete');
+    const qualityCheck = document.getElementById('qualityCheck');
+    const actionNote = document.getElementById('actionNote');
+    const policyError = document.getElementById('policyError');
+    const stateActions = document.getElementById('stateActions');
+    const auditTrail = document.getElementById('auditTrail');
+    const exportBtn = document.getElementById('exportBtn');
+
+    const todayCount = document.getElementById('todayCount');
+    const riskCount = document.getElementById('riskCount');
+    const arrivedCount = document.getElementById('arrivedCount');
+    const closedCount = document.getElementById('closedCount');
+
+    const newShipmentForm = document.getElementById('newShipmentForm');
+    const newShipmentError = document.getElementById('newShipmentError');
+
+    const today = new Date('2026-04-24T08:00:00Z');
+    const calendarDays = [...Array(14)].map((_, i) => {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+
+    let selectedDate = calendarDays[0];
+    let selectedShipmentId = null;
+
+    function toDateLabel(dateStr) {
+      return new Date(`${dateStr}T00:00:00Z`).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short'
+      });
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function populateFilters() {
+      const lanes = ['All', ...new Set(shipments.map(s => s.lane))];
+      laneFilter.innerHTML = lanes.map(l => `<option>${l}</option>`).join('');
+      statusFilter.innerHTML = ['All', ...statusOrder].map(s => `<option>${s}</option>`).join('');
+      laneFilter.value = laneFilter.value || 'All';
+      statusFilter.value = statusFilter.value || 'All';
+    }
+
+    function getFilteredShipments() {
+      const q = searchInput.value.trim().toLowerCase();
+      const lane = laneFilter.value;
+      const status = statusFilter.value;
+
+      let list = shipments.filter(s => {
+        const matchesSearch = !q || `${s.id} ${s.po} ${s.supplier} ${s.carrier}`.toLowerCase().includes(q);
+        const matchesLane = lane === 'All' || s.lane === lane;
+        const matchesStatus = status === 'All' || s.status === status;
+        return matchesSearch && matchesLane && matchesStatus;
+      });
+
+      list = list.sort((a, b) => {
+        if (sortBy.value === 'etaAsc') {
+          return `${a.etaDate} ${a.slot}`.localeCompare(`${b.etaDate} ${b.slot}`);
+        }
+        if (sortBy.value === 'priorityDesc') {
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
+        if (sortBy.value === 'supplierAsc') {
+          return a.supplier.localeCompare(b.supplier);
+        }
+        return b.pallets - a.pallets;
+      });
+
+      return list;
+    }
+
+    function renderMetrics(filtered) {
+      todayCount.textContent = filtered.filter(s => s.etaDate === calendarDays[0]).length;
+      riskCount.textContent = filtered.filter(s => ['At Risk', 'Delayed'].includes(s.status)).length;
+      arrivedCount.textContent = filtered.filter(s => s.status === 'Arrived').length;
+      closedCount.textContent = filtered.filter(s => s.status === 'Closed').length;
+    }
+
+    function renderCalendar(filtered) {
+      const countByDay = Object.fromEntries(calendarDays.map(d => [d, 0]));
+      filtered.forEach(s => {
+        if (countByDay[s.etaDate] !== undefined) countByDay[s.etaDate] += 1;
+      });
+
+      calendarGrid.innerHTML = calendarDays.map(day => {
+        const dayItems = filtered.filter(s => s.etaDate === day);
+        const critical = dayItems.filter(s => s.priority === 'Critical').length;
+        const isSelected = day === selectedDate;
+        return `
+          <button data-day="${day}" class="text-left rounded-lg border p-3 transition ${isSelected ? 'border-emerald-500 bg-slate-800' : 'border-slate-800 bg-slate-900 hover:border-slate-700'}">
+            <div class="flex items-center justify-between">
+              <p class="font-medium">${toDateLabel(day)}</p>
+              <span class="text-xs px-2 py-0.5 rounded-full ${countByDay[day] ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400'}">${countByDay[day]} slots</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Critical loads: <span class="${critical ? 'text-rose-300' : 'text-slate-500'}">${critical}</span></p>
+          </button>
+        `;
+      }).join('');
+
+      calendarGrid.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedDate = btn.dataset.day;
+          selectedShipmentId = null;
+          render();
+        });
+      });
+    }
+
+    function renderDayShipments(filtered) {
+      selectedDateLabel.textContent = toDateLabel(selectedDate);
+      const dayItems = filtered.filter(s => s.etaDate === selectedDate);
+
+      if (!dayItems.length) {
+        dayShipments.innerHTML = '<p class="text-sm text-slate-400">No shipments for this day after filters.</p>';
+        detailPane.classList.add('hidden');
+        emptyDetail.classList.remove('hidden');
+        return;
+      }
+
+      if (!dayItems.some(s => s.id === selectedShipmentId)) {
+        selectedShipmentId = dayItems[0].id;
+      }
+
+      dayShipments.innerHTML = dayItems.map(s => {
+        const active = s.id === selectedShipmentId;
+        return `
+          <button data-id="${s.id}" class="text-left rounded-lg border p-3 ${active ? 'border-emerald-500 bg-slate-800' : 'border-slate-800 bg-slate-950 hover:border-slate-700'}">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-medium">${escapeHtml(s.id)} • ${escapeHtml(s.slot)}</p>
+                <p class="text-xs text-slate-400 mt-1">${escapeHtml(s.supplier)} • ${escapeHtml(s.po)}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full ${statusBadge[s.status]}">${s.status}</span>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
+              <span class="px-2 py-1 rounded bg-slate-900 border border-slate-700">${escapeHtml(s.lane)}</span>
+              <span class="px-2 py-1 rounded bg-slate-900 border border-slate-700">${escapeHtml(s.priority)}</span>
+              <span class="px-2 py-1 rounded bg-slate-900 border border-slate-700">${escapeHtml(String(s.pallets))} pallets</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      dayShipments.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedShipmentId = btn.dataset.id;
+          render();
+        });
+      });
+
+      renderDetail();
+    }
+
+    function addAudit(item, text) {
+      const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      item.audit.unshift(`${stamp} ${text}`);
+    }
+
+    function validateTransition(item, targetStatus) {
+      const role = roleView.value;
+      const note = actionNote.value.trim();
+
+      if (targetStatus === 'Arrived' && !item.docsComplete) {
+        return 'Cannot mark Arrived until ASN/docs are verified.';
+      }
+
+      if (targetStatus === 'Delayed' && note.length < 10) {
+        return 'Delay transitions require a note of at least 10 characters.';
+      }
+
+      if (targetStatus === 'Closed') {
+        if (role !== 'Shift Lead') return 'Only Shift Lead can close shipments.';
+        if (!item.qualityCheck) return 'Quality gate must be completed before close.';
+        if (note.length < 10) return 'Close action requires a handoff note of at least 10 characters.';
+      }
+
+      if (role === 'Carrier Desk' && ['Closed', 'Arrived'].includes(targetStatus)) {
+        return 'Carrier Desk can only flag risk or delay, not finalize arrivals.';
+      }
+
+      return null;
+    }
+
+    function renderDetail() {
+      const item = shipments.find(s => s.id === selectedShipmentId);
+      if (!item) {
+        detailPane.classList.add('hidden');
+        emptyDetail.classList.remove('hidden');
+        return;
+      }
+
+      detailPane.classList.remove('hidden');
+      emptyDetail.classList.add('hidden');
+      detailTitle.textContent = `${item.id} • ${item.supplier}`;
+      detailMeta.textContent = `${item.po} • ${item.carrier} • ${item.slot} • ${item.pallets} pallets`;
+      detailStatus.className = `text-xs px-2 py-1 rounded-full ${statusBadge[item.status]}`;
+      detailStatus.textContent = item.status;
+
+      docsComplete.checked = item.docsComplete;
+      qualityCheck.checked = item.qualityCheck;
+
+      docsComplete.onchange = () => {
+        item.docsComplete = docsComplete.checked;
+        addAudit(item, `Docs flag set to ${item.docsComplete ? 'complete' : 'incomplete'} by ${roleView.value}.`);
+        render();
+      };
+
+      qualityCheck.onchange = () => {
+        item.qualityCheck = qualityCheck.checked;
+        addAudit(item, `Quality gate set to ${item.qualityCheck ? 'done' : 'pending'} by ${roleView.value}.`);
+        render();
+      };
+
+      const allowed = transitions[item.status] || [];
+      stateActions.innerHTML = allowed.length
+        ? allowed.map(target => `<button data-target="${target}" class="px-3 py-2 rounded text-sm font-medium ${target === 'Closed' ? 'bg-emerald-700 hover:bg-emerald-600' : target === 'Delayed' ? 'bg-rose-700 hover:bg-rose-600' : target === 'Arrived' ? 'bg-sky-700 hover:bg-sky-600' : 'bg-amber-700 hover:bg-amber-600'}">Mark ${target}</button>`).join('')
+        : '<p class="text-sm text-slate-400">No further transitions available.</p>';
+
+      stateActions.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.target;
+          const issue = validateTransition(item, target);
+          if (issue) {
+            policyError.textContent = issue;
+            policyError.classList.remove('hidden');
+            return;
+          }
+
+          policyError.classList.add('hidden');
+          const note = actionNote.value.trim();
+          const prev = item.status;
+          item.status = target;
+          addAudit(item, `${roleView.value} moved ${prev} -> ${target}${note ? ` (${note})` : ''}.`);
+          actionNote.value = '';
+          render();
+        });
+      });
+
+      auditTrail.innerHTML = item.audit
+        .slice(0, 8)
+        .map(entry => `<li class="bg-slate-950 border border-slate-800 rounded px-3 py-2">${escapeHtml(entry)}</li>`)
+        .join('');
+    }
+
+    function exportCsv(rows) {
+      const header = ['id', 'supplier', 'po', 'lane', 'carrier', 'etaDate', 'slot', 'priority', 'status', 'pallets', 'docsComplete', 'qualityCheck'];
+      const csv = [header.join(',')].concat(
+        rows.map(s => header.map(key => {
+          const value = String(s[key] ?? '').replaceAll('"', '""');
+          return /[",\n]/.test(value) ? `"${value}"` : value;
+        }).join(','))
+      ).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shipment-dock-calendar-${selectedDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      populateFilters();
+      const filtered = getFilteredShipments();
+      renderMetrics(filtered);
+      renderCalendar(filtered);
+      renderDayShipments(filtered);
+    }
+
+    [searchInput, laneFilter, statusFilter, sortBy, roleView].forEach(el => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const filtered = getFilteredShipments().filter(s => s.etaDate === selectedDate);
+      exportCsv(filtered);
+      const item = shipments.find(s => s.id === selectedShipmentId);
+      if (item) addAudit(item, `${roleView.value} exported CSV for ${selectedDate} view.`);
+      render();
+    });
+
+    newShipmentForm.addEventListener('submit', event => {
+      event.preventDefault();
+      newShipmentError.classList.add('hidden');
+
+      const supplier = document.getElementById('newSupplier').value.trim();
+      const po = document.getElementById('newPo').value.trim();
+      const lane = document.getElementById('newLane').value;
+      const carrier = document.getElementById('newCarrier').value.trim();
+      const pallets = Number(document.getElementById('newPallets').value);
+      const etaDate = document.getElementById('newEtaDate').value;
+      const slot = document.getElementById('newSlot').value;
+      const priority = document.getElementById('newPriority').value;
+
+      if (!supplier || !po || !carrier || !etaDate || !slot || !Number.isFinite(pallets) || pallets < 1) {
+        newShipmentError.textContent = 'Please fill all fields with valid values.';
+        newShipmentError.classList.remove('hidden');
+        return;
+      }
+
+      if (etaDate < calendarDays[0]) {
+        newShipmentError.textContent = 'ETA date cannot be in the past for dock planning.';
+        newShipmentError.classList.remove('hidden');
+        return;
+      }
+
+      const nextId = `SHP-${Math.max(...shipments.map(s => Number(s.id.split('-')[1]))) + 1}`;
+      shipments.push({
+        id: nextId,
+        supplier,
+        po,
+        lane,
+        carrier,
+        pallets,
+        etaDate,
+        slot,
+        priority,
+        status: 'Scheduled',
+        docsComplete: false,
+        qualityCheck: false,
+        audit: [`${new Date().toISOString().slice(0, 16).replace('T', ' ')} Shipment created by ${roleView.value}.`]
+      });
+
+      selectedDate = etaDate;
+      selectedShipmentId = nextId;
+      newShipmentForm.reset();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
