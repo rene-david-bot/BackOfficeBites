@@ -2135,5 +2135,23 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-25",
+    "day": 95,
+    "slug": "2026-04-25-shift-swap-approval-dragboard",
+    "name": "Shift Swap Approval Dragboard",
+    "description": "Dark-mode HR dragboard for routing shift swap requests with policy-gated approvals, audit trail, and CSV export.",
+    "category": "HR",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "hr",
+      "shift-swap",
+      "workflow",
+      "policy",
+      "audit",
+      "drag-drop"
+    ],
+    "thumb": "thumb.png"
   }
 ]

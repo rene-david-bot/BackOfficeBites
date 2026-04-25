@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift Swap Approval Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <a href="../../index.html" class="text-xs uppercase tracking-widest text-amber-400 hover:text-amber-300">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Shift Swap Approval Dragboard</h1>
+    <p class="text-slate-400 mt-2">HR command board for routing shift-swap requests with policy checks, audit trail, and CSV export.</p>
+
+    <div class="grid gap-4 md:grid-cols-5 mt-6">
+      <div class="md:col-span-3 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+        <div class="grid gap-3 md:grid-cols-4">
+          <label class="text-sm">
+            <span class="text-slate-300">Search</span>
+            <input id="search" type="text" placeholder="Employee or reason" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Team</span>
+            <select id="teamFilter" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="">All</option>
+              <option>Warehouse</option>
+              <option>Support</option>
+              <option>Retail</option>
+              <option>Fulfillment</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Policy</span>
+            <select id="policyFilter" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="">All</option>
+              <option value="ok">Within policy</option>
+              <option value="risk">Overtime risk</option>
+              <option value="skill">Skill mismatch</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-300">Sort</span>
+            <select id="sortBy" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="priority">Priority</option>
+              <option value="date">Date</option>
+              <option value="hours">Hours impact</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2 text-xs">
+          <label class="text-slate-300">View as</label>
+          <select id="roleView" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
+            <option value="Coordinator">Coordinator</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="HRBP">HRBP</option>
+          </select>
+          <button id="exportBtn" class="ml-auto bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg px-3 py-1.5">Export CSV</button>
+        </div>
+      </div>
+
+      <form id="newRequestForm" class="md:col-span-2 bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3" novalidate>
+        <h2 class="font-semibold text-slate-100">New Swap Request</h2>
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="text-sm">Employee
+            <input id="employee" required class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+          </label>
+          <label class="text-sm">Team
+            <select id="team" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option>Warehouse</option><option>Support</option><option>Retail</option><option>Fulfillment</option>
+            </select>
+          </label>
+          <label class="text-sm">From shift
+            <select id="fromShift" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option>Morning</option><option>Afternoon</option><option>Night</option>
+            </select>
+          </label>
+          <label class="text-sm">To shift
+            <select id="toShift" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option>Morning</option><option>Afternoon</option><option>Night</option>
+            </select>
+          </label>
+          <label class="text-sm">Date
+            <input id="swapDate" type="date" required class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+          </label>
+          <label class="text-sm">Projected weekly hours
+            <input id="weeklyHours" type="number" min="0" max="80" value="40" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+          </label>
+        </div>
+        <label class="text-sm block">Reason
+          <textarea id="reason" rows="2" required class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+        </label>
+        <p id="formError" class="text-rose-400 text-sm hidden"></p>
+        <button class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg px-3 py-2 font-medium">Submit request</button>
+      </form>
+    </div>
+
+    <div class="grid lg:grid-cols-4 gap-4 mt-6" id="board"></div>
+
+    <div class="mt-6 bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+      <h2 class="font-semibold">Audit Trail</h2>
+      <ul id="audit" class="mt-3 space-y-2 text-sm text-slate-300 max-h-52 overflow-auto"></ul>
+    </div>
+  </div>
+
+  <script>
+    const columns = ["Submitted", "Supervisor Review", "Approved", "Rejected"];
+    const priorityRank = { High: 0, Medium: 1, Low: 2 };
+    const state = {
+      role: "Coordinator",
+      items: [
+        { id: "SR-1182", employee: "Nadia Klein", team: "Warehouse", date: "2026-04-27", fromShift: "Night", toShift: "Morning", hours: 46, reason: "Childcare handoff", status: "Submitted", priority: "High", policy: "risk" },
+        { id: "SR-1183", employee: "Tim Weber", team: "Support", date: "2026-04-26", fromShift: "Afternoon", toShift: "Morning", hours: 39, reason: "Doctor appointment", status: "Supervisor Review", priority: "Medium", policy: "ok" },
+        { id: "SR-1184", employee: "Aylin Kaya", team: "Retail", date: "2026-04-28", fromShift: "Morning", toShift: "Night", hours: 42, reason: "Exam schedule", status: "Approved", priority: "Low", policy: "ok" },
+        { id: "SR-1185", employee: "Jonas Maier", team: "Fulfillment", date: "2026-04-29", fromShift: "Night", toShift: "Afternoon", hours: 40, reason: "Forklift cert missing on target shift", status: "Rejected", priority: "High", policy: "skill" }
+      ],
+      audit: [
+        { t: "08:02", text: "SR-1184 approved by Supervisor Lena." },
+        { t: "08:07", text: "SR-1185 rejected: skill mismatch for target shift." }
+      ]
+    };
+
+    const board = document.getElementById("board");
+    const audit = document.getElementById("audit");
+
+    function policyBadge(policy) {
+      const map = {
+        ok: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+        risk: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+        skill: "bg-rose-500/20 text-rose-300 border-rose-500/40"
+      };
+      const label = { ok: "Within policy", risk: "Overtime risk", skill: "Skill mismatch" };
+      return `<span class="text-[11px] px-2 py-1 rounded-full border ${map[policy] || map.ok}">${label[policy] || label.ok}</span>`;
+    }
+
+    function canMove(item, target) {
+      if (target === "Approved" && state.role === "Coordinator") return "Coordinator cannot approve requests.";
+      if (target === "Approved" && item.policy === "skill") return "Skill mismatch blocks approval.";
+      if (target === "Approved" && item.hours > 50) return "Weekly hours above policy limit (50h).";
+      return "";
+    }
+
+    function addAudit(text) {
+      const now = new Date();
+      const t = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      state.audit.unshift({ t, text });
+      state.audit = state.audit.slice(0, 20);
+      renderAudit();
+    }
+
+    function renderAudit() {
+      audit.innerHTML = state.audit.map(a => `<li class="border border-slate-800 rounded-lg p-2"><span class="text-cyan-300">${a.t}</span> — ${a.text}</li>`).join("");
+    }
+
+    function filteredSorted(items) {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const team = document.getElementById("teamFilter").value;
+      const policy = document.getElementById("policyFilter").value;
+      const sortBy = document.getElementById("sortBy").value;
+
+      let out = items.filter(i => {
+        const textMatch = !q || `${i.employee} ${i.reason} ${i.id}`.toLowerCase().includes(q);
+        const teamMatch = !team || i.team === team;
+        const policyMatch = !policy || i.policy === policy;
+        return textMatch && teamMatch && policyMatch;
+      });
+
+      out.sort((a, b) => {
+        if (sortBy === "date") return a.date.localeCompare(b.date);
+        if (sortBy === "hours") return b.hours - a.hours;
+        return priorityRank[a.priority] - priorityRank[b.priority];
+      });
+
+      return out;
+    }
+
+    function renderBoard() {
+      const items = filteredSorted(state.items);
+      board.innerHTML = columns.map(col => {
+        const colItems = items.filter(i => i.status === col);
+        return `
+          <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 min-h-72" data-col="${col}">
+            <h3 class="font-semibold mb-2">${col} <span class="text-slate-400 text-sm">(${colItems.length})</span></h3>
+            <div class="space-y-2" data-dropzone="${col}" tabindex="0" aria-label="${col} column dropzone">
+              ${colItems.map(i => `
+                <article draggable="true" data-id="${i.id}" class="bg-slate-800 border border-slate-700 rounded-lg p-3 cursor-grab active:cursor-grabbing">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <p class="font-medium">${i.employee}</p>
+                      <p class="text-xs text-slate-400">${i.id} · ${i.team}</p>
+                    </div>
+                    <span class="text-[11px] px-2 py-1 rounded-full border border-slate-600 text-slate-300">${i.priority}</span>
+                  </div>
+                  <p class="text-sm mt-2 text-slate-300">${i.date} · ${i.fromShift} → ${i.toShift}</p>
+                  <p class="text-sm text-slate-400">${i.hours}h weekly · ${i.reason}</p>
+                  <div class="mt-2">${policyBadge(i.policy)}</div>
+                </article>
+              `).join("") || '<p class="text-sm text-slate-500">No requests</p>'}
+            </div>
+          </section>
+        `;
+      }).join("");
+      attachDnD();
+    }
+
+    function attachDnD() {
+      document.querySelectorAll("[draggable='true']").forEach(card => {
+        card.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", card.dataset.id);
+        });
+      });
+
+      document.querySelectorAll("[data-dropzone]").forEach(zone => {
+        zone.addEventListener("dragover", e => e.preventDefault());
+        zone.addEventListener("drop", e => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData("text/plain");
+          const target = zone.dataset.dropzone;
+          const item = state.items.find(x => x.id === id);
+          if (!item || item.status === target) return;
+
+          const block = canMove(item, target);
+          if (block) {
+            addAudit(`${id} blocked from ${target}: ${block}`);
+            return;
+          }
+
+          const prev = item.status;
+          item.status = target;
+          addAudit(`${id} moved ${prev} → ${target} by ${state.role}.`);
+          renderBoard();
+        });
+      });
+    }
+
+    document.getElementById("newRequestForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const err = document.getElementById("formError");
+      const employee = document.getElementById("employee").value.trim();
+      const team = document.getElementById("team").value;
+      const fromShift = document.getElementById("fromShift").value;
+      const toShift = document.getElementById("toShift").value;
+      const date = document.getElementById("swapDate").value;
+      const hours = Number(document.getElementById("weeklyHours").value || 0);
+      const reason = document.getElementById("reason").value.trim();
+
+      if (!employee || !date || !reason) {
+        err.textContent = "Employee, date, and reason are required.";
+        err.classList.remove("hidden");
+        return;
+      }
+      if (fromShift === toShift) {
+        err.textContent = "From shift and To shift must be different.";
+        err.classList.remove("hidden");
+        return;
+      }
+
+      err.classList.add("hidden");
+      const id = `SR-${Math.floor(1000 + Math.random() * 9000)}`;
+      const policy = hours > 50 ? "risk" : "ok";
+      const priority = hours > 46 ? "High" : hours > 40 ? "Medium" : "Low";
+
+      state.items.unshift({ id, employee, team, date, fromShift, toShift, hours, reason, status: "Submitted", priority, policy });
+      addAudit(`${id} created for ${employee} (${team}).`);
+      e.target.reset();
+      document.getElementById("weeklyHours").value = 40;
+      renderBoard();
+    });
+
+    document.getElementById("roleView").addEventListener("change", e => {
+      state.role = e.target.value;
+      addAudit(`Role switched to ${state.role} view.`);
+    });
+
+    ["search", "teamFilter", "policyFilter", "sortBy"].forEach(id => {
+      document.getElementById(id).addEventListener("input", renderBoard);
+      document.getElementById(id).addEventListener("change", renderBoard);
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const rows = [["id", "employee", "team", "date", "fromShift", "toShift", "hours", "policy", "status", "priority"]];
+      state.items.forEach(i => rows.push([i.id, i.employee, i.team, i.date, i.fromShift, i.toShift, i.hours, i.policy, i.status, i.priority]));
+      const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "shift-swap-board.csv";
+      a.click();
+      addAudit("CSV export generated.");
+    });
+
+    renderBoard();
+    renderAudit();
+  </script>
+</body>
+</html>
