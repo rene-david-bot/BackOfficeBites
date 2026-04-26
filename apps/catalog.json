@@ -2153,5 +2153,29 @@
       "drag-drop"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-04-26",
+    "day": 96,
+    "slug": "2026-04-26-customer-onboarding-escalation-timeline",
+    "name": "Customer Onboarding Escalation Timeline",
+    "description": "Sales timeline workspace to escalate onboarding blockers with policy-gated approvals, role-based actions, and audit-ready export.",
+    "category": "Sales",
+    "pattern": "Timeline",
+    "tags": [
+      "customer onboarding",
+      "sales",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customer Onboarding Escalation Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="mt-3 text-2xl md:text-3xl font-bold">Customer Onboarding Escalation Timeline</h1>
+    <p class="mt-2 text-slate-300 max-w-3xl">Track high-stakes enterprise onboardings through security, integration, and go-live with policy checks, approval workflow, role-based views, and audit history.</p>
+
+    <section class="mt-6 grid gap-3 md:grid-cols-5">
+      <div>
+        <label for="searchInput" class="text-xs uppercase tracking-wide text-slate-400">Search</label>
+        <input id="searchInput" type="text" placeholder="customer or owner" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label for="segmentFilter" class="text-xs uppercase tracking-wide text-slate-400">Segment</label>
+        <select id="segmentFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"></select>
+      </div>
+      <div>
+        <label for="riskFilter" class="text-xs uppercase tracking-wide text-slate-400">Risk</label>
+        <select id="riskFilter" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+          <option value="all">All</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div>
+        <label for="roleSelect" class="text-xs uppercase tracking-wide text-slate-400">Role View</label>
+        <select id="roleSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+          <option value="csm">CSM</option>
+          <option value="solutions">Solutions Engineer</option>
+          <option value="legal">Legal Ops</option>
+          <option value="exec">Revenue VP</option>
+        </select>
+      </div>
+      <div>
+        <label for="sortSelect" class="text-xs uppercase tracking-wide text-slate-400">Sort</label>
+        <select id="sortSelect" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+          <option value="goLiveAsc">Go-live (soonest)</option>
+          <option value="riskDesc">Risk (highest first)</option>
+          <option value="nameAsc">Customer (A-Z)</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="mt-4 flex flex-wrap items-center gap-2">
+      <button id="exportBtn" class="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-300">Export CSV</button>
+      <span id="summary" class="text-sm text-slate-300"></span>
+    </section>
+
+    <section class="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <div id="timeline" class="grid gap-3 md:grid-cols-2 xl:grid-cols-5"></div>
+
+      <aside class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h2 class="text-lg font-semibold">Escalation Console</h2>
+        <p id="selectedHint" class="mt-1 text-sm text-slate-400">Select an account card to manage approvals and add escalation notes.</p>
+
+        <div id="detailPanel" class="mt-4 hidden space-y-4">
+          <div class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+            <div id="detailTitle" class="font-semibold"></div>
+            <div id="detailMeta" class="mt-1 text-sm text-slate-300"></div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="advanceStageBtn" class="rounded-md border border-sky-500/40 bg-sky-500/20 px-2.5 py-1.5 text-xs font-semibold text-sky-200">Advance Stage</button>
+              <button id="requestApprovalBtn" class="rounded-md border border-indigo-500/40 bg-indigo-500/20 px-2.5 py-1.5 text-xs font-semibold text-indigo-200">Request Approval</button>
+              <button id="approveBtn" class="rounded-md border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-1.5 text-xs font-semibold text-emerald-200">Approve</button>
+            </div>
+            <p id="actionMsg" class="mt-2 text-xs text-slate-400"></p>
+          </div>
+
+          <form id="escalationForm" class="rounded-lg border border-slate-700 bg-slate-950/60 p-3 space-y-3" novalidate>
+            <h3 class="font-semibold text-sm">Log Escalation</h3>
+            <div>
+              <label for="reasonInput" class="text-xs text-slate-300">Reason</label>
+              <textarea id="reasonInput" rows="3" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" placeholder="Describe the blocker and business impact"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="concessionInput" class="text-xs text-slate-300">Concession (€)</label>
+                <input id="concessionInput" type="number" min="0" step="500" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" placeholder="0" />
+              </div>
+              <div>
+                <label for="dueDateInput" class="text-xs text-slate-300">Resolution Due</label>
+                <input id="dueDateInput" type="date" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
+              </div>
+            </div>
+            <button type="submit" class="w-full rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">Save Escalation</button>
+            <p id="formError" class="text-xs text-rose-300 min-h-[1rem]"></p>
+          </form>
+
+          <div>
+            <h3 class="text-sm font-semibold">Audit Trail</h3>
+            <ul id="auditList" class="mt-2 space-y-2 max-h-56 overflow-auto pr-1"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <template id="stageColumnTemplate">
+    <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+      <header class="mb-3 flex items-center justify-between gap-2">
+        <h3 class="text-sm font-semibold"></h3>
+        <span class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300"></span>
+      </header>
+      <div class="space-y-2"></div>
+    </section>
+  </template>
+
+  <template id="cardTemplate">
+    <button class="w-full rounded-lg border border-slate-700 bg-slate-950/70 p-2.5 text-left hover:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300">
+      <div class="text-sm font-semibold"></div>
+      <div class="mt-1 text-xs text-slate-300"></div>
+      <div class="mt-2 flex flex-wrap gap-1"></div>
+    </button>
+  </template>
+
+  <script>
+    const stages = ["Contract Signed", "Security Review", "Integration", "Training", "Go-Live"];
+    const riskWeight = { low: 1, medium: 2, high: 3 };
+
+    const state = {
+      role: 'csm',
+      selectedId: null,
+      rows: [
+        { id: 'ONB-4101', customer: 'NordBerg Robotics', segment: 'Enterprise', owner: 'Lina Vogt', stage: 'Security Review', risk: 'high', health: 'Red', goLive: '2026-05-12', approvalState: 'Pending VP', blockers: 2, mrr: 84000 },
+        { id: 'ONB-4102', customer: 'Aquila Mobility', segment: 'Mid-Market', owner: 'Ben Kramer', stage: 'Integration', risk: 'medium', health: 'Amber', goLive: '2026-05-25', approvalState: 'Draft', blockers: 1, mrr: 46000 },
+        { id: 'ONB-4103', customer: 'HafenWerk Logistics', segment: 'Enterprise', owner: 'Mira Klein', stage: 'Contract Signed', risk: 'low', health: 'Green', goLive: '2026-06-01', approvalState: 'Not Needed', blockers: 0, mrr: 32000 },
+        { id: 'ONB-4104', customer: 'Voltis Energy Systems', segment: 'Strategic', owner: 'Jonas Wolf', stage: 'Training', risk: 'high', health: 'Amber', goLive: '2026-05-09', approvalState: 'Approved', blockers: 1, mrr: 97000 },
+        { id: 'ONB-4105', customer: 'MedCore Devices', segment: 'Mid-Market', owner: 'Sofia Hart', stage: 'Security Review', risk: 'medium', health: 'Amber', goLive: '2026-05-19', approvalState: 'Pending Legal', blockers: 2, mrr: 51000 }
+      ],
+      audit: {
+        'ONB-4101': ['2026-04-25 15:20 · VP approval requested for temporary SSO bypass.'],
+        'ONB-4102': ['2026-04-25 11:45 · Integration credentials rotated after failed sync test.'],
+        'ONB-4103': ['2026-04-24 16:12 · Contract countersigned and kickoff complete.'],
+        'ONB-4104': ['2026-04-25 13:05 · Training cohort expanded to 110 users.'],
+        'ONB-4105': ['2026-04-25 09:30 · Legal requested revised DPA appendix.']
+      }
+    };
+
+    const els = {
+      timeline: document.getElementById('timeline'),
+      summary: document.getElementById('summary'),
+      search: document.getElementById('searchInput'),
+      segment: document.getElementById('segmentFilter'),
+      risk: document.getElementById('riskFilter'),
+      sort: document.getElementById('sortSelect'),
+      role: document.getElementById('roleSelect'),
+      stageTpl: document.getElementById('stageColumnTemplate'),
+      cardTpl: document.getElementById('cardTemplate'),
+      detailPanel: document.getElementById('detailPanel'),
+      selectedHint: document.getElementById('selectedHint'),
+      detailTitle: document.getElementById('detailTitle'),
+      detailMeta: document.getElementById('detailMeta'),
+      actionMsg: document.getElementById('actionMsg'),
+      advanceStageBtn: document.getElementById('advanceStageBtn'),
+      requestApprovalBtn: document.getElementById('requestApprovalBtn'),
+      approveBtn: document.getElementById('approveBtn'),
+      escalationForm: document.getElementById('escalationForm'),
+      reason: document.getElementById('reasonInput'),
+      concession: document.getElementById('concessionInput'),
+      dueDate: document.getElementById('dueDateInput'),
+      formError: document.getElementById('formError'),
+      auditList: document.getElementById('auditList'),
+      exportBtn: document.getElementById('exportBtn')
+    };
+
+    function formatMoney(v) { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v); }
+
+    function appendAudit(id, text) {
+      const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      state.audit[id] = state.audit[id] || [];
+      state.audit[id].unshift(`${now} · ${text}`);
+    }
+
+    function getFilteredRows() {
+      const q = els.search.value.trim().toLowerCase();
+      const seg = els.segment.value;
+      const risk = els.risk.value;
+      const sortBy = els.sort.value;
+
+      const rows = state.rows.filter(row => {
+        if (seg !== 'all' && row.segment !== seg) return false;
+        if (risk !== 'all' && row.risk !== risk) return false;
+        if (!q) return true;
+        return `${row.customer} ${row.owner} ${row.id}`.toLowerCase().includes(q);
+      });
+
+      rows.sort((a, b) => {
+        if (sortBy === 'goLiveAsc') return a.goLive.localeCompare(b.goLive);
+        if (sortBy === 'riskDesc') return riskWeight[b.risk] - riskWeight[a.risk] || a.goLive.localeCompare(b.goLive);
+        return a.customer.localeCompare(b.customer);
+      });
+
+      return rows;
+    }
+
+    function renderTimeline() {
+      els.timeline.innerHTML = '';
+      const rows = getFilteredRows();
+      const byStage = Object.fromEntries(stages.map(s => [s, []]));
+      rows.forEach(r => byStage[r.stage].push(r));
+
+      stages.forEach(stage => {
+        const col = els.stageTpl.content.firstElementChild.cloneNode(true);
+        col.querySelector('h3').textContent = stage;
+        col.querySelector('span').textContent = byStage[stage].length;
+        const stack = col.querySelector('div');
+
+        byStage[stage].forEach(row => {
+          const card = els.cardTpl.content.firstElementChild.cloneNode(true);
+          card.dataset.id = row.id;
+          card.querySelector('div:nth-child(1)').textContent = row.customer;
+          card.querySelector('div:nth-child(2)').textContent = `${row.id} · ${row.owner} · Go-live ${row.goLive}`;
+
+          const tags = card.querySelector('div:nth-child(3)');
+          [row.segment, row.risk.toUpperCase(), row.approvalState, `${row.blockers} blocker${row.blockers === 1 ? '' : 's'}`].forEach(text => {
+            const chip = document.createElement('span');
+            chip.className = 'rounded-full border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-300';
+            chip.textContent = text;
+            tags.appendChild(chip);
+          });
+
+          if (row.id === state.selectedId) {
+            card.classList.add('border-amber-300');
+          }
+
+          card.addEventListener('click', () => {
+            state.selectedId = row.id;
+            renderAll();
+          });
+          stack.appendChild(card);
+        });
+
+        els.timeline.appendChild(col);
+      });
+
+      const highRisk = rows.filter(r => r.risk === 'high').length;
+      els.summary.textContent = `${rows.length} accounts shown · ${highRisk} high-risk`;
+    }
+
+    function setRolePermissions(row) {
+      const role = state.role;
+      const canAdvance = role === 'csm' || role === 'solutions';
+      const canRequest = role !== 'solutions';
+      const canApprove = role === 'exec' || (role === 'legal' && row.approvalState === 'Pending Legal');
+
+      els.advanceStageBtn.disabled = !canAdvance;
+      els.requestApprovalBtn.disabled = !canRequest;
+      els.approveBtn.disabled = !canApprove;
+      [els.advanceStageBtn, els.requestApprovalBtn, els.approveBtn].forEach(btn => {
+        btn.classList.toggle('opacity-40', btn.disabled);
+        btn.classList.toggle('cursor-not-allowed', btn.disabled);
+      });
+    }
+
+    function renderDetail() {
+      const row = state.rows.find(r => r.id === state.selectedId);
+      if (!row) {
+        els.detailPanel.classList.add('hidden');
+        els.selectedHint.classList.remove('hidden');
+        return;
+      }
+
+      els.detailPanel.classList.remove('hidden');
+      els.selectedHint.classList.add('hidden');
+      els.detailTitle.textContent = `${row.customer} (${row.id})`;
+      els.detailMeta.textContent = `${row.segment} · ${row.stage} · Risk ${row.risk.toUpperCase()} · ${formatMoney(row.mrr)} MRR · ${row.approvalState}`;
+      els.actionMsg.textContent = `Current role: ${els.role.options[els.role.selectedIndex].text}`;
+      setRolePermissions(row);
+
+      const auditRows = state.audit[row.id] || [];
+      els.auditList.innerHTML = '';
+      auditRows.forEach(line => {
+        const li = document.createElement('li');
+        li.className = 'rounded-md border border-slate-700 bg-slate-950/70 px-2 py-1.5 text-xs text-slate-300';
+        li.textContent = line;
+        els.auditList.appendChild(li);
+      });
+    }
+
+    function renderAll() {
+      renderTimeline();
+      renderDetail();
+    }
+
+    function nextStage(current) {
+      const idx = stages.indexOf(current);
+      return idx < stages.length - 1 ? stages[idx + 1] : current;
+    }
+
+    function initSegments() {
+      const segments = ['all', ...new Set(state.rows.map(r => r.segment))];
+      els.segment.innerHTML = '';
+      segments.forEach(seg => {
+        const opt = document.createElement('option');
+        opt.value = seg;
+        opt.textContent = seg === 'all' ? 'All' : seg;
+        els.segment.appendChild(opt);
+      });
+    }
+
+    function selectedRow() {
+      return state.rows.find(r => r.id === state.selectedId);
+    }
+
+    els.advanceStageBtn.addEventListener('click', () => {
+      const row = selectedRow();
+      if (!row || els.advanceStageBtn.disabled) return;
+      const newStage = nextStage(row.stage);
+      if (newStage === row.stage) {
+        els.actionMsg.textContent = 'Already at final stage.';
+        return;
+      }
+      row.stage = newStage;
+      row.blockers = Math.max(0, row.blockers - 1);
+      appendAudit(row.id, `Stage advanced to ${newStage} by ${state.role.toUpperCase()}.`);
+      els.actionMsg.textContent = `Moved to ${newStage}.`;
+      renderAll();
+    });
+
+    els.requestApprovalBtn.addEventListener('click', () => {
+      const row = selectedRow();
+      if (!row || els.requestApprovalBtn.disabled) return;
+      row.approvalState = row.risk === 'high' ? 'Pending VP' : 'Pending Legal';
+      appendAudit(row.id, `Approval requested (${row.approvalState}).`);
+      els.actionMsg.textContent = `Approval state: ${row.approvalState}`;
+      renderAll();
+    });
+
+    els.approveBtn.addEventListener('click', () => {
+      const row = selectedRow();
+      if (!row || els.approveBtn.disabled) return;
+      row.approvalState = 'Approved';
+      appendAudit(row.id, `Approval granted by ${state.role.toUpperCase()}.`);
+      els.actionMsg.textContent = 'Approved.';
+      renderAll();
+    });
+
+    els.escalationForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const row = selectedRow();
+      if (!row) return;
+
+      const reason = els.reason.value.trim();
+      const concession = Number(els.concession.value || 0);
+      const dueDate = els.dueDate.value;
+
+      if (reason.length < 12) {
+        els.formError.textContent = 'Reason must be at least 12 characters.';
+        return;
+      }
+      if (!dueDate) {
+        els.formError.textContent = 'Please set a resolution due date.';
+        return;
+      }
+      if (dueDate > row.goLive) {
+        els.formError.textContent = 'Due date cannot be later than go-live date.';
+        return;
+      }
+      if (concession > 50000 && state.role !== 'exec') {
+        els.formError.textContent = 'Policy check failed: concessions above €50k require Revenue VP role.';
+        return;
+      }
+
+      row.blockers += 1;
+      if (row.risk === 'high' && row.approvalState === 'Draft') row.approvalState = 'Pending VP';
+      appendAudit(row.id, `Escalation logged: ${reason} (Concession ${formatMoney(concession)}, due ${dueDate}).`);
+      els.formError.textContent = '';
+      els.reason.value = '';
+      els.concession.value = '';
+      els.dueDate.value = '';
+      els.actionMsg.textContent = 'Escalation saved and audit trail updated.';
+      renderAll();
+    });
+
+    els.exportBtn.addEventListener('click', () => {
+      const rows = getFilteredRows();
+      const headers = ['id', 'customer', 'segment', 'owner', 'stage', 'risk', 'goLive', 'approvalState', 'blockers', 'mrr'];
+      const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${String(r[h]).replaceAll('"', '""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'customer-onboarding-escalations.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    [els.search, els.segment, els.risk, els.sort].forEach(el => el.addEventListener('input', renderAll));
+    [els.segment, els.risk, els.sort].forEach(el => el.addEventListener('change', renderAll));
+    els.role.addEventListener('change', () => {
+      state.role = els.role.value;
+      renderDetail();
+    });
+
+    initSegments();
+    state.selectedId = state.rows[0].id;
+    renderAll();
+  </script>
+</body>
+</html>
