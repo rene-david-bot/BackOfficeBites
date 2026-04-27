@@ -2177,5 +2177,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-27",
+    "day": 97,
+    "slug": "2026-04-27-room-booking-policy-wizard",
+    "name": "Room Booking Policy Wizard",
+    "description": "IT Ops wizard for policy-gated room requests with approval routing, role-based actions, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Wizard",
+    "tags": [
+      "room booking",
+      "it ops",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

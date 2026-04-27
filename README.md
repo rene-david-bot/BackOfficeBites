@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Customer Onboarding Escalation Timeline** — sales timeline workspace to escalate onboarding blockers with policy-gated approvals, role-based actions, and audit-ready export.
+**Room Booking Policy Wizard** — IT Ops wizard for policy-gated room requests with approval routing, role-based actions, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

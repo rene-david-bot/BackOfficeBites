@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Booking Policy Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#f59e0b',
+              600: '#d97706'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Room Booking Policy Wizard</h1>
+    <p class="text-slate-400 mt-2">Request and approve high-stakes meeting room bookings with policy validation, role-based decisions, audit trail, and CSV export.</p>
+
+    <div class="mt-6 grid grid-cols-1 xl:grid-cols-5 gap-6">
+      <section class="xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold text-lg">New Booking</h2>
+          <label class="text-sm text-slate-300">Role
+            <select id="activeRole" class="ml-2 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm">
+              <option value="Requester">Requester</option>
+              <option value="Manager">Manager</option>
+              <option value="Facilities">Facilities</option>
+            </select>
+          </label>
+        </div>
+
+        <ol class="mt-4 grid grid-cols-3 gap-2 text-xs" id="steps"></ol>
+
+        <form id="wizardForm" class="mt-4 space-y-4" novalidate>
+          <div data-step="1" class="space-y-3">
+            <div>
+              <label for="requester" class="block text-sm mb-1">Requester</label>
+              <input id="requester" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" placeholder="e.g., Nina Hartmann" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="team" class="block text-sm mb-1">Team</label>
+                <select id="team" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2">
+                  <option>Sales</option>
+                  <option>Finance</option>
+                  <option>IT Ops</option>
+                  <option>Legal</option>
+                </select>
+              </div>
+              <div>
+                <label for="room" class="block text-sm mb-1">Room</label>
+                <select id="room" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2"></select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="date" class="block text-sm mb-1">Date</label>
+                <input id="date" type="date" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" />
+              </div>
+              <div>
+                <label for="attendees" class="block text-sm mb-1">Attendees</label>
+                <input id="attendees" type="number" min="1" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" value="8" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="startTime" class="block text-sm mb-1">Start</label>
+                <input id="startTime" type="time" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" value="10:00" />
+              </div>
+              <div>
+                <label for="endTime" class="block text-sm mb-1">End</label>
+                <input id="endTime" type="time" required class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" value="11:00" />
+              </div>
+            </div>
+          </div>
+
+          <div data-step="2" class="space-y-3 hidden">
+            <div>
+              <label for="purpose" class="block text-sm mb-1">Meeting Purpose</label>
+              <textarea id="purpose" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2" placeholder="Quarterly partner review"></textarea>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="classification" class="block text-sm mb-1">Security Classification</label>
+                <select id="classification" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2">
+                  <option value="Internal">Internal</option>
+                  <option value="Confidential">Confidential</option>
+                  <option value="Restricted">Restricted</option>
+                </select>
+              </div>
+              <div>
+                <label for="catering" class="block text-sm mb-1">Catering</label>
+                <select id="catering" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2">
+                  <option value="None">None</option>
+                  <option value="Coffee">Coffee</option>
+                  <option value="Lunch">Lunch</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label class="flex items-center gap-2 text-sm">
+                <input id="externalGuests" type="checkbox" class="accent-amber-500" />
+                External guests attending
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <input id="recording" type="checkbox" class="accent-amber-500" />
+                Session recording required
+              </label>
+            </div>
+          </div>
+
+          <div data-step="3" class="hidden">
+            <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-4 space-y-2 text-sm" id="reviewPane"></div>
+          </div>
+
+          <div id="policyBox" class="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm hidden"></div>
+          <p id="formError" class="text-rose-300 text-sm hidden"></p>
+
+          <div class="flex items-center justify-between pt-2">
+            <button type="button" id="prevBtn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm">Back</button>
+            <div class="flex gap-2">
+              <button type="button" id="nextBtn" class="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500 text-sm font-medium">Next</button>
+              <button type="submit" id="submitBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-medium hidden">Submit Request</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="xl:col-span-3 space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <h2 class="font-semibold text-lg">Booking Queue</h2>
+            <div class="flex flex-wrap gap-2">
+              <input id="search" placeholder="Search room/team/requester" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm" />
+              <select id="statusFilter" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm">
+                <option value="all">All status</option>
+                <option>Draft</option>
+                <option>Pending Approval</option>
+                <option>Approved</option>
+                <option>Rejected</option>
+                <option>Scheduled</option>
+                <option>Completed</option>
+              </select>
+              <select id="sortBy" class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm">
+                <option value="date">Sort: Date</option>
+                <option value="room">Sort: Room</option>
+                <option value="status">Sort: Status</option>
+              </select>
+              <button id="csvBtn" class="bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded px-3 py-2 text-sm">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-sm">
+              <thead class="text-slate-400">
+                <tr class="text-left border-b border-slate-800">
+                  <th class="py-2 pr-2">Request</th>
+                  <th class="py-2 pr-2">Room</th>
+                  <th class="py-2 pr-2">Slot</th>
+                  <th class="py-2 pr-2">Status</th>
+                  <th class="py-2 pr-2">Risk</th>
+                  <th class="py-2 pr-2">Action</th>
+                </tr>
+              </thead>
+              <tbody id="queueBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+          <h3 class="font-semibold">Audit Trail</h3>
+          <ul id="auditTrail" class="mt-3 space-y-2 text-sm text-slate-300"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const rooms = [
+      { name: 'Atlas Room', capacity: 10, recording: true },
+      { name: 'Elbe Studio', capacity: 6, recording: false },
+      { name: 'Neon Boardroom', capacity: 16, recording: true },
+      { name: 'Rhine Hub', capacity: 12, recording: false }
+    ];
+
+    const stateFlow = {
+      'Draft': ['Pending Approval'],
+      'Pending Approval': ['Approved', 'Rejected'],
+      'Approved': ['Scheduled'],
+      'Scheduled': ['Completed'],
+      'Rejected': [],
+      'Completed': []
+    };
+
+    let bookings = [
+      {
+        id: 'RB-1204', requester: 'Nina Hartmann', team: 'Sales', room: 'Atlas Room', date: '2026-04-27', start: '09:00', end: '10:00',
+        attendees: 8, classification: 'Internal', externalGuests: false, recording: true, status: 'Scheduled', risk: 'Low'
+      },
+      {
+        id: 'RB-1205', requester: 'Marek Vogel', team: 'Finance', room: 'Elbe Studio', date: '2026-04-27', start: '14:00', end: '16:30',
+        attendees: 7, classification: 'Confidential', externalGuests: true, recording: false, status: 'Pending Approval', risk: 'High'
+      },
+      {
+        id: 'RB-1206', requester: 'Anja Koch', team: 'Legal', room: 'Neon Boardroom', date: '2026-04-28', start: '11:00', end: '12:00',
+        attendees: 12, classification: 'Restricted', externalGuests: false, recording: true, status: 'Approved', risk: 'Medium'
+      }
+    ];
+
+    const audits = [
+      '07:52 Facilities scheduled RB-1204 and assigned room prep checklist.',
+      '07:41 Policy engine flagged RB-1205: external guests + confidential content => manager approval required.',
+      '07:29 Manager approved RB-1206 with note: security badge sweep before meeting.'
+    ];
+
+    const roomSelect = document.getElementById('room');
+    const steps = ['Request', 'Policy', 'Review'];
+    const stepsNode = document.getElementById('steps');
+    const form = document.getElementById('wizardForm');
+    const reviewPane = document.getElementById('reviewPane');
+    const policyBox = document.getElementById('policyBox');
+    const formError = document.getElementById('formError');
+    const queueBody = document.getElementById('queueBody');
+    const auditTrail = document.getElementById('auditTrail');
+    const activeRole = document.getElementById('activeRole');
+
+    let currentStep = 1;
+
+    rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = `${r.name} (${r.capacity} seats)`;
+      roomSelect.appendChild(opt);
+    });
+
+    steps.forEach((name, i) => {
+      const li = document.createElement('li');
+      li.className = 'rounded-lg border px-2 py-2 text-center border-slate-700';
+      li.dataset.step = i + 1;
+      li.textContent = `${i + 1}. ${name}`;
+      stepsNode.appendChild(li);
+    });
+
+    function toMins(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function riskLabel(data) {
+      let score = 0;
+      if (data.classification === 'Restricted') score += 2;
+      if (data.externalGuests) score += 2;
+      if (data.attendees > 10) score += 1;
+      if (toMins(data.endTime) - toMins(data.startTime) > 120) score += 1;
+      return score >= 4 ? 'High' : score >= 2 ? 'Medium' : 'Low';
+    }
+
+    function runPolicy(data) {
+      const room = rooms.find(r => r.name === data.room);
+      const start = toMins(data.startTime);
+      const end = toMins(data.endTime);
+      const checks = [];
+      let valid = true;
+      let requiresApproval = false;
+
+      if (!data.requester.trim()) {
+        valid = false;
+        checks.push('Requester name is required.');
+      }
+      if (end <= start) {
+        valid = false;
+        checks.push('End time must be later than start time.');
+      }
+      if (start < 8 * 60 || end > 19 * 60) {
+        valid = false;
+        checks.push('Room booking must stay within 08:00–19:00 policy window.');
+      }
+      if (data.attendees > room.capacity) {
+        valid = false;
+        checks.push(`Selected room capacity exceeded (${room.capacity} max).`);
+      }
+      if (data.recording && !room.recording) {
+        valid = false;
+        checks.push('Selected room has no recording setup. Choose Atlas or Neon Boardroom.');
+      }
+      if (data.externalGuests && data.classification !== 'Internal') {
+        requiresApproval = true;
+        checks.push('External guests with non-internal content needs manager approval.');
+      }
+      if ((end - start) > 180) {
+        requiresApproval = true;
+        checks.push('Meetings longer than 3 hours require manager approval.');
+      }
+
+      return { valid, requiresApproval, checks };
+    }
+
+    function getFormData() {
+      return {
+        requester: document.getElementById('requester').value,
+        team: document.getElementById('team').value,
+        room: document.getElementById('room').value,
+        date: document.getElementById('date').value,
+        attendees: Number(document.getElementById('attendees').value || 0),
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value,
+        purpose: document.getElementById('purpose').value,
+        classification: document.getElementById('classification').value,
+        catering: document.getElementById('catering').value,
+        externalGuests: document.getElementById('externalGuests').checked,
+        recording: document.getElementById('recording').checked
+      };
+    }
+
+    function drawSteps() {
+      [...stepsNode.children].forEach(step => {
+        const n = Number(step.dataset.step);
+        step.className = `rounded-lg border px-2 py-2 text-center ${n === currentStep ? 'border-amber-500 bg-amber-500/10 text-amber-200' : 'border-slate-700 text-slate-400'}`;
+      });
+
+      document.querySelectorAll('[data-step]').forEach(pane => {
+        const isVisible = Number(pane.dataset.step) === currentStep;
+        pane.classList.toggle('hidden', !isVisible);
+      });
+
+      document.getElementById('prevBtn').disabled = currentStep === 1;
+      document.getElementById('prevBtn').classList.toggle('opacity-40', currentStep === 1);
+      document.getElementById('nextBtn').classList.toggle('hidden', currentStep === 3);
+      document.getElementById('submitBtn').classList.toggle('hidden', currentStep !== 3);
+
+      if (currentStep === 3) {
+        const data = getFormData();
+        const policy = runPolicy(data);
+        reviewPane.innerHTML = `
+          <p><span class="text-slate-400">Requester:</span> ${data.requester || '—'} (${data.team})</p>
+          <p><span class="text-slate-400">Slot:</span> ${data.date || '—'} ${data.startTime || '—'}-${data.endTime || '—'}</p>
+          <p><span class="text-slate-400">Room:</span> ${data.room}, ${data.attendees} attendees</p>
+          <p><span class="text-slate-400">Classification:</span> ${data.classification} ${data.externalGuests ? '(External guests)' : ''}</p>
+          <p><span class="text-slate-400">Risk:</span> ${riskLabel(data)}</p>
+          <p><span class="text-slate-400">Approval route:</span> ${policy.requiresApproval ? 'Manager approval required' : 'Auto route to scheduling'}</p>
+        `;
+      }
+    }
+
+    function allowedActions(status, role) {
+      if (role === 'Requester') return [];
+      if (role === 'Manager') {
+        if (status === 'Pending Approval') return ['Approved', 'Rejected'];
+        return [];
+      }
+      if (role === 'Facilities') {
+        if (status === 'Approved') return ['Scheduled'];
+        if (status === 'Scheduled') return ['Completed'];
+      }
+      return [];
+    }
+
+    function statusPill(status) {
+      const color = {
+        'Draft': 'bg-slate-700',
+        'Pending Approval': 'bg-amber-700/80',
+        'Approved': 'bg-emerald-700/80',
+        'Rejected': 'bg-rose-700/80',
+        'Scheduled': 'bg-sky-700/80',
+        'Completed': 'bg-violet-700/80'
+      }[status] || 'bg-slate-700';
+      return `<span class="px-2 py-1 rounded-full text-xs ${color}">${status}</span>`;
+    }
+
+    function renderQueue() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const filter = document.getElementById('statusFilter').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      let rows = bookings.filter(item => {
+        const hit = `${item.id} ${item.requester} ${item.team} ${item.room}`.toLowerCase().includes(query);
+        const okStatus = filter === 'all' || item.status === filter;
+        return hit && okStatus;
+      });
+
+      rows.sort((a, b) => {
+        if (sortBy === 'room') return a.room.localeCompare(b.room);
+        if (sortBy === 'status') return a.status.localeCompare(b.status);
+        return `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`);
+      });
+
+      if (!rows.length) {
+        queueBody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-400">No matching requests.</td></tr>';
+        return;
+      }
+
+      const role = activeRole.value;
+      queueBody.innerHTML = rows.map(item => {
+        const actions = allowedActions(item.status, role);
+        const actionBtns = actions.length
+          ? actions.map(next => `<button class="px-2 py-1 text-xs rounded bg-slate-800 border border-slate-700 hover:bg-slate-700" data-id="${item.id}" data-next="${next}">${next}</button>`).join(' ')
+          : '<span class="text-slate-500 text-xs">No action</span>';
+
+        return `
+          <tr class="border-b border-slate-800/70">
+            <td class="py-2 pr-2">
+              <p class="font-medium">${item.id}</p>
+              <p class="text-xs text-slate-400">${item.requester} · ${item.team}</p>
+            </td>
+            <td class="py-2 pr-2">${item.room}</td>
+            <td class="py-2 pr-2">${item.date}<br><span class="text-xs text-slate-400">${item.start}-${item.end}</span></td>
+            <td class="py-2 pr-2">${statusPill(item.status)}</td>
+            <td class="py-2 pr-2">${item.risk}</td>
+            <td class="py-2 pr-2">${actionBtns}</td>
+          </tr>
+        `;
+      }).join('');
+
+      queueBody.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const next = btn.dataset.next;
+          bookings = bookings.map(b => b.id === id ? { ...b, status: next } : b);
+          audits.unshift(`${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${activeRole.value} moved ${id} to ${next}.`);
+          renderQueue();
+          renderAudits();
+        });
+      });
+    }
+
+    function renderAudits() {
+      auditTrail.innerHTML = audits.slice(0, 10).map(a => `<li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-800/40">${a}</li>`).join('');
+    }
+
+    function exportCsv() {
+      const headers = ['id','requester','team','room','date','start','end','attendees','classification','externalGuests','recording','status','risk'];
+      const rows = [headers.join(',')].concat(
+        bookings.map(b => headers.map(h => `"${String(b[h]).replaceAll('"','""')}"`).join(','))
+      );
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `room-bookings-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      audits.unshift(`${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} CSV export generated by ${activeRole.value}.`);
+      renderAudits();
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      formError.classList.add('hidden');
+      const data = getFormData();
+      if (currentStep === 1) {
+        if (!data.requester || !data.date || !data.startTime || !data.endTime || !data.attendees) {
+          formError.textContent = 'Please complete required fields before continuing.';
+          formError.classList.remove('hidden');
+          return;
+        }
+      }
+      if (currentStep < 3) currentStep += 1;
+      drawSteps();
+      const policy = runPolicy(getFormData());
+      policyBox.classList.remove('hidden');
+      policyBox.innerHTML = policy.checks.length
+        ? `<p class="font-medium mb-1">Policy checks</p><ul class="list-disc pl-5 space-y-1">${policy.checks.map(c => `<li>${c}</li>`).join('')}</ul>`
+        : '<p class="text-emerald-300">No policy issues detected yet.</p>';
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentStep > 1) currentStep -= 1;
+      drawSteps();
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = getFormData();
+      const policy = runPolicy(data);
+
+      if (!policy.valid) {
+        formError.textContent = 'Submission blocked. Fix policy errors first.';
+        formError.classList.remove('hidden');
+        policyBox.classList.remove('hidden');
+        policyBox.innerHTML = `<p class="font-medium mb-1 text-rose-300">Policy violations</p><ul class="list-disc pl-5 space-y-1">${policy.checks.map(c => `<li>${c}</li>`).join('')}</ul>`;
+        return;
+      }
+
+      const nextId = `RB-${1200 + bookings.length + 7}`;
+      const newItem = {
+        id: nextId,
+        requester: data.requester,
+        team: data.team,
+        room: data.room,
+        date: data.date,
+        start: data.startTime,
+        end: data.endTime,
+        attendees: data.attendees,
+        classification: data.classification,
+        externalGuests: data.externalGuests,
+        recording: data.recording,
+        status: policy.requiresApproval ? 'Pending Approval' : 'Approved',
+        risk: riskLabel(data)
+      };
+
+      bookings.unshift(newItem);
+      audits.unshift(`${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${activeRole.value} submitted ${nextId} (${newItem.status}).`);
+
+      form.reset();
+      document.getElementById('attendees').value = 8;
+      document.getElementById('startTime').value = '10:00';
+      document.getElementById('endTime').value = '11:00';
+      currentStep = 1;
+      policyBox.classList.add('hidden');
+      formError.classList.add('hidden');
+      drawSteps();
+      renderQueue();
+      renderAudits();
+    });
+
+    ['search', 'statusFilter', 'sortBy'].forEach(id => document.getElementById(id).addEventListener('input', renderQueue));
+    activeRole.addEventListener('change', renderQueue);
+    document.getElementById('csvBtn').addEventListener('click', exportCsv);
+
+    drawSteps();
+    renderQueue();
+    renderAudits();
+  </script>
+</body>
+</html>
