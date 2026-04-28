@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contract Obligation Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0b1220',
+            panel: '#121b2d',
+            panel2: '#1a2640'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-ink text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-10">
+    <a href="../../index.html" class="text-sm text-cyan-300 hover:text-cyan-200 underline">BackOfficeBites 🍔</a>
+    <h1 class="mt-2 text-2xl md:text-3xl font-bold">Contract Obligation Control Grid</h1>
+    <p class="mt-2 text-slate-300 max-w-3xl">Legal workspace for tracking contractual obligations, policy-gated waivers, and audit-ready changes across vendors.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-6" id="kpis"></section>
+
+    <section class="mt-6 rounded-xl border border-slate-700 bg-panel p-4">
+      <div class="flex flex-col lg:flex-row gap-3 lg:items-end">
+        <div>
+          <label for="roleSelect" class="block text-xs uppercase tracking-wide text-slate-300">Role View</label>
+          <select id="roleSelect" class="mt-1 w-full lg:w-44 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option>Legal Counsel</option>
+            <option>Procurement</option>
+            <option>Compliance Lead</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-300">Search</label>
+          <input id="searchInput" type="text" placeholder="Clause ID, vendor, clause text" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-300">Status</label>
+          <select id="statusFilter" class="mt-1 w-full lg:w-44 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option value="all">All</option>
+            <option value="Open">Open</option>
+            <option value="In Review">In Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Waived">Waived</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+        <div>
+          <label for="riskFilter" class="block text-xs uppercase tracking-wide text-slate-300">Risk</label>
+          <select id="riskFilter" class="mt-1 w-full lg:w-36 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option value="all">All</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <button id="exportBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white rounded-md px-4 py-2 font-medium">Export CSV</button>
+      </div>
+      <p id="policyHint" class="mt-3 text-xs text-amber-300"></p>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="xl:col-span-2 rounded-xl border border-slate-700 bg-panel overflow-hidden">
+        <div class="overflow-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-800 text-slate-200 sticky top-0">
+              <tr>
+                <th class="px-3 py-2 text-left"><button data-sort="id" class="sortBtn">Clause</button></th>
+                <th class="px-3 py-2 text-left"><button data-sort="vendor" class="sortBtn">Vendor</button></th>
+                <th class="px-3 py-2 text-left"><button data-sort="owner" class="sortBtn">Owner</button></th>
+                <th class="px-3 py-2 text-left"><button data-sort="dueDate" class="sortBtn">Due</button></th>
+                <th class="px-3 py-2 text-left"><button data-sort="risk" class="sortBtn">Risk</button></th>
+                <th class="px-3 py-2 text-left"><button data-sort="status" class="sortBtn">Status</button></th>
+                <th class="px-3 py-2 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="rounded-xl border border-slate-700 bg-panel p-4">
+        <h2 class="font-semibold text-lg">Selected Clause</h2>
+        <div id="detailCard" class="mt-3 text-sm text-slate-300">Choose a row to inspect details and write a review note.</div>
+
+        <form id="noteForm" class="mt-4 space-y-3">
+          <div>
+            <label for="reviewNote" class="block text-xs uppercase tracking-wide text-slate-300">Review Note</label>
+            <textarea id="reviewNote" rows="3" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" placeholder="Explain decision, cite evidence"></textarea>
+          </div>
+          <div>
+            <label for="waiverReason" class="block text-xs uppercase tracking-wide text-slate-300">Waiver Reason (required for Waived)</label>
+            <textarea id="waiverReason" rows="2" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" placeholder="Minimum 20 chars"></textarea>
+          </div>
+          <button class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-md px-4 py-2 font-medium">Log Note</button>
+          <p id="noteError" class="text-xs text-rose-300"></p>
+        </form>
+
+        <div class="mt-5 pt-4 border-t border-slate-700">
+          <h3 class="font-medium">Quick Add Obligation</h3>
+          <form id="addForm" class="mt-3 space-y-2">
+            <input id="newVendor" placeholder="Vendor" class="w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+            <input id="newClause" placeholder="Clause summary" class="w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+            <div class="grid grid-cols-2 gap-2">
+              <input id="newOwner" placeholder="Owner" class="bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+              <input id="newDue" type="date" class="bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+            </div>
+            <select id="newRisk" class="w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+              <option>High</option><option>Medium</option><option>Low</option>
+            </select>
+            <button class="w-full bg-indigo-600 hover:bg-indigo-500 rounded-md px-4 py-2 font-medium">Add Obligation</button>
+            <p id="addError" class="text-xs text-rose-300"></p>
+          </form>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      rows: [
+        { id: 'CL-4821', vendor: 'Nordic Components GmbH', clause: 'Data processing addendum renewal', owner: 'A. Meyer', dueDate: '2026-05-02', risk: 'High', status: 'In Review', lastAudit: '2026-04-21', notes: [], trail: ['Created by Procurement', 'Escalated to Legal'] },
+        { id: 'CL-4822', vendor: 'BlueShield Logistics', clause: 'Insurance certificate update', owner: 'L. Ritter', dueDate: '2026-04-29', risk: 'Medium', status: 'Open', lastAudit: '2026-04-18', notes: [], trail: ['Created by Legal Ops'] },
+        { id: 'CL-4823', vendor: 'Helios Cloud Services', clause: 'Subprocessor disclosure annex', owner: 'M. Vogel', dueDate: '2026-04-26', risk: 'High', status: 'Overdue', lastAudit: '2026-04-20', notes: [], trail: ['Created by Compliance', 'Reminder sent to owner'] },
+        { id: 'CL-4824', vendor: 'Westline HR Systems', clause: 'Works council notification window', owner: 'S. Klein', dueDate: '2026-05-08', risk: 'Low', status: 'Approved', lastAudit: '2026-04-24', notes: [], trail: ['Approved by Legal Counsel'] },
+        { id: 'CL-4825', vendor: 'Futura Facilities', clause: 'Visitor privacy signage review', owner: 'J. Hartmann', dueDate: '2026-04-30', risk: 'Medium', status: 'Waived', lastAudit: '2026-04-23', notes: [], trail: ['Waiver accepted by Legal Counsel'] }
+      ],
+      selectedId: null,
+      search: '',
+      status: 'all',
+      risk: 'all',
+      role: 'Legal Counsel',
+      sortBy: 'dueDate',
+      sortDir: 1
+    };
+
+    const statusOrder = ['Open', 'In Review', 'Approved', 'Waived', 'Overdue'];
+    const riskOrder = { High: 0, Medium: 1, Low: 2 };
+
+    const el = {
+      kpis: document.getElementById('kpis'),
+      body: document.getElementById('gridBody'),
+      detailCard: document.getElementById('detailCard'),
+      policyHint: document.getElementById('policyHint'),
+      noteForm: document.getElementById('noteForm'),
+      noteError: document.getElementById('noteError'),
+      addForm: document.getElementById('addForm'),
+      addError: document.getElementById('addError')
+    };
+
+    function badge(value, kind) {
+      const map = {
+        status: {
+          Open: 'bg-slate-600',
+          'In Review': 'bg-amber-600',
+          Approved: 'bg-emerald-600',
+          Waived: 'bg-violet-600',
+          Overdue: 'bg-rose-600'
+        },
+        risk: {
+          High: 'bg-rose-600',
+          Medium: 'bg-amber-600',
+          Low: 'bg-emerald-700'
+        }
+      };
+      return `<span class="inline-flex px-2 py-1 rounded text-xs ${map[kind][value] || 'bg-slate-600'}">${value}</span>`;
+    }
+
+    function nextStatus(current) {
+      const idx = statusOrder.indexOf(current);
+      return statusOrder[(idx + 1) % statusOrder.length];
+    }
+
+    function filteredRows() {
+      return state.rows
+        .filter(r => {
+          const hay = `${r.id} ${r.vendor} ${r.clause} ${r.owner}`.toLowerCase();
+          return hay.includes(state.search.toLowerCase());
+        })
+        .filter(r => state.status === 'all' ? true : r.status === state.status)
+        .filter(r => state.risk === 'all' ? true : r.risk === state.risk)
+        .sort((a, b) => {
+          const key = state.sortBy;
+          let av = a[key], bv = b[key];
+          if (key === 'risk') {
+            av = riskOrder[av]; bv = riskOrder[bv];
+          }
+          if (key === 'status') {
+            av = statusOrder.indexOf(av); bv = statusOrder.indexOf(bv);
+          }
+          if (key === 'dueDate') {
+            av = new Date(av).getTime(); bv = new Date(bv).getTime();
+          }
+          return av > bv ? state.sortDir : av < bv ? -state.sortDir : 0;
+        });
+    }
+
+    function renderKpis(rows) {
+      const overdue = rows.filter(r => r.status === 'Overdue').length;
+      const high = rows.filter(r => r.risk === 'High').length;
+      const dueSoon = rows.filter(r => {
+        const d = new Date(r.dueDate).getTime() - Date.now();
+        return d > 0 && d < 1000 * 60 * 60 * 24 * 7;
+      }).length;
+      const waived = rows.filter(r => r.status === 'Waived').length;
+      const cards = [
+        ['Overdue', overdue, 'text-rose-300'],
+        ['High Risk', high, 'text-amber-300'],
+        ['Due ≤ 7d', dueSoon, 'text-cyan-300'],
+        ['Waived', waived, 'text-violet-300']
+      ];
+      el.kpis.innerHTML = cards.map(([label, val, color]) =>
+        `<div class="rounded-xl border border-slate-700 bg-panel p-3"><p class="text-xs uppercase text-slate-400">${label}</p><p class="mt-1 text-2xl font-semibold ${color}">${val}</p></div>`
+      ).join('');
+    }
+
+    function renderDetail(row) {
+      if (!row) {
+        el.detailCard.innerHTML = 'Choose a row to inspect details and write a review note.';
+        return;
+      }
+      el.detailCard.innerHTML = `
+        <div class="space-y-2">
+          <p><span class="text-slate-400">Clause:</span> ${row.id}</p>
+          <p><span class="text-slate-400">Vendor:</span> ${row.vendor}</p>
+          <p><span class="text-slate-400">Summary:</span> ${row.clause}</p>
+          <p><span class="text-slate-400">Status:</span> ${badge(row.status, 'status')}</p>
+          <p><span class="text-slate-400">Risk:</span> ${badge(row.risk, 'risk')}</p>
+          <p><span class="text-slate-400">Audit trail:</span></p>
+          <ul class="list-disc ml-5 text-xs text-slate-300 space-y-1">${row.trail.slice(-4).map(t => `<li>${t}</li>`).join('')}</ul>
+        </div>
+      `;
+    }
+
+    function render() {
+      const rows = filteredRows();
+      renderKpis(rows);
+      el.body.innerHTML = rows.map(r => {
+        const selected = r.id === state.selectedId ? 'bg-slate-800/80' : 'hover:bg-slate-800/40';
+        return `
+          <tr class="border-t border-slate-700 ${selected}" data-id="${r.id}" tabindex="0">
+            <td class="px-3 py-2">${r.id}<div class="text-xs text-slate-400 truncate max-w-64">${r.clause}</div></td>
+            <td class="px-3 py-2">${r.vendor}</td>
+            <td class="px-3 py-2">${r.owner}</td>
+            <td class="px-3 py-2">${r.dueDate}</td>
+            <td class="px-3 py-2">${badge(r.risk, 'risk')}</td>
+            <td class="px-3 py-2">${badge(r.status, 'status')}</td>
+            <td class="px-3 py-2"><button class="text-cyan-300 hover:text-cyan-200 underline statusBtn" data-id="${r.id}">Next status</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      const selected = state.rows.find(r => r.id === state.selectedId);
+      renderDetail(selected);
+
+      const legalOnly = state.role !== 'Legal Counsel';
+      el.policyHint.textContent = legalOnly
+        ? 'Policy: only Legal Counsel can set status to Waived.'
+        : 'Policy: Waived status requires a waiver reason of at least 20 characters.';
+    }
+
+    function setSelected(id) {
+      state.selectedId = id;
+      render();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', e => { state.search = e.target.value; render(); });
+    document.getElementById('statusFilter').addEventListener('change', e => { state.status = e.target.value; render(); });
+    document.getElementById('riskFilter').addEventListener('change', e => { state.risk = e.target.value; render(); });
+    document.getElementById('roleSelect').addEventListener('change', e => { state.role = e.target.value; render(); });
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort;
+        state.sortDir = state.sortBy === key ? state.sortDir * -1 : 1;
+        state.sortBy = key;
+        render();
+      });
+    });
+
+    el.body.addEventListener('click', e => {
+      const statusBtn = e.target.closest('.statusBtn');
+      if (statusBtn) {
+        const row = state.rows.find(r => r.id === statusBtn.dataset.id);
+        const next = nextStatus(row.status);
+        if (next === 'Waived' && state.role !== 'Legal Counsel') {
+          alert('Policy violation: only Legal Counsel can set Waived.');
+          return;
+        }
+        row.status = next;
+        row.trail.push(`${new Date().toISOString().slice(0, 10)} status changed to ${next} by ${state.role}`);
+        row.lastAudit = new Date().toISOString().slice(0, 10);
+        render();
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (tr) setSelected(tr.dataset.id);
+    });
+
+    el.body.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-id]')) {
+        e.preventDefault();
+        setSelected(e.target.dataset.id);
+      }
+    });
+
+    el.noteForm.addEventListener('submit', e => {
+      e.preventDefault();
+      el.noteError.textContent = '';
+      const row = state.rows.find(r => r.id === state.selectedId);
+      if (!row) {
+        el.noteError.textContent = 'Select a clause first.';
+        return;
+      }
+      const note = document.getElementById('reviewNote').value.trim();
+      const reason = document.getElementById('waiverReason').value.trim();
+      if (note.length < 8) {
+        el.noteError.textContent = 'Review note must be at least 8 characters.';
+        return;
+      }
+      if (row.status === 'Waived' && reason.length < 20) {
+        el.noteError.textContent = 'Waiver reason must be at least 20 characters for waived clauses.';
+        return;
+      }
+      row.notes.push({ note, reason, by: state.role, at: new Date().toISOString() });
+      row.trail.push(`${new Date().toISOString().slice(0, 10)} note logged by ${state.role}`);
+      document.getElementById('reviewNote').value = '';
+      document.getElementById('waiverReason').value = '';
+      render();
+    });
+
+    el.addForm.addEventListener('submit', e => {
+      e.preventDefault();
+      el.addError.textContent = '';
+      const vendor = document.getElementById('newVendor').value.trim();
+      const clause = document.getElementById('newClause').value.trim();
+      const owner = document.getElementById('newOwner').value.trim();
+      const due = document.getElementById('newDue').value;
+      const risk = document.getElementById('newRisk').value;
+      if (!vendor || !clause || !owner || !due) {
+        el.addError.textContent = 'All fields are required.';
+        return;
+      }
+      const id = `CL-${Math.floor(5000 + Math.random() * 4000)}`;
+      state.rows.unshift({
+        id, vendor, clause, owner, dueDate: due, risk,
+        status: 'Open', lastAudit: new Date().toISOString().slice(0, 10), notes: [], trail: [`${new Date().toISOString().slice(0, 10)} created by ${state.role}`]
+      });
+      e.target.reset();
+      setSelected(id);
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = filteredRows();
+      const header = ['id', 'vendor', 'clause', 'owner', 'dueDate', 'risk', 'status', 'lastAudit'];
+      const csv = [header.join(',')].concat(rows.map(r => header.map(h => `"${String(r[h]).replaceAll('"', '""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'contract-obligations.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    setSelected(state.rows[0].id);
+  </script>
+</body>
+</html>

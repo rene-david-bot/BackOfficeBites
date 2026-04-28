@@ -2201,5 +2201,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-28",
+    "day": 98,
+    "slug": "2026-04-28-contract-obligation-control-grid",
+    "name": "Contract Obligation Control Grid",
+    "description": "Legal data grid for tracking contract obligations with policy-gated waivers, audit trail, role-based views, and CSV export.",
+    "category": "Legal",
+    "pattern": "Data Grid",
+    "tags": [
+      "legal",
+      "contract obligations",
+      "data grid",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
