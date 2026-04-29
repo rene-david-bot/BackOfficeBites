@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resource Allocation Exception Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0a1220',
+            panel: '#111c33',
+            panel2: '#1a2946'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-ink text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-10">
+    <a href="../../index.html" class="text-sm text-cyan-300 hover:text-cyan-200 underline">BackOfficeBites 🍔</a>
+    <h1 class="mt-2 text-2xl md:text-3xl font-bold">Resource Allocation Exception Chatdesk</h1>
+    <p class="mt-2 text-slate-300 max-w-3xl">Planning chat workspace to triage staffing exceptions, enforce approval policy, and keep an audit trail for every allocation decision.</p>
+
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6" id="kpis"></section>
+
+    <section class="mt-6 rounded-xl border border-slate-700 bg-panel p-4">
+      <div class="flex flex-col xl:flex-row xl:items-end gap-3">
+        <div>
+          <label for="roleSelect" class="block text-xs uppercase tracking-wide text-slate-300">Role View</label>
+          <select id="roleSelect" class="mt-1 w-full xl:w-52 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option>Planner</option>
+            <option>Team Lead</option>
+            <option>Portfolio Manager</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-300">Search</label>
+          <input id="searchInput" type="text" placeholder="Request, team, initiative" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-300">Status</label>
+          <select id="statusFilter" class="mt-1 w-full xl:w-44 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option value="all">All</option>
+            <option value="Needs Review">Needs Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="priorityFilter" class="block text-xs uppercase tracking-wide text-slate-300">Priority</label>
+          <select id="priorityFilter" class="mt-1 w-full xl:w-40 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option value="all">All</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortSelect" class="block text-xs uppercase tracking-wide text-slate-300">Sort</label>
+          <select id="sortSelect" class="mt-1 w-full xl:w-40 bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+            <option value="impact">Impact Hours</option>
+            <option value="dueDate">Due Date</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
+        <button id="exportBtn" class="bg-cyan-600 hover:bg-cyan-500 rounded-md px-4 py-2 font-medium">Export CSV</button>
+      </div>
+      <p id="policyHint" class="mt-3 text-xs text-amber-300"></p>
+    </section>
+
+    <section class="mt-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <aside class="xl:col-span-3 rounded-xl border border-slate-700 bg-panel overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-700">
+          <h2 class="font-semibold">Exception Queue</h2>
+          <p class="text-xs text-slate-400">Use arrow keys + Enter to select</p>
+        </div>
+        <div id="queue" class="max-h-[560px] overflow-auto"></div>
+      </aside>
+
+      <section class="xl:col-span-5 rounded-xl border border-slate-700 bg-panel overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+          <div>
+            <h2 class="font-semibold">Chat Resolution Desk</h2>
+            <p id="chatMeta" class="text-xs text-slate-400">Select an exception to load messages.</p>
+          </div>
+          <div id="statusBadge"></div>
+        </div>
+        <div id="chatThread" class="h-[380px] overflow-auto p-4 space-y-3"></div>
+        <form id="chatForm" class="border-t border-slate-700 p-4">
+          <label for="chatInput" class="block text-xs uppercase tracking-wide text-slate-300">Reply</label>
+          <div class="mt-2 flex gap-2">
+            <input id="chatInput" type="text" placeholder="Summarize action or ask for clarification" class="flex-1 bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+            <button class="bg-indigo-600 hover:bg-indigo-500 rounded-md px-4 py-2 font-medium">Send</button>
+          </div>
+          <p id="chatError" class="mt-2 text-xs text-rose-300"></p>
+        </form>
+      </section>
+
+      <aside class="xl:col-span-4 rounded-xl border border-slate-700 bg-panel p-4 space-y-4">
+        <div>
+          <h2 class="font-semibold">Decision Panel</h2>
+          <div id="detailCard" class="mt-2 text-sm text-slate-300">Select an exception from the queue.</div>
+        </div>
+
+        <form id="proposalForm" class="space-y-3 border-t border-slate-700 pt-4">
+          <h3 class="font-medium">Propose Reallocation</h3>
+          <div>
+            <label for="hoursInput" class="block text-xs uppercase tracking-wide text-slate-300">Hours to Move</label>
+            <input id="hoursInput" type="number" min="1" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" />
+          </div>
+          <div>
+            <label for="targetTeam" class="block text-xs uppercase tracking-wide text-slate-300">Target Team</label>
+            <select id="targetTeam" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2">
+              <option value="">Choose target team</option>
+              <option>Platform</option>
+              <option>Data</option>
+              <option>QA</option>
+              <option>Ops Enablement</option>
+            </select>
+          </div>
+          <div>
+            <label for="reasonInput" class="block text-xs uppercase tracking-wide text-slate-300">Justification</label>
+            <textarea id="reasonInput" rows="3" class="mt-1 w-full bg-panel2 border border-slate-600 rounded-md px-3 py-2" placeholder="Why this move is needed"></textarea>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="approveBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 rounded-md px-4 py-2 font-medium">Approve</button>
+            <button type="button" id="rejectBtn" class="flex-1 bg-rose-600 hover:bg-rose-500 rounded-md px-4 py-2 font-medium">Reject</button>
+          </div>
+          <p id="proposalError" class="text-xs text-rose-300"></p>
+        </form>
+
+        <div class="border-t border-slate-700 pt-4">
+          <h3 class="font-medium">Audit Trail</h3>
+          <ul id="trail" class="mt-2 text-xs text-slate-300 space-y-2 max-h-36 overflow-auto"></ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      role: 'Planner',
+      search: '',
+      status: 'all',
+      priority: 'all',
+      sortBy: 'impact',
+      selectedId: null,
+      requests: [
+        {
+          id: 'RA-301',
+          team: 'Platform',
+          initiative: 'ERP migration sprint 6',
+          dueDate: '2026-05-05',
+          impact: 48,
+          priority: 'High',
+          status: 'Needs Review',
+          requester: 'M. Wagner',
+          targetTeam: 'Data',
+          reason: 'API schema changes require two data engineers for 3 days.',
+          messages: [
+            { by: 'Planner', text: 'Platform has a 48h shortage for sprint 6 cutover checks.', at: '08:04' },
+            { by: 'Data Lead', text: 'Can provide 24h now, rest next week unless approved overtime.', at: '08:11' }
+          ],
+          trail: ['2026-04-29 08:04 Exception created by Planner', '2026-04-29 08:11 Data Lead provided capacity estimate']
+        },
+        {
+          id: 'RA-302',
+          team: 'QA',
+          initiative: 'Vendor invoice OCR release',
+          dueDate: '2026-05-01',
+          impact: 18,
+          priority: 'Medium',
+          status: 'Needs Review',
+          requester: 'L. Hofmann',
+          targetTeam: 'Ops Enablement',
+          reason: 'Regression cycle needs one additional tester for integration pack.',
+          messages: [
+            { by: 'Planner', text: 'QA requests 18h from Ops Enablement.', at: '07:52' },
+            { by: 'Ops Lead', text: 'Available if release scorecard remains green.', at: '07:58' }
+          ],
+          trail: ['2026-04-29 07:52 Exception created by Planner']
+        },
+        {
+          id: 'RA-303',
+          team: 'Data',
+          initiative: 'Revenue forecast model refresh',
+          dueDate: '2026-05-07',
+          impact: 10,
+          priority: 'Low',
+          status: 'Approved',
+          requester: 'S. Kramer',
+          targetTeam: 'Platform',
+          reason: 'Backfill analyst support for feature engineering clean-up.',
+          messages: [
+            { by: 'Planner', text: 'Data asks for 10h from Platform.', at: '07:21' },
+            { by: 'Portfolio Manager', text: 'Approved, no roadmap impact expected.', at: '07:29' }
+          ],
+          trail: ['2026-04-29 07:21 Exception created by Planner', '2026-04-29 07:29 Approved by Portfolio Manager']
+        },
+        {
+          id: 'RA-304',
+          team: 'Ops Enablement',
+          initiative: 'Month-end controls readiness',
+          dueDate: '2026-04-30',
+          impact: 22,
+          priority: 'High',
+          status: 'Rejected',
+          requester: 'R. Baum',
+          targetTeam: 'QA',
+          reason: 'Audit simulation run failed, additional prep requested.',
+          messages: [
+            { by: 'Planner', text: 'Ops requests 22h from QA before month-end.', at: '06:49' },
+            { by: 'Team Lead', text: 'Rejected: QA blocked by release freeze tests.', at: '07:02' }
+          ],
+          trail: ['2026-04-29 06:49 Exception created by Planner', '2026-04-29 07:02 Rejected by Team Lead']
+        }
+      ]
+    };
+
+    const priorityWeight = { High: 0, Medium: 1, Low: 2 };
+
+    const el = {
+      kpis: document.getElementById('kpis'),
+      queue: document.getElementById('queue'),
+      chatMeta: document.getElementById('chatMeta'),
+      statusBadge: document.getElementById('statusBadge'),
+      chatThread: document.getElementById('chatThread'),
+      chatForm: document.getElementById('chatForm'),
+      chatInput: document.getElementById('chatInput'),
+      chatError: document.getElementById('chatError'),
+      detailCard: document.getElementById('detailCard'),
+      trail: document.getElementById('trail'),
+      proposalError: document.getElementById('proposalError'),
+      policyHint: document.getElementById('policyHint')
+    };
+
+    const chip = (label, tone) => `<span class="inline-flex px-2 py-1 rounded text-xs ${tone}">${label}</span>`;
+
+    function statusChip(status) {
+      const tones = {
+        'Needs Review': 'bg-amber-600',
+        Approved: 'bg-emerald-600',
+        Rejected: 'bg-rose-600'
+      };
+      return chip(status, tones[status] || 'bg-slate-600');
+    }
+
+    function priorityChip(priority) {
+      const tones = {
+        High: 'bg-rose-600',
+        Medium: 'bg-amber-600',
+        Low: 'bg-emerald-700'
+      };
+      return chip(priority, tones[priority] || 'bg-slate-600');
+    }
+
+    function nowStamp() {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
+    function filteredRequests() {
+      return state.requests
+        .filter(r => (`${r.id} ${r.team} ${r.initiative} ${r.requester}`).toLowerCase().includes(state.search.toLowerCase()))
+        .filter(r => state.status === 'all' ? true : r.status === state.status)
+        .filter(r => state.priority === 'all' ? true : r.priority === state.priority)
+        .sort((a, b) => {
+          if (state.sortBy === 'impact') return b.impact - a.impact;
+          if (state.sortBy === 'dueDate') return new Date(a.dueDate) - new Date(b.dueDate);
+          return priorityWeight[a.priority] - priorityWeight[b.priority];
+        });
+    }
+
+    function selectedRequest() {
+      return state.requests.find(r => r.id === state.selectedId) || null;
+    }
+
+    function renderKpis(rows) {
+      const needs = rows.filter(r => r.status === 'Needs Review').length;
+      const high = rows.filter(r => r.priority === 'High').length;
+      const approvedHours = rows.filter(r => r.status === 'Approved').reduce((sum, r) => sum + r.impact, 0);
+      const pendingHours = rows.filter(r => r.status === 'Needs Review').reduce((sum, r) => sum + r.impact, 0);
+      const cards = [
+        ['Needs Review', needs, 'text-amber-300'],
+        ['High Priority', high, 'text-rose-300'],
+        ['Approved Hours', approvedHours, 'text-emerald-300'],
+        ['Pending Hours', pendingHours, 'text-cyan-300']
+      ];
+      el.kpis.innerHTML = cards.map(([label, value, color]) =>
+        `<div class="rounded-xl border border-slate-700 bg-panel p-3"><p class="text-xs uppercase text-slate-400">${label}</p><p class="mt-1 text-2xl font-semibold ${color}">${value}</p></div>`
+      ).join('');
+    }
+
+    function renderQueue(rows) {
+      if (!rows.length) {
+        el.queue.innerHTML = '<p class="p-4 text-sm text-slate-400">No exceptions match current filters.</p>';
+        return;
+      }
+
+      el.queue.innerHTML = rows.map(r => {
+        const active = r.id === state.selectedId;
+        return `
+          <button data-id="${r.id}" class="w-full text-left p-3 border-b border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 ${active ? 'bg-slate-800/80' : 'hover:bg-slate-800/40'}">
+            <div class="flex justify-between items-start gap-2">
+              <div>
+                <p class="font-medium">${r.id} · ${r.team}</p>
+                <p class="text-xs text-slate-400 mt-1">${r.initiative}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-slate-400">${r.impact}h</p>
+                <p class="text-xs text-slate-400">due ${r.dueDate}</p>
+              </div>
+            </div>
+            <div class="mt-2 flex gap-2">${priorityChip(r.priority)}${statusChip(r.status)}</div>
+          </button>`;
+      }).join('');
+    }
+
+    function renderChat(req) {
+      if (!req) {
+        el.chatMeta.textContent = 'Select an exception to load messages.';
+        el.statusBadge.innerHTML = '';
+        el.chatThread.innerHTML = '<p class="text-sm text-slate-400">No conversation selected.</p>';
+        return;
+      }
+
+      el.chatMeta.textContent = `${req.id} · ${req.team} → ${req.targetTeam} · ${req.impact}h requested`;
+      el.statusBadge.innerHTML = statusChip(req.status);
+
+      el.chatThread.innerHTML = req.messages.map(m => {
+        const mine = m.by === state.role;
+        return `
+          <div class="${mine ? 'text-right' : 'text-left'}">
+            <div class="inline-block max-w-[92%] rounded-xl px-3 py-2 ${mine ? 'bg-indigo-600' : 'bg-panel2'}">
+              <p class="text-xs text-slate-200/90 mb-1">${m.by} · ${m.at}</p>
+              <p class="text-sm">${m.text}</p>
+            </div>
+          </div>`;
+      }).join('');
+
+      el.chatThread.scrollTop = el.chatThread.scrollHeight;
+    }
+
+    function renderDetail(req) {
+      if (!req) {
+        el.detailCard.textContent = 'Select an exception from the queue.';
+        el.trail.innerHTML = '';
+        return;
+      }
+
+      el.detailCard.innerHTML = `
+        <div class="space-y-2">
+          <p><span class="text-slate-400">Requester:</span> ${req.requester}</p>
+          <p><span class="text-slate-400">Initiative:</span> ${req.initiative}</p>
+          <p><span class="text-slate-400">Current need:</span> ${req.impact} hours from ${req.targetTeam}</p>
+          <p><span class="text-slate-400">Justification:</span> ${req.reason}</p>
+          <p class="text-xs text-slate-400">Policy: high impact requests (&gt; 40h) require Portfolio Manager approval.</p>
+        </div>`;
+
+      el.trail.innerHTML = req.trail.slice(-6).reverse().map(t => `<li class="border border-slate-700 bg-panel2 rounded-md px-2 py-1">${t}</li>`).join('');
+    }
+
+    function renderPolicyHint() {
+      el.policyHint.textContent = state.role === 'Portfolio Manager'
+        ? 'Policy active: you can approve all request sizes.'
+        : 'Policy active: only Portfolio Manager can approve requests above 40h impact.';
+    }
+
+    function render() {
+      const rows = filteredRequests();
+      if (!state.selectedId && rows[0]) state.selectedId = rows[0].id;
+      if (state.selectedId && !state.requests.some(r => r.id === state.selectedId)) state.selectedId = rows[0]?.id || null;
+
+      renderKpis(rows);
+      renderQueue(rows);
+      const req = selectedRequest();
+      renderChat(req);
+      renderDetail(req);
+      renderPolicyHint();
+    }
+
+    function addTrail(req, text) {
+      const stamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      req.trail.push(`${stamp} ${text}`);
+    }
+
+    function validateProposal(req) {
+      const hours = Number(document.getElementById('hoursInput').value);
+      const team = document.getElementById('targetTeam').value;
+      const reason = document.getElementById('reasonInput').value.trim();
+
+      if (!req) return { ok: false, msg: 'Select an exception first.' };
+      if (!Number.isFinite(hours) || hours < 1) return { ok: false, msg: 'Hours must be at least 1.' };
+      if (!team) return { ok: false, msg: 'Choose a target team.' };
+      if (reason.length < 15) return { ok: false, msg: 'Justification must be at least 15 characters.' };
+
+      return { ok: true, hours, team, reason };
+    }
+
+    document.getElementById('roleSelect').addEventListener('change', (e) => {
+      state.role = e.target.value;
+      render();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.search = e.target.value;
+      render();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+      state.status = e.target.value;
+      render();
+    });
+
+    document.getElementById('priorityFilter').addEventListener('change', (e) => {
+      state.priority = e.target.value;
+      render();
+    });
+
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+      state.sortBy = e.target.value;
+      render();
+    });
+
+    el.queue.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      state.selectedId = btn.dataset.id;
+      render();
+    });
+
+    el.queue.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      e.preventDefault();
+      state.selectedId = btn.dataset.id;
+      render();
+    });
+
+    el.chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      el.chatError.textContent = '';
+      const req = selectedRequest();
+      const msg = el.chatInput.value.trim();
+
+      if (!req) {
+        el.chatError.textContent = 'Select an exception first.';
+        return;
+      }
+      if (msg.length < 5) {
+        el.chatError.textContent = 'Message must be at least 5 characters.';
+        return;
+      }
+
+      req.messages.push({ by: state.role, text: msg, at: nowStamp() });
+      addTrail(req, `${state.role} posted update in chat`);
+      el.chatInput.value = '';
+      render();
+    });
+
+    function applyDecision(decision) {
+      const req = selectedRequest();
+      el.proposalError.textContent = '';
+      const proposal = validateProposal(req);
+      if (!proposal.ok) {
+        el.proposalError.textContent = proposal.msg;
+        return;
+      }
+
+      if (decision === 'Approve' && proposal.hours > 40 && state.role !== 'Portfolio Manager') {
+        el.proposalError.textContent = 'Policy violation: only Portfolio Manager can approve requests above 40h.';
+        return;
+      }
+
+      req.impact = proposal.hours;
+      req.targetTeam = proposal.team;
+      req.reason = proposal.reason;
+      req.status = decision === 'Approve' ? 'Approved' : 'Rejected';
+
+      req.messages.push({
+        by: state.role,
+        text: `${decision}d allocation: ${proposal.hours}h to ${proposal.team}. ${proposal.reason}`,
+        at: nowStamp()
+      });
+
+      addTrail(req, `${decision}d by ${state.role} (${proposal.hours}h to ${proposal.team})`);
+
+      document.getElementById('hoursInput').value = '';
+      document.getElementById('targetTeam').value = '';
+      document.getElementById('reasonInput').value = '';
+      render();
+    }
+
+    document.getElementById('approveBtn').addEventListener('click', () => applyDecision('Approve'));
+    document.getElementById('rejectBtn').addEventListener('click', () => applyDecision('Reject'));
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = filteredRequests();
+      const cols = ['id', 'team', 'initiative', 'impact', 'targetTeam', 'dueDate', 'priority', 'status'];
+      const csv = [cols.join(',')]
+        .concat(rows.map(r => cols.map(c => `"${String(r[c]).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'resource-allocation-exceptions.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    render();
+  </script>
+</body>
+</html>

@@ -2224,5 +2224,23 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-04-29",
+    "day": 99,
+    "slug": "2026-04-29-resource-allocation-exception-chatdesk",
+    "name": "Resource Allocation Exception Chatdesk",
+    "description": "Planning chat workspace for staffing exceptions, approval policy checks, and auditable allocation decisions.",
+    "category": "Planning",
+    "pattern": "Chat UI",
+    "tags": [
+      "planning",
+      "resource allocation",
+      "chat ui",
+      "approval workflow",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]
