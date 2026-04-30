@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Petty Cash Reconciliation Pulseboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-amber-300 hover:text-amber-200 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="mt-2 text-3xl md:text-4xl font-bold tracking-tight">Petty Cash Reconciliation Pulseboard</h1>
+    <p class="mt-2 text-slate-300 max-w-3xl">Finance control board for branch-level petty cash reconciliation, exception handling, and audit-ready approvals.</p>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex flex-wrap items-center gap-3 justify-between">
+          <h2 class="text-lg font-semibold">Branch Variance (EUR)</h2>
+          <label class="text-sm flex items-center gap-2">
+            <span class="text-slate-300">Role</span>
+            <select id="roleSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              <option>Controller</option>
+              <option>Auditor</option>
+              <option>Cashier</option>
+            </select>
+          </label>
+        </div>
+        <div id="varianceChart" class="mt-4 space-y-3"></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <h2 class="text-lg font-semibold">Submit Adjustment</h2>
+        <form id="adjustmentForm" class="mt-3 space-y-3" novalidate>
+          <div>
+            <label for="branchInput" class="block text-sm text-slate-300">Branch</label>
+            <select id="branchInput" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" required>
+              <option value="">Select branch</option>
+              <option>Berlin Mitte</option>
+              <option>Hamburg Nord</option>
+              <option>Munich Ost</option>
+              <option>Cologne Süd</option>
+              <option>Leipzig Zentrum</option>
+            </select>
+          </div>
+          <div>
+            <label for="amountInput" class="block text-sm text-slate-300">Adjustment Amount (EUR)</label>
+            <input id="amountInput" type="number" step="0.01" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="e.g. -42.50" required />
+          </div>
+          <div>
+            <label for="reasonInput" class="block text-sm text-slate-300">Reason</label>
+            <textarea id="reasonInput" rows="3" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Missing receipt / till recount / posting correction..." required></textarea>
+          </div>
+          <p id="formError" class="text-sm text-rose-400 hidden"></p>
+          <button class="w-full bg-cyan-600 hover:bg-cyan-500 transition rounded-lg px-4 py-2 font-semibold" type="submit">Create Review Case</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+        <h2 class="text-lg font-semibold">Open Reconciliation Cases</h2>
+        <div class="flex flex-wrap gap-2">
+          <label class="text-sm text-slate-300">
+            <span class="sr-only">Search cases</span>
+            <input id="searchInput" type="search" placeholder="Search branch, owner, reason" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 w-60 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+          </label>
+          <select id="statusFilter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <option value="all">All statuses</option>
+            <option value="open">Open</option>
+            <option value="under review">Under Review</option>
+            <option value="approved">Approved</option>
+            <option value="needs correction">Needs Correction</option>
+          </select>
+          <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 transition rounded-lg px-3 py-2 text-sm font-semibold">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-sm" aria-label="Reconciliation cases table">
+          <thead>
+            <tr class="text-left text-slate-300 border-b border-slate-800">
+              <th class="py-2 pr-3"><button class="sortBtn" data-key="caseId">Case #</button></th>
+              <th class="py-2 pr-3"><button class="sortBtn" data-key="branch">Branch</button></th>
+              <th class="py-2 pr-3"><button class="sortBtn" data-key="variance">Variance</button></th>
+              <th class="py-2 pr-3"><button class="sortBtn" data-key="owner">Owner</button></th>
+              <th class="py-2 pr-3"><button class="sortBtn" data-key="status">Status</button></th>
+              <th class="py-2 pr-3">Reason</th>
+              <th class="py-2 pr-0">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="caseRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h2 class="text-lg font-semibold">Audit Trail</h2>
+      <ul id="auditTrail" class="mt-3 space-y-2 text-sm text-slate-300"></ul>
+    </section>
+  </main>
+
+  <script>
+    const cases = [
+      { caseId: 'PC-3401', branch: 'Berlin Mitte', variance: -124.3, owner: 'N. Fischer', status: 'Open', reason: 'Taxi receipt missing VAT split' },
+      { caseId: 'PC-3402', branch: 'Hamburg Nord', variance: 89.5, owner: 'J. Adler', status: 'Under Review', reason: 'Till count exceeds posted payout' },
+      { caseId: 'PC-3403', branch: 'Munich Ost', variance: -41.2, owner: 'S. Weber', status: 'Needs Correction', reason: 'Duplicate snack order booking' },
+      { caseId: 'PC-3404', branch: 'Cologne Süd', variance: 16.8, owner: 'M. Ortmann', status: 'Approved', reason: 'Rounding adjustment confirmed' },
+      { caseId: 'PC-3405', branch: 'Leipzig Zentrum', variance: -203.0, owner: 'A. Yilmaz', status: 'Open', reason: 'Fuel voucher not attached' }
+    ];
+
+    const auditEvents = [
+      '08:06 Controller opened daily reconciliation board.',
+      '08:09 Policy check flagged variance > €200 for secondary approval.',
+      '08:12 Auditor requested evidence on case PC-3403.'
+    ];
+
+    let sortKey = 'caseId';
+    let sortDir = 1;
+
+    const roleSelect = document.getElementById('roleSelect');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+
+    function euro(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+    }
+
+    function statusPill(status) {
+      const map = {
+        'Open': 'bg-amber-500/20 text-amber-300 border-amber-400/30',
+        'Under Review': 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30',
+        'Approved': 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
+        'Needs Correction': 'bg-rose-500/20 text-rose-300 border-rose-400/30'
+      };
+      return `<span class="px-2 py-1 rounded-full border text-xs font-semibold ${map[status] || 'bg-slate-700 text-slate-200 border-slate-600'}">${status}</span>`;
+    }
+
+    function renderKpis(filtered) {
+      const totalVariance = filtered.reduce((sum, r) => sum + r.variance, 0);
+      const open = filtered.filter(r => r.status === 'Open').length;
+      const review = filtered.filter(r => r.status === 'Under Review').length;
+      const approved = filtered.filter(r => r.status === 'Approved').length;
+
+      document.getElementById('kpis').innerHTML = [
+        ['Net Variance', euro(totalVariance), 'text-cyan-300'],
+        ['Open Cases', String(open), 'text-amber-300'],
+        ['In Review', String(review), 'text-blue-300'],
+        ['Approved', String(approved), 'text-emerald-300'],
+      ].map(([label, value, color]) => `
+        <article class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1 ${color}">${value}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderChart() {
+      const byBranch = cases.reduce((acc, row) => {
+        acc[row.branch] = (acc[row.branch] || 0) + row.variance;
+        return acc;
+      }, {});
+      const max = Math.max(...Object.values(byBranch).map(v => Math.abs(v)), 1);
+
+      document.getElementById('varianceChart').innerHTML = Object.entries(byBranch).map(([branch, variance]) => {
+        const width = Math.round((Math.abs(variance) / max) * 100);
+        const color = variance < 0 ? 'bg-rose-500' : 'bg-emerald-500';
+        return `
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>${branch}</span>
+              <span class="font-semibold">${euro(variance)}</span>
+            </div>
+            <div class="h-3 bg-slate-800 rounded">
+              <div class="h-3 rounded ${color}" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function sortedFilteredCases() {
+      const needle = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+
+      return cases
+        .filter(row => {
+          const matchesText = [row.caseId, row.branch, row.owner, row.reason].join(' ').toLowerCase().includes(needle);
+          const matchesStatus = status === 'all' || row.status.toLowerCase() === status;
+          return matchesText && matchesStatus;
+        })
+        .sort((a, b) => {
+          const av = a[sortKey];
+          const bv = b[sortKey];
+          if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+          return String(av).localeCompare(String(bv)) * sortDir;
+        });
+    }
+
+    function allowedActions() {
+      const role = roleSelect.value;
+      if (role === 'Cashier') return [];
+      if (role === 'Auditor') return ['Needs Correction'];
+      return ['Approved', 'Under Review', 'Needs Correction'];
+    }
+
+    function renderTable() {
+      const filtered = sortedFilteredCases();
+      const actions = allowedActions();
+      renderKpis(filtered);
+
+      const rows = filtered.map(row => {
+        const actionButtons = actions.length === 0
+          ? '<span class="text-slate-500 text-xs">Read-only</span>'
+          : actions.map(action => `<button data-case="${row.caseId}" data-action="${action}" class="actionBtn text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded px-2 py-1">${action}</button>`).join(' ');
+
+        return `
+          <tr class="border-b border-slate-800/60 hover:bg-slate-800/30">
+            <td class="py-2 pr-3 font-medium">${row.caseId}</td>
+            <td class="py-2 pr-3">${row.branch}</td>
+            <td class="py-2 pr-3 ${row.variance < 0 ? 'text-rose-300' : 'text-emerald-300'}">${euro(row.variance)}</td>
+            <td class="py-2 pr-3">${row.owner}</td>
+            <td class="py-2 pr-3">${statusPill(row.status)}</td>
+            <td class="py-2 pr-3 text-slate-300">${row.reason}</td>
+            <td class="py-2 pr-0 space-x-1 whitespace-nowrap">${actionButtons}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('caseRows').innerHTML = rows || '<tr><td colspan="7" class="py-6 text-center text-slate-400">No cases match your filters.</td></tr>';
+    }
+
+    function renderAudit() {
+      document.getElementById('auditTrail').innerHTML = auditEvents
+        .slice(0, 12)
+        .map(e => `<li class="border border-slate-800 rounded-lg px-3 py-2 bg-slate-950/70">${e}</li>`)
+        .join('');
+    }
+
+    function pushAudit(msg) {
+      const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      auditEvents.unshift(`${stamp} ${msg}`);
+      renderAudit();
+    }
+
+    document.querySelectorAll('.sortBtn').forEach(btn => {
+      btn.className += ' hover:text-cyan-300';
+      btn.addEventListener('click', () => {
+        const nextKey = btn.dataset.key;
+        if (sortKey === nextKey) {
+          sortDir *= -1;
+        } else {
+          sortKey = nextKey;
+          sortDir = 1;
+        }
+        renderTable();
+      });
+    });
+
+    document.getElementById('caseRows').addEventListener('click', (event) => {
+      const target = event.target.closest('.actionBtn');
+      if (!target) return;
+
+      const caseId = target.dataset.case;
+      const action = target.dataset.action;
+      const row = cases.find(c => c.caseId === caseId);
+      if (!row) return;
+
+      row.status = action;
+      pushAudit(`${roleSelect.value} set ${caseId} to ${action}.`);
+      renderTable();
+    });
+
+    [searchInput, statusFilter, roleSelect].forEach(el => el.addEventListener('input', renderTable));
+
+    document.getElementById('adjustmentForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const branch = document.getElementById('branchInput').value;
+      const amount = Number(document.getElementById('amountInput').value);
+      const reason = document.getElementById('reasonInput').value.trim();
+      const error = document.getElementById('formError');
+
+      if (!branch || !reason || Number.isNaN(amount)) {
+        error.textContent = 'Please complete all fields before submitting.';
+        error.classList.remove('hidden');
+        return;
+      }
+
+      if (Math.abs(amount) > 500) {
+        error.textContent = 'Adjustment exceeds €500. Split into reviewed sub-cases.';
+        error.classList.remove('hidden');
+        return;
+      }
+
+      error.classList.add('hidden');
+      const caseId = `PC-${Math.floor(3500 + Math.random() * 400)}`;
+      cases.unshift({
+        caseId,
+        branch,
+        variance: amount,
+        owner: roleSelect.value === 'Cashier' ? 'Cashier Desk' : 'Ops Desk',
+        status: 'Open',
+        reason
+      });
+
+      pushAudit(`${roleSelect.value} opened ${caseId} (${euro(amount)}) for ${branch}.`);
+      event.target.reset();
+      renderChart();
+      renderTable();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = sortedFilteredCases();
+      const header = ['caseId', 'branch', 'variance', 'owner', 'status', 'reason'];
+      const csv = [header.join(',')]
+        .concat(rows.map(r => header.map(h => `"${String(r[h]).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'petty-cash-reconciliation.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      pushAudit(`${roleSelect.value} exported ${rows.length} rows to CSV.`);
+    });
+
+    renderChart();
+    renderTable();
+    renderAudit();
+  </script>
+</body>
+</html>

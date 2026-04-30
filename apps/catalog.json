@@ -2242,5 +2242,30 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-04-30",
+    "day": 100,
+    "slug": "2026-04-30-petty-cash-reconciliation-pulseboard",
+    "name": "Petty Cash Reconciliation Pulseboard",
+    "description": "Finance dashboard for petty cash exception handling with role-based approvals, policy validation, audit trail updates, and CSV export.",
+    "category": "Finance",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "petty cash",
+      "finance",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
