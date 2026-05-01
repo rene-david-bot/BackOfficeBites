@@ -2267,5 +2267,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-01",
+    "day": 101,
+    "slug": "2026-05-01-asset-checkout-chain-of-custody-desk",
+    "name": "Asset Checkout Chain-of-Custody Desk",
+    "description": "Supply chain master-detail desk for equipment handoffs with approval workflow, policy validation, role-based actions, audit trail, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Master-Detail",
+    "tags": [
+      "asset checkout",
+      "supply chain",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

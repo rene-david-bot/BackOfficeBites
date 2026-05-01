@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Asset Checkout Chain-of-Custody Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Asset Checkout Chain-of-Custody Desk</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Track high-value equipment handoffs with policy checks, approval gates, role-based actions, and a tamper-evident audit timeline.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option>Requester</option>
+          <option>Manager</option>
+          <option>Storekeeper</option>
+        </select>
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" placeholder="asset, owner, ticket" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" />
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Status</span>
+        <select id="status" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option value="all">All</option>
+          <option>Requested</option>
+          <option>Approved</option>
+          <option>Checked Out</option>
+          <option>Returned</option>
+          <option>Overdue</option>
+        </select>
+      </label>
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col gap-2">
+        <span class="text-xs text-slate-400 uppercase">Actions</span>
+        <button id="exportCsv" class="bg-amber-400 text-slate-950 font-semibold rounded-lg px-3 py-2 hover:bg-amber-300">Export CSV (Filtered)</button>
+        <p id="stats" class="text-xs text-slate-400"></p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-6">
+      <section class="lg:col-span-5 rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <h2 class="font-semibold">Checkout Requests</h2>
+          <button id="sortBtn" class="text-xs border border-slate-700 rounded px-2 py-1 hover:bg-slate-800">Sort: Due ↑</button>
+        </div>
+        <div id="list" class="divide-y divide-slate-800 max-h-[560px] overflow-auto" tabindex="0" aria-label="Asset requests list"></div>
+      </section>
+
+      <section class="lg:col-span-7 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="emptyState" class="text-slate-400">Select a request to view details.</div>
+        <div id="detail" class="hidden">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 id="assetName" class="text-2xl font-semibold"></h2>
+              <p id="meta" class="text-slate-400 text-sm mt-1"></p>
+            </div>
+            <span id="badge" class="text-xs px-2 py-1 rounded-full border"></span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3 mt-4 text-sm">
+            <div class="rounded-xl bg-slate-950 border border-slate-800 p-3">
+              <p class="text-slate-400 text-xs uppercase">Custodian</p>
+              <p id="custodian" class="mt-1"></p>
+            </div>
+            <div class="rounded-xl bg-slate-950 border border-slate-800 p-3">
+              <p class="text-slate-400 text-xs uppercase">Due Date</p>
+              <p id="dueDate" class="mt-1"></p>
+            </div>
+          </div>
+
+          <form id="policyForm" class="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+            <h3 class="font-semibold">Policy & Handoff Validation</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+              <label class="block">
+                <span class="text-xs text-slate-400 uppercase">Purpose</span>
+                <input id="purpose" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required minlength="8" />
+              </label>
+              <label class="block">
+                <span class="text-xs text-slate-400 uppercase">Return Condition</span>
+                <select id="condition" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required>
+                  <option value="">Choose…</option>
+                  <option>Verified</option>
+                  <option>Minor Damage</option>
+                  <option>Needs Repair</option>
+                </select>
+              </label>
+            </div>
+            <label class="flex items-start gap-2 text-sm">
+              <input id="policyAck" type="checkbox" class="mt-1" />
+              <span>I confirm asset usage follows company handling policy and security controls.</span>
+            </label>
+            <p id="validation" class="text-xs"></p>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="approveBtn" class="px-3 py-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 font-semibold">Approve</button>
+              <button type="button" id="checkoutBtn" class="px-3 py-2 rounded-lg bg-sky-500/90 hover:bg-sky-400 text-slate-950 font-semibold">Check Out</button>
+              <button type="button" id="returnBtn" class="px-3 py-2 rounded-lg bg-violet-500/90 hover:bg-violet-400 text-slate-950 font-semibold">Return</button>
+            </div>
+          </form>
+
+          <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+            <h3 class="font-semibold">State Snapshot</h3>
+            <div id="bars" class="grid grid-cols-5 gap-2 mt-3 text-xs"></div>
+          </div>
+
+          <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="audit" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const records = [
+      {id:'AC-4081', asset:'Rugged Tablet T14', owner:'Nina Vogel', team:'Warehouse', ticket:'INC-8821', due:'2026-05-02', status:'Requested', custodian:'M. Becker', purpose:'Cycle-count verification on dock B', condition:'', policyAck:false, audit:['2026-05-01 07:11 Request created by Nina Vogel']},
+      {id:'AC-4082', asset:'Thermal Scanner X2', owner:'Luca Meier', team:'Quality', ticket:'CHG-1920', due:'2026-05-03', status:'Approved', custodian:'R. Hahn', purpose:'Cold-chain anomaly inspection', condition:'', policyAck:true, audit:['2026-05-01 06:42 Request submitted','2026-05-01 06:50 Manager approved']},
+      {id:'AC-4083', asset:'Label Printer Z9', owner:'Iris König', team:'Outbound', ticket:'INC-8817', due:'2026-04-30', status:'Checked Out', custodian:'P. Schulz', purpose:'Reprint damaged shipping labels', condition:'', policyAck:true, audit:['2026-04-30 08:14 Checked out by Storekeeper']},
+      {id:'AC-4084', asset:'RFID Reader M5', owner:'Jonas Franke', team:'Inbound', ticket:'REQ-5542', due:'2026-05-04', status:'Returned', custodian:'K. Peters', purpose:'Pallet gate remapping', condition:'Verified', policyAck:true, audit:['2026-04-29 10:33 Approved','2026-04-29 11:05 Checked out','2026-04-30 17:22 Returned in verified condition']},
+      {id:'AC-4085', asset:'Barcode Gun BX', owner:'Lea Brandt', team:'Warehouse', ticket:'INC-8830', due:'2026-04-29', status:'Overdue', custodian:'M. Becker', purpose:'Emergency stock recount after mismatch', condition:'', policyAck:true, audit:['2026-04-28 09:40 Approved','2026-04-28 10:02 Checked out','2026-04-30 09:00 Reminder sent (overdue)']}
+    ];
+
+    const byId = (id) => records.find(r => r.id === id);
+    const el = (id) => document.getElementById(id);
+    const state = { selected:null, sortAsc:true };
+
+    const role = el('role'), search = el('search'), status = el('status'), list = el('list');
+    const sortBtn = el('sortBtn'), exportCsv = el('exportCsv'), stats = el('stats');
+
+    function statusClass(s){
+      const map = {
+        Requested:'border-amber-500 text-amber-300', Approved:'border-emerald-500 text-emerald-300',
+        'Checked Out':'border-sky-500 text-sky-300', Returned:'border-violet-500 text-violet-300', Overdue:'border-rose-500 text-rose-300'
+      };
+      return map[s] || 'border-slate-600 text-slate-300';
+    }
+
+    function visibleRows(){
+      const q = search.value.trim().toLowerCase();
+      return records
+        .filter(r => status.value === 'all' || r.status === status.value)
+        .filter(r => !q || `${r.asset} ${r.owner} ${r.ticket} ${r.team}`.toLowerCase().includes(q))
+        .sort((a,b) => state.sortAsc ? a.due.localeCompare(b.due) : b.due.localeCompare(a.due));
+    }
+
+    function renderList(){
+      const rows = visibleRows();
+      list.innerHTML = '';
+      rows.forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left px-4 py-3 hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-amber-400 ${state.selected===r.id ? 'bg-slate-800/80' : ''}`;
+        btn.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-medium">${r.asset}</div>
+              <div class="text-xs text-slate-400 mt-1">${r.id} · ${r.owner} · ${r.team}</div>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full border ${statusClass(r.status)}">${r.status}</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-2">Due ${r.due} · ${r.ticket}</div>
+        `;
+        btn.onclick = () => { state.selected = r.id; renderAll(); };
+        list.appendChild(btn);
+      });
+      stats.textContent = `${rows.length} of ${records.length} requests visible`;
+    }
+
+    function applyRolePermissions(r){
+      const canApprove = role.value === 'Manager' && r.status === 'Requested';
+      const canCheckout = role.value === 'Storekeeper' && r.status === 'Approved';
+      const canReturn = role.value === 'Storekeeper' && r.status === 'Checked Out';
+      el('approveBtn').disabled = !canApprove;
+      el('checkoutBtn').disabled = !canCheckout;
+      el('returnBtn').disabled = !canReturn;
+      [el('approveBtn'),el('checkoutBtn'),el('returnBtn')].forEach(b => b.classList.toggle('opacity-40', b.disabled));
+    }
+
+    function validateForm(r){
+      const msg = el('validation');
+      const purposeOk = el('purpose').value.trim().length >= 8;
+      const condOk = el('condition').value.length > 0;
+      const ack = el('policyAck').checked;
+      r.purpose = el('purpose').value;
+      r.condition = el('condition').value;
+      r.policyAck = ack;
+      if (!purposeOk) { msg.textContent = 'Purpose must be at least 8 characters.'; msg.className='text-xs text-rose-300'; return false; }
+      if (!ack) { msg.textContent = 'Policy acknowledgment is required for any state transition.'; msg.className='text-xs text-rose-300'; return false; }
+      if (!condOk && r.status === 'Returned') { msg.textContent = 'Return condition is required when returning an asset.'; msg.className='text-xs text-rose-300'; return false; }
+      msg.textContent = 'Validation passed.';
+      msg.className='text-xs text-emerald-300';
+      return true;
+    }
+
+    function addAudit(r, text){
+      const stamp = new Date().toISOString().slice(0,16).replace('T',' ');
+      r.audit.unshift(`${stamp} ${text}`);
+    }
+
+    function renderBars(){
+      const totals = ['Requested','Approved','Checked Out','Returned','Overdue'].map(s => ({s, n: records.filter(r => r.status===s).length}));
+      const max = Math.max(...totals.map(t => t.n), 1);
+      el('bars').innerHTML = totals.map(t => `
+        <div class="rounded-lg border border-slate-800 p-2 bg-slate-900">
+          <div class="text-slate-400">${t.s}</div>
+          <div class="mt-2 h-16 bg-slate-800 rounded flex items-end">
+            <div class="w-full bg-amber-400/80 rounded" style="height:${(t.n/max)*100}%"></div>
+          </div>
+          <div class="mt-1 font-semibold">${t.n}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderDetail(){
+      const r = byId(state.selected);
+      if (!r) { el('detail').classList.add('hidden'); el('emptyState').classList.remove('hidden'); return; }
+      el('detail').classList.remove('hidden'); el('emptyState').classList.add('hidden');
+      el('assetName').textContent = r.asset;
+      el('meta').textContent = `${r.id} · ${r.team} · Ticket ${r.ticket}`;
+      el('custodian').textContent = r.custodian;
+      el('dueDate').textContent = r.due;
+      const badge = el('badge');
+      badge.className = `text-xs px-2 py-1 rounded-full border ${statusClass(r.status)}`;
+      badge.textContent = r.status;
+      el('purpose').value = r.purpose || '';
+      el('condition').value = r.condition || '';
+      el('policyAck').checked = !!r.policyAck;
+      el('audit').innerHTML = r.audit.map(a => `<li class="border border-slate-800 rounded-lg p-2">${a}</li>`).join('');
+      applyRolePermissions(r);
+      validateForm(r);
+    }
+
+    function transition(to){
+      const r = byId(state.selected); if (!r) return;
+      if (!validateForm(r)) return;
+      const allowed = {
+        Requested:['Approved'], Approved:['Checked Out'], 'Checked Out':['Returned']
+      };
+      if (!(allowed[r.status] || []).includes(to)) {
+        el('validation').textContent = `Transition ${r.status} → ${to} not allowed by workflow.`;
+        el('validation').className='text-xs text-rose-300';
+        return;
+      }
+      r.status = to;
+      addAudit(r, `${role.value} changed status to ${to}`);
+      renderAll();
+    }
+
+    function exportFilteredCsv(){
+      const rows = visibleRows();
+      const header = ['id','asset','owner','team','ticket','due','status','custodian','policyAck'];
+      const csv = [header.join(',')].concat(rows.map(r => header.map(h => `"${String(r[h] ?? '').replaceAll('"','""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'asset-checkout-filtered.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function flagOverdue(){
+      const today = new Date().toISOString().slice(0,10);
+      records.forEach(r => {
+        if (r.status === 'Checked Out' && r.due < today) r.status = 'Overdue';
+      });
+    }
+
+    function renderAll(){
+      flagOverdue();
+      renderList();
+      renderDetail();
+      renderBars();
+    }
+
+    sortBtn.onclick = () => { state.sortAsc = !state.sortAsc; sortBtn.textContent = `Sort: Due ${state.sortAsc ? '↑' : '↓'}`; renderAll(); };
+    [search,status,role].forEach(i => i.addEventListener('input', renderAll));
+    ['purpose','condition','policyAck'].forEach(id => el(id).addEventListener('input', () => state.selected && validateForm(byId(state.selected))));
+    el('approveBtn').onclick = () => transition('Approved');
+    el('checkoutBtn').onclick = () => transition('Checked Out');
+    el('returnBtn').onclick = () => transition('Returned');
+    exportCsv.onclick = exportFilteredCsv;
+
+    state.selected = records[0].id;
+    renderAll();
+  </script>
+</body>
+</html>

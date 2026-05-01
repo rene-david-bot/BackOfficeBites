@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Petty Cash Reconciliation Pulseboard** — Finance dashboard for petty cash exception handling with role-based approvals, policy validation, audit trail updates, and CSV export.
+**Asset Checkout Chain-of-Custody Desk** — Supply chain master-detail desk for equipment handoffs with approval workflow, policy validation, role-based actions, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
