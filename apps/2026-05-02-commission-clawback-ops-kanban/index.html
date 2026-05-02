@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Commission Clawback Ops Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Commission Clawback Ops Kanban</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Sales ops board for commission clawback disputes with policy validation, role-based approvals, drag-and-drop workflow, and full audit history.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Role view">
+          <option>Analyst</option>
+          <option>Manager</option>
+          <option>Finance Controller</option>
+        </select>
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" placeholder="account, rep, case id" />
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Region</span>
+        <select id="region" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option value="all">All Regions</option>
+          <option>EMEA</option>
+          <option>DACH</option>
+          <option>UKI</option>
+          <option>Nordics</option>
+        </select>
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Sort</span>
+        <select id="sort" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option value="age-desc">Oldest first</option>
+          <option value="age-asc">Newest first</option>
+          <option value="amount-desc">Amount high-low</option>
+          <option value="amount-asc">Amount low-high</option>
+        </select>
+      </label>
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-2 flex flex-col gap-2">
+        <span class="text-xs text-slate-400 uppercase">Actions</span>
+        <div class="flex flex-wrap gap-2">
+          <button id="exportCsv" class="bg-amber-400 text-slate-950 font-semibold rounded-lg px-3 py-2 hover:bg-amber-300">Export CSV</button>
+          <button id="newCase" class="bg-sky-500 text-slate-950 font-semibold rounded-lg px-3 py-2 hover:bg-sky-400">Add Case</button>
+        </div>
+        <p id="stats" class="text-xs text-slate-400"></p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mt-6">
+      <div class="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" id="board"></div>
+
+      <aside class="xl:col-span-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="empty" class="text-slate-400">Select a case card to inspect details.</div>
+        <div id="detail" class="hidden space-y-4">
+          <div>
+            <h2 id="caseTitle" class="text-xl font-semibold"></h2>
+            <p id="caseMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Recovery Amount</p>
+              <p id="amountText" class="mt-1 font-semibold"></p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Current Stage</p>
+              <p id="stageText" class="mt-1 font-semibold"></p>
+            </div>
+          </div>
+
+          <form id="caseForm" class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-3">
+            <h3 class="font-semibold">Policy Validation</h3>
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Root Cause Note</span>
+              <textarea id="rootCause" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required minlength="12"></textarea>
+            </label>
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Corrected Amount (€)</span>
+              <input id="correctedAmount" type="number" min="1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required />
+            </label>
+            <label class="flex gap-2 text-sm items-start">
+              <input id="policyAck" type="checkbox" class="mt-1" />
+              <span>I confirm compensation policy section 4.2 is reviewed and evidence is attached.</span>
+            </label>
+            <p id="validationMsg" class="text-xs"></p>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="saveBtn" class="px-3 py-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 font-semibold">Save</button>
+              <button type="button" id="advanceBtn" class="px-3 py-2 rounded-lg bg-violet-500/90 hover:bg-violet-400 text-slate-950 font-semibold">Advance Stage</button>
+              <button type="button" id="resolveBtn" class="px-3 py-2 rounded-lg bg-rose-500/90 hover:bg-rose-400 text-slate-950 font-semibold">Resolve</button>
+            </div>
+          </form>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const STAGES = ['Intake', 'Review', 'Approval', 'Resolved'];
+    const stageColor = {
+      Intake: 'border-sky-500 text-sky-300',
+      Review: 'border-amber-500 text-amber-300',
+      Approval: 'border-violet-500 text-violet-300',
+      Resolved: 'border-emerald-500 text-emerald-300'
+    };
+
+    const records = [
+      {id:'CLB-511', account:'Nordic Retail Group', rep:'L. Wagner', region:'EMEA', amount:14800, correctedAmount:14800, age:12, risk:'High', stage:'Intake', rootCause:'Late cancellation processed after payout close.', policyAck:false, audit:['2026-05-02 06:12 Case opened by Sales Ops Analyst']},
+      {id:'CLB-512', account:'Dresden Cloudworks', rep:'A. Ritter', region:'DACH', amount:9200, correctedAmount:8800, age:7, risk:'Medium', stage:'Review', rootCause:'Contract downgrade reflected one cycle late.', policyAck:true, audit:['2026-05-01 15:20 Intake validated','2026-05-01 16:04 Moved to Review']},
+      {id:'CLB-513', account:'Albion Logistics', rep:'S. Patel', region:'UKI', amount:11600, correctedAmount:11600, age:5, risk:'Medium', stage:'Approval', rootCause:'Discount exception not mirrored in payout table.', policyAck:true, audit:['2026-05-01 09:31 Review completed','2026-05-01 10:02 Sent to Approval']},
+      {id:'CLB-514', account:'PolarNet Services', rep:'M. Holm', region:'Nordics', amount:6400, correctedAmount:6400, age:2, risk:'Low', stage:'Resolved', rootCause:'Territory split applied retroactively.', policyAck:true, audit:['2026-05-01 08:12 Intake created','2026-05-01 09:41 Approved and resolved']},
+      {id:'CLB-515', account:'Berlin Tech Fabric', rep:'J. Kaya', region:'DACH', amount:17100, correctedAmount:17100, age:14, risk:'High', stage:'Review', rootCause:'Multi-year uplift booked before procurement signature.', policyAck:false, audit:['2026-04-30 11:30 Intake accepted','2026-04-30 13:10 Escalated to Review']}
+    ];
+
+    const state = { selectedId: null };
+
+    const el = id => document.getElementById(id);
+    const board = el('board');
+
+    function canMoveByRole(from, to){
+      const role = el('role').value;
+      if (from === 'Resolved') return false;
+      const allowed = {
+        Analyst: { Intake:['Review'] },
+        Manager: { Review:['Approval','Resolved'] },
+        'Finance Controller': { Approval:['Resolved'] }
+      };
+      return (allowed[role]?.[from] || []).includes(to);
+    }
+
+    function filteredRecords(){
+      const q = el('search').value.trim().toLowerCase();
+      const region = el('region').value;
+      const sort = el('sort').value;
+      const rows = records.filter(r => (region === 'all' || r.region === region))
+        .filter(r => !q || `${r.id} ${r.account} ${r.rep}`.toLowerCase().includes(q));
+
+      const sorters = {
+        'age-desc': (a,b) => b.age - a.age,
+        'age-asc': (a,b) => a.age - b.age,
+        'amount-desc': (a,b) => b.amount - a.amount,
+        'amount-asc': (a,b) => a.amount - b.amount
+      };
+      return rows.sort(sorters[sort]);
+    }
+
+    function addAudit(item, text){
+      const stamp = new Date().toISOString().slice(0,16).replace('T',' ');
+      item.audit.unshift(`${stamp} ${text}`);
+    }
+
+    function validateSelected(){
+      const item = records.find(r => r.id === state.selectedId);
+      if (!item) return false;
+
+      const root = el('rootCause').value.trim();
+      const corrected = Number(el('correctedAmount').value);
+      const ack = el('policyAck').checked;
+      item.rootCause = root;
+      item.correctedAmount = corrected;
+      item.policyAck = ack;
+
+      const msg = el('validationMsg');
+      if (root.length < 12) {
+        msg.textContent = 'Root cause note must be at least 12 characters.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+      if (!Number.isFinite(corrected) || corrected < 1 || corrected > item.amount) {
+        msg.textContent = 'Corrected amount must be between 1 and original amount.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+      if (!ack) {
+        msg.textContent = 'Policy acknowledgment is required before stage changes.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+      msg.textContent = 'Validation passed.';
+      msg.className = 'text-xs text-emerald-300';
+      return true;
+    }
+
+    function moveCase(id, targetStage){
+      const item = records.find(r => r.id === id);
+      if (!item) return;
+      if (!canMoveByRole(item.stage, targetStage)) return;
+      if (!item.policyAck || item.rootCause.trim().length < 12) return;
+      item.stage = targetStage;
+      addAudit(item, `${el('role').value} moved stage to ${targetStage}`);
+      render();
+    }
+
+    function renderBoard(){
+      const rows = filteredRecords();
+      board.innerHTML = '';
+      STAGES.forEach(stage => {
+        const col = document.createElement('section');
+        col.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3 min-h-[260px]';
+        col.setAttribute('data-stage', stage);
+        col.ondragover = (e) => e.preventDefault();
+        col.ondrop = (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          moveCase(id, stage);
+        };
+
+        const stageRows = rows.filter(r => r.stage === stage);
+        const amount = stageRows.reduce((sum, r) => sum + r.correctedAmount, 0);
+        col.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h2 class="font-semibold">${stage}</h2>
+            <span class="text-xs text-slate-400">${stageRows.length} · €${amount.toLocaleString()}</span>
+          </div>
+          <div class="space-y-2" id="col-${stage}"></div>
+        `;
+
+        const holder = col.querySelector(`#col-${stage}`);
+        stageRows.forEach(item => {
+          const btn = document.createElement('button');
+          btn.className = `w-full text-left rounded-xl border p-3 bg-slate-950 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 ${state.selectedId===item.id ? 'ring-2 ring-amber-400' : 'border-slate-800'}`;
+          btn.draggable = true;
+          btn.setAttribute('aria-label', `${item.id} ${item.account}`);
+          btn.ondragstart = (e) => e.dataTransfer.setData('text/plain', item.id);
+          btn.onclick = () => { state.selectedId = item.id; render(); };
+          btn.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-medium">${item.account}</p>
+                <p class="text-xs text-slate-400 mt-1">${item.id} · ${item.rep} · ${item.region}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full border ${stageColor[item.stage]}">${item.risk}</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">€${item.correctedAmount.toLocaleString()} · ${item.age}d open</p>
+          `;
+          holder.appendChild(btn);
+        });
+
+        board.appendChild(col);
+      });
+
+      el('stats').textContent = `${rows.length} of ${records.length} cases visible`;
+    }
+
+    function renderDetail(){
+      const item = records.find(r => r.id === state.selectedId);
+      if (!item) {
+        el('empty').classList.remove('hidden');
+        el('detail').classList.add('hidden');
+        return;
+      }
+
+      el('empty').classList.add('hidden');
+      el('detail').classList.remove('hidden');
+      el('caseTitle').textContent = `${item.id} · ${item.account}`;
+      el('caseMeta').textContent = `${item.rep} · ${item.region} · Risk ${item.risk}`;
+      el('amountText').textContent = `€${item.amount.toLocaleString()} (current €${item.correctedAmount.toLocaleString()})`;
+      el('stageText').textContent = item.stage;
+      el('rootCause').value = item.rootCause;
+      el('correctedAmount').value = item.correctedAmount;
+      el('policyAck').checked = item.policyAck;
+
+      el('auditTrail').innerHTML = item.audit.map(a => `<li class="rounded-lg border border-slate-800 p-2">${a}</li>`).join('');
+      validateSelected();
+    }
+
+    function exportCsv(){
+      const rows = filteredRecords();
+      const header = ['id','account','rep','region','amount','correctedAmount','age','risk','stage','policyAck'];
+      const body = rows.map(r => header.map(h => `"${String(r[h]).replaceAll('"','""')}"`).join(','));
+      const csv = [header.join(','), ...body].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'commission-clawback-cases.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function addCase(){
+      const id = `CLB-${Math.floor(Math.random()*900 + 100)}`;
+      const template = {
+        id,
+        account: 'New Enterprise Account',
+        rep: 'T. Miller',
+        region: 'EMEA',
+        amount: 5000,
+        correctedAmount: 5000,
+        age: 0,
+        risk: 'Medium',
+        stage: 'Intake',
+        rootCause: 'Pending investigation details.',
+        policyAck: false,
+        audit: [`${new Date().toISOString().slice(0,16).replace('T',' ')} Case created manually`]
+      };
+      records.unshift(template);
+      state.selectedId = id;
+      render();
+    }
+
+    function nextStage(from){
+      if (from === 'Intake') return 'Review';
+      if (from === 'Review') return 'Approval';
+      if (from === 'Approval') return 'Resolved';
+      return 'Resolved';
+    }
+
+    function render(){
+      renderBoard();
+      renderDetail();
+    }
+
+    ['role','search','region','sort'].forEach(id => el(id).addEventListener('input', render));
+    ['rootCause','correctedAmount','policyAck'].forEach(id => el(id).addEventListener('input', () => state.selectedId && validateSelected()));
+
+    el('saveBtn').onclick = () => {
+      const item = records.find(r => r.id === state.selectedId);
+      if (!item) return;
+      if (!validateSelected()) return;
+      addAudit(item, `${el('role').value} saved case fields`);
+      render();
+    };
+
+    el('advanceBtn').onclick = () => {
+      const item = records.find(r => r.id === state.selectedId);
+      if (!item) return;
+      if (!validateSelected()) return;
+      const target = nextStage(item.stage);
+      if (!canMoveByRole(item.stage, target)) {
+        el('validationMsg').textContent = `Role ${el('role').value} cannot move ${item.stage} to ${target}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+      item.stage = target;
+      addAudit(item, `${el('role').value} advanced stage to ${target}`);
+      render();
+    };
+
+    el('resolveBtn').onclick = () => {
+      const item = records.find(r => r.id === state.selectedId);
+      if (!item) return;
+      if (!validateSelected()) return;
+      if (!canMoveByRole(item.stage, 'Resolved')) {
+        el('validationMsg').textContent = `Role ${el('role').value} cannot resolve directly from ${item.stage}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+      item.stage = 'Resolved';
+      addAudit(item, `${el('role').value} resolved case`);
+      render();
+    };
+
+    el('exportCsv').onclick = exportCsv;
+    el('newCase').onclick = addCase;
+
+    state.selectedId = records[0].id;
+    render();
+  </script>
+</body>
+</html>

@@ -2291,5 +2291,31 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-02",
+    "day": 102,
+    "slug": "2026-05-02-commission-clawback-ops-kanban",
+    "name": "Commission Clawback Ops Kanban",
+    "description": "Sales kanban board for commission clawback disputes with role-based approvals, policy validation, drag-and-drop workflow, audit trail, and CSV export.",
+    "category": "Sales",
+    "pattern": "Kanban",
+    "tags": [
+      "sales",
+      "commissions",
+      "clawback",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "drag-and-drop",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
