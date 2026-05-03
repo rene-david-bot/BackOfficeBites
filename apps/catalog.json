@@ -2317,5 +2317,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-03",
+    "day": 103,
+    "slug": "2026-05-03-raci-builder-dragboard",
+    "name": "RACI Builder Ownership Dragboard",
+    "description": "Planning drag-and-drop workspace for RACI governance with role-gated approvals, policy validation, audit trail actions, and CSV export.",
+    "category": "Planning",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "raci builder",
+      "planning",
+      "drag-and-drop",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

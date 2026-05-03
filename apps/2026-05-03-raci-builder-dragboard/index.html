@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RACI Builder Ownership Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">RACI Builder Ownership Dragboard</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Planning workspace to define decision ownership across programs with role-gated stage transitions, policy validation, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Role view">
+          <option>PMO Lead</option>
+          <option>Functional Owner</option>
+          <option>Compliance Reviewer</option>
+        </select>
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" placeholder="work item, owner, id" />
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Workstream</span>
+        <select id="workstream" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option value="all">All Workstreams</option>
+          <option>ERP Rollout</option>
+          <option>Warehouse Automation</option>
+          <option>CRM Migration</option>
+          <option>S4 Governance</option>
+        </select>
+      </label>
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Sort</span>
+        <select id="sort" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2">
+          <option value="due-asc">Due date (soonest)</option>
+          <option value="due-desc">Due date (latest)</option>
+          <option value="risk-desc">Risk (high to low)</option>
+          <option value="name-asc">Name (A-Z)</option>
+        </select>
+      </label>
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-2 flex flex-col gap-2">
+        <span class="text-xs text-slate-400 uppercase">Actions</span>
+        <div class="flex flex-wrap gap-2">
+          <button id="exportCsv" class="bg-amber-400 text-slate-950 font-semibold rounded-lg px-3 py-2 hover:bg-amber-300">Export CSV</button>
+          <button id="newItem" class="bg-sky-500 text-slate-950 font-semibold rounded-lg px-3 py-2 hover:bg-sky-400">Add Work Item</button>
+        </div>
+        <p id="stats" class="text-xs text-slate-400"></p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mt-6">
+      <div id="board" class="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"></div>
+
+      <aside class="xl:col-span-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="empty" class="text-slate-400">Select a work item to edit RACI ownership.</div>
+
+        <div id="detail" class="hidden space-y-4">
+          <div>
+            <h2 id="itemTitle" class="text-xl font-semibold"></h2>
+            <p id="itemMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Current Stage</p>
+              <p id="stageText" class="mt-1 font-semibold"></p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Due Date</p>
+              <p id="dueText" class="mt-1 font-semibold"></p>
+            </div>
+          </div>
+
+          <form id="raciForm" class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-3">
+            <h3 class="font-semibold">Policy Validation</h3>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Responsible (R)</span>
+              <input id="rOwner" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required minlength="3" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Accountable (A)</span>
+              <input id="aOwner" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required minlength="3" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Consulted (C)</span>
+              <input id="cOwners" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" placeholder="Comma-separated names" required />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Informed Group (I)</span>
+              <select id="iGroup" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Informed group">
+                <option>Program Steering Committee</option>
+                <option>Regional Ops Council</option>
+                <option>Finance Control Board</option>
+                <option>IT Security Office</option>
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Target Date</span>
+              <input id="dueDate" type="date" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" required />
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="policyAck" type="checkbox" class="mt-1" />
+              <span>I confirm segregation-of-duties checks passed and no person is both Responsible and Accountable.</span>
+            </label>
+
+            <p id="validationMsg" class="text-xs"></p>
+
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="saveBtn" class="px-3 py-2 rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 font-semibold">Save</button>
+              <button type="button" id="advanceBtn" class="px-3 py-2 rounded-lg bg-violet-500/90 hover:bg-violet-400 text-slate-950 font-semibold">Advance Stage</button>
+              <button type="button" id="sendBackBtn" class="px-3 py-2 rounded-lg bg-rose-500/90 hover:bg-rose-400 text-slate-950 font-semibold">Send Back</button>
+            </div>
+          </form>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const STAGES = ['Intake', 'Mapping', 'Approval', 'Published'];
+    const STAGE_COLORS = {
+      Intake: 'border-sky-500 text-sky-300',
+      Mapping: 'border-amber-500 text-amber-300',
+      Approval: 'border-violet-500 text-violet-300',
+      Published: 'border-emerald-500 text-emerald-300'
+    };
+
+    const records = [
+      {
+        id: 'RACI-301',
+        title: 'Global returns policy ownership',
+        workstream: 'ERP Rollout',
+        stage: 'Intake',
+        due: '2026-05-08',
+        risk: 3,
+        r: 'Nina Wolf',
+        a: 'Marco Hahn',
+        c: 'Legal Counsel, Finance Ops',
+        i: 'Program Steering Committee',
+        policyAck: false,
+        audit: ['2026-05-02 09:14 Item created by PMO Lead']
+      },
+      {
+        id: 'RACI-302',
+        title: 'Cycle count variance escalation model',
+        workstream: 'Warehouse Automation',
+        stage: 'Mapping',
+        due: '2026-05-06',
+        risk: 2,
+        r: 'Lea Becker',
+        a: 'Jonas Schrader',
+        c: 'Plant Manager, Quality Lead',
+        i: 'Regional Ops Council',
+        policyAck: true,
+        audit: ['2026-05-01 14:22 Intake approved', '2026-05-01 15:03 Moved to Mapping']
+      },
+      {
+        id: 'RACI-303',
+        title: 'Quote discount threshold governance',
+        workstream: 'CRM Migration',
+        stage: 'Approval',
+        due: '2026-05-09',
+        risk: 3,
+        r: 'Olga Keller',
+        a: 'Murat Demir',
+        c: 'Sales Ops Lead, RevOps Analyst',
+        i: 'Finance Control Board',
+        policyAck: true,
+        audit: ['2026-05-01 11:10 Mapping completed', '2026-05-01 13:40 Sent to Approval']
+      },
+      {
+        id: 'RACI-304',
+        title: 'SOD matrix for vendor master updates',
+        workstream: 'S4 Governance',
+        stage: 'Published',
+        due: '2026-05-04',
+        risk: 1,
+        r: 'Paula Richter',
+        a: 'Daniel Koch',
+        c: 'IT Security Architect, Internal Audit',
+        i: 'IT Security Office',
+        policyAck: true,
+        audit: ['2026-04-30 10:12 Approved by Compliance', '2026-04-30 12:30 Published to governance portal']
+      },
+      {
+        id: 'RACI-305',
+        title: 'Intercompany invoice dispute ownership',
+        workstream: 'ERP Rollout',
+        stage: 'Mapping',
+        due: '2026-05-11',
+        risk: 2,
+        r: 'Tobias Neumann',
+        a: 'Yasmin Ali',
+        c: 'AP Lead, Tax Manager',
+        i: 'Program Steering Committee',
+        policyAck: false,
+        audit: ['2026-05-02 07:48 Intake accepted', '2026-05-02 09:02 Moved to Mapping']
+      }
+    ];
+
+    const state = { selectedId: null };
+
+    const el = id => document.getElementById(id);
+    const board = el('board');
+
+    function riskLabel(level) {
+      return level === 3 ? 'High' : level === 2 ? 'Medium' : 'Low';
+    }
+
+    function canMoveByRole(from, to) {
+      const role = el('role').value;
+      if (from === to) return false;
+      const allowed = {
+        'PMO Lead': { Intake: ['Mapping'], Mapping: ['Approval'] },
+        'Functional Owner': { Mapping: ['Approval'], Approval: ['Mapping'] },
+        'Compliance Reviewer': { Approval: ['Published'], Published: ['Approval'] }
+      };
+      return (allowed[role]?.[from] || []).includes(to);
+    }
+
+    function filteredRecords() {
+      const query = el('search').value.trim().toLowerCase();
+      const workstream = el('workstream').value;
+      const sort = el('sort').value;
+
+      const rows = records
+        .filter(r => workstream === 'all' || r.workstream === workstream)
+        .filter(r => !query || `${r.id} ${r.title} ${r.r} ${r.a}`.toLowerCase().includes(query));
+
+      const sorters = {
+        'due-asc': (a, b) => a.due.localeCompare(b.due),
+        'due-desc': (a, b) => b.due.localeCompare(a.due),
+        'risk-desc': (a, b) => b.risk - a.risk,
+        'name-asc': (a, b) => a.title.localeCompare(b.title)
+      };
+
+      return rows.sort(sorters[sort]);
+    }
+
+    function addAudit(item, text) {
+      const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      item.audit.unshift(`${stamp} ${text}`);
+    }
+
+    function selectedItem() {
+      return records.find(r => r.id === state.selectedId);
+    }
+
+    function validateForm() {
+      const item = selectedItem();
+      if (!item) return false;
+
+      const rOwner = el('rOwner').value.trim();
+      const aOwner = el('aOwner').value.trim();
+      const cOwners = el('cOwners').value.trim();
+      const dueDate = el('dueDate').value;
+      const policyAck = el('policyAck').checked;
+
+      const msg = el('validationMsg');
+
+      if (rOwner.length < 3 || aOwner.length < 3) {
+        msg.textContent = 'Responsible and Accountable owners must each be at least 3 characters.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+
+      if (rOwner.toLowerCase() === aOwner.toLowerCase()) {
+        msg.textContent = 'Policy violation: Responsible and Accountable cannot be the same person.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+
+      if (cOwners.split(',').map(v => v.trim()).filter(Boolean).length < 2) {
+        msg.textContent = 'Add at least two consulted stakeholders.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+
+      if (!dueDate) {
+        msg.textContent = 'Due date is required.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+
+      if (!policyAck) {
+        msg.textContent = 'Policy acknowledgment is required before stage transitions.';
+        msg.className = 'text-xs text-rose-300';
+        return false;
+      }
+
+      item.r = rOwner;
+      item.a = aOwner;
+      item.c = cOwners;
+      item.i = el('iGroup').value;
+      item.due = dueDate;
+      item.policyAck = true;
+
+      msg.textContent = 'Validation passed.';
+      msg.className = 'text-xs text-emerald-300';
+      return true;
+    }
+
+    function moveItem(item, targetStage) {
+      if (!item) return;
+      if (!canMoveByRole(item.stage, targetStage)) {
+        el('validationMsg').textContent = `${el('role').value} cannot move ${item.stage} to ${targetStage}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+      if (!validateForm()) return;
+
+      item.stage = targetStage;
+      addAudit(item, `${el('role').value} moved stage to ${targetStage}`);
+      render();
+    }
+
+    function renderBoard() {
+      const rows = filteredRecords();
+      board.innerHTML = '';
+
+      STAGES.forEach(stage => {
+        const stageRows = rows.filter(r => r.stage === stage);
+        const col = document.createElement('section');
+        col.className = 'rounded-2xl border border-slate-800 bg-slate-900 p-3 min-h-[260px]';
+        col.ondragover = e => e.preventDefault();
+        col.ondrop = e => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          const item = records.find(r => r.id === id);
+          moveItem(item, stage);
+        };
+
+        col.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h2 class="font-semibold">${stage}</h2>
+            <span class="text-xs text-slate-400">${stageRows.length}</span>
+          </div>
+          <div class="space-y-2" id="col-${stage}"></div>
+        `;
+
+        const holder = col.querySelector(`#col-${stage}`);
+        stageRows.forEach(item => {
+          const card = document.createElement('button');
+          card.className = `w-full text-left rounded-xl border p-3 bg-slate-950 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 ${state.selectedId === item.id ? 'ring-2 ring-amber-400' : 'border-slate-800'}`;
+          card.draggable = true;
+          card.setAttribute('aria-label', `${item.id} ${item.title}`);
+          card.ondragstart = e => e.dataTransfer.setData('text/plain', item.id);
+          card.onclick = () => {
+            state.selectedId = item.id;
+            render();
+          };
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-medium">${item.title}</p>
+                <p class="text-xs text-slate-400 mt-1">${item.id} · ${item.workstream}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full border ${STAGE_COLORS[item.stage]}">${riskLabel(item.risk)}</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">R: ${item.r} · A: ${item.a}</p>
+            <p class="text-xs text-slate-400">Due ${item.due}</p>
+          `;
+
+          holder.appendChild(card);
+        });
+
+        board.appendChild(col);
+      });
+
+      el('stats').textContent = `${rows.length} of ${records.length} work items visible`;
+    }
+
+    function renderDetail() {
+      const item = selectedItem();
+      if (!item) {
+        el('empty').classList.remove('hidden');
+        el('detail').classList.add('hidden');
+        return;
+      }
+
+      el('empty').classList.add('hidden');
+      el('detail').classList.remove('hidden');
+
+      el('itemTitle').textContent = item.title;
+      el('itemMeta').textContent = `${item.id} · ${item.workstream} · ${riskLabel(item.risk)} risk`;
+      el('stageText').textContent = item.stage;
+      el('dueText').textContent = item.due;
+
+      el('rOwner').value = item.r;
+      el('aOwner').value = item.a;
+      el('cOwners').value = item.c;
+      el('iGroup').value = item.i;
+      el('dueDate').value = item.due;
+      el('policyAck').checked = item.policyAck;
+      el('validationMsg').textContent = '';
+
+      el('auditTrail').innerHTML = '';
+      item.audit.slice(0, 8).forEach(line => {
+        const li = document.createElement('li');
+        li.className = 'border border-slate-800 rounded-lg px-3 py-2 bg-slate-900';
+        li.textContent = line;
+        el('auditTrail').appendChild(li);
+      });
+    }
+
+    function render() {
+      renderBoard();
+      renderDetail();
+    }
+
+    function nextStage(current) {
+      const map = { Intake: 'Mapping', Mapping: 'Approval', Approval: 'Published' };
+      return map[current] || current;
+    }
+
+    function previousStage(current) {
+      const map = { Mapping: 'Intake', Approval: 'Mapping', Published: 'Approval' };
+      return map[current] || current;
+    }
+
+    el('saveBtn').onclick = () => {
+      const item = selectedItem();
+      if (!item) return;
+      if (validateForm()) {
+        addAudit(item, `${el('role').value} saved ownership fields`);
+        render();
+      }
+    };
+
+    el('advanceBtn').onclick = () => {
+      const item = selectedItem();
+      if (!item) return;
+      moveItem(item, nextStage(item.stage));
+    };
+
+    el('sendBackBtn').onclick = () => {
+      const item = selectedItem();
+      if (!item) return;
+      moveItem(item, previousStage(item.stage));
+    };
+
+    el('newItem').onclick = () => {
+      const title = prompt('Work item title');
+      if (!title) return;
+
+      const workstream = prompt('Workstream (ERP Rollout, Warehouse Automation, CRM Migration, S4 Governance)', 'ERP Rollout') || 'ERP Rollout';
+      const due = prompt('Due date (YYYY-MM-DD)', '2026-05-12') || '2026-05-12';
+
+      const nextNum = records.reduce((max, r) => Math.max(max, Number(r.id.split('-')[1])), 300) + 1;
+      const item = {
+        id: `RACI-${nextNum}`,
+        title: title.trim(),
+        workstream,
+        stage: 'Intake',
+        due,
+        risk: 2,
+        r: 'Unassigned',
+        a: 'Unassigned',
+        c: '',
+        i: 'Program Steering Committee',
+        policyAck: false,
+        audit: [`${new Date().toISOString().slice(0, 16).replace('T', ' ')} Item created by ${el('role').value}`]
+      };
+
+      records.unshift(item);
+      state.selectedId = item.id;
+      render();
+    };
+
+    el('exportCsv').onclick = () => {
+      const rows = filteredRecords();
+      const csv = [
+        ['id', 'title', 'workstream', 'stage', 'risk', 'due', 'responsible', 'accountable', 'consulted', 'informed'],
+        ...rows.map(r => [r.id, r.title, r.workstream, r.stage, riskLabel(r.risk), r.due, r.r, r.a, r.c, r.i])
+      ].map(line => line.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'raci-ownership-dragboard.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    ['role', 'search', 'workstream', 'sort'].forEach(id => el(id).addEventListener('input', render));
+
+    state.selectedId = records[0].id;
+    render();
+  </script>
+</body>
+</html>
