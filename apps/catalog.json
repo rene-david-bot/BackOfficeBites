@@ -2341,5 +2341,25 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-04",
+    "day": 104,
+    "slug": "2026-05-04-skills-matrix-gap-closure-wizard",
+    "name": "Skills Matrix Gap Closure Wizard",
+    "description": "HR wizard for identifying skill gaps, enforcing policy checks, and routing closure plans through approvals with audit trail and CSV export.",
+    "category": "HR",
+    "pattern": "Wizard",
+    "tags": [
+      "skills matrix",
+      "upskilling",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "csv export",
+      "wizard"
+    ],
+    "thumb": ""
   }
 ]

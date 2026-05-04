@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Skills Matrix Gap Closure Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-3">Skills Matrix Gap Closure Wizard</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">HR and team leads can identify critical skill gaps, design closure plans, enforce policy constraints, and route requests through approval stages with a full audit trail.</p>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <label class="flex items-center gap-2">
+          <span class="text-slate-300">View as</span>
+          <select id="roleSelect" class="bg-slate-950 border border-slate-700 rounded px-2 py-1">
+            <option value="manager">Team Manager</option>
+            <option value="hr">HR Business Partner</option>
+          </select>
+        </label>
+        <div class="text-slate-400">Workflow: Draft → Manager Review → HR Calibration → Approved</div>
+      </div>
+      <div id="stepper" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+    </section>
+
+    <section id="panel-step-1" class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5">
+      <h2 class="text-xl font-semibold">1) Pick employee and focus area</h2>
+      <div class="mt-4 grid md:grid-cols-4 gap-3">
+        <div>
+          <label for="searchInput" class="text-sm text-slate-300">Search</label>
+          <input id="searchInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="name, role, skill" />
+        </div>
+        <div>
+          <label for="deptFilter" class="text-sm text-slate-300">Department</label>
+          <select id="deptFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>Operations</option>
+            <option>Customer Success</option>
+            <option>Finance</option>
+            <option>IT</option>
+          </select>
+        </div>
+        <div>
+          <label for="priorityFilter" class="text-sm text-slate-300">Priority</label>
+          <select id="priorityFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-sm text-slate-300">Sort</label>
+          <select id="sortBy" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="gap-desc">Largest gap first</option>
+            <option value="gap-asc">Smallest gap first</option>
+            <option value="name-asc">Name A-Z</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 overflow-auto border border-slate-800 rounded-lg">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="text-left p-2">Employee</th>
+              <th class="text-left p-2">Department</th>
+              <th class="text-left p-2">Role</th>
+              <th class="text-left p-2">Critical Skill</th>
+              <th class="text-left p-2">Gap</th>
+              <th class="text-left p-2">Priority</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTable"></tbody>
+        </table>
+      </div>
+      <p id="employeeHint" class="mt-3 text-sm text-amber-300"></p>
+      <div class="mt-4 flex justify-end">
+        <button id="toStep2" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2">Continue</button>
+      </div>
+    </section>
+
+    <section id="panel-step-2" class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5 hidden">
+      <h2 class="text-xl font-semibold">2) Define closure scope</h2>
+      <p class="text-slate-300 mt-2" id="selectedEmployeeInfo"></p>
+      <div id="skillCards" class="mt-4 grid md:grid-cols-2 gap-3"></div>
+      <div class="mt-4 flex items-center gap-2">
+        <input id="policyAck" type="checkbox" class="h-4 w-4" />
+        <label for="policyAck" class="text-sm text-slate-300">I confirm policy HR-12 (minimum 2-level gap and business impact note) is met.</label>
+      </div>
+      <p id="scopeError" class="mt-2 text-sm text-rose-300"></p>
+      <div class="mt-4 flex justify-between">
+        <button data-back="1" class="border border-slate-700 rounded px-4 py-2 hover:bg-slate-800">Back</button>
+        <button id="toStep3" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2">Continue</button>
+      </div>
+    </section>
+
+    <section id="panel-step-3" class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5 hidden">
+      <h2 class="text-xl font-semibold">3) Plan and validate</h2>
+      <form id="planForm" class="mt-4 grid md:grid-cols-2 gap-4">
+        <div>
+          <label for="deliveryMode" class="text-sm text-slate-300">Delivery mode</label>
+          <select id="deliveryMode" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
+            <option value="">Select…</option>
+            <option>Coach-led bootcamp</option>
+            <option>Peer shadowing</option>
+            <option>Certification sprint</option>
+            <option>Micro-learning pathway</option>
+          </select>
+        </div>
+        <div>
+          <label for="startDate" class="text-sm text-slate-300">Planned start date</label>
+          <input id="startDate" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+        </div>
+        <div>
+          <label for="budgetInput" class="text-sm text-slate-300">Budget (EUR)</label>
+          <input id="budgetInput" type="number" min="500" step="100" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+        </div>
+        <div>
+          <label for="impactNote" class="text-sm text-slate-300">Business impact note</label>
+          <textarea id="impactNote" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="What risk is reduced if this gap closes?" required></textarea>
+        </div>
+      </form>
+      <p id="policyCheck" class="mt-3 text-sm"></p>
+      <div class="mt-4 flex justify-between">
+        <button data-back="2" class="border border-slate-700 rounded px-4 py-2 hover:bg-slate-800">Back</button>
+        <button id="toStep4" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2">Continue</button>
+      </div>
+    </section>
+
+    <section id="panel-step-4" class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-5 hidden">
+      <h2 class="text-xl font-semibold">4) Route approvals</h2>
+      <div class="grid lg:grid-cols-3 gap-4 mt-4">
+        <div class="lg:col-span-2">
+          <div id="summary" class="rounded-lg border border-slate-800 bg-slate-950 p-4"></div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="advanceState" class="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold rounded px-4 py-2">Advance stage</button>
+            <button id="rejectState" class="bg-rose-500 hover:bg-rose-400 text-slate-900 font-semibold rounded px-4 py-2">Send back for rework</button>
+            <button id="exportCsv" class="border border-slate-700 rounded px-4 py-2 hover:bg-slate-800">Export closure CSV</button>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-semibold">Audit trail</h3>
+          <ul id="auditTrail" class="mt-2 text-sm space-y-2"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const employees = [
+  { id: 'E-104', name: 'Leonie Kruger', dept: 'Operations', role: 'Dispatch Coordinator', skill: 'Slot optimization', current: 2, target: 4, priority: 'High' },
+  { id: 'E-211', name: 'Marco Feld', dept: 'Customer Success', role: 'Enterprise Advisor', skill: 'Renewal negotiation', current: 3, target: 5, priority: 'Medium' },
+  { id: 'E-328', name: 'Nina Brandt', dept: 'Finance', role: 'AP Specialist', skill: '3-way matching exceptions', current: 1, target: 4, priority: 'High' },
+  { id: 'E-410', name: 'Tim Adler', dept: 'IT', role: 'Service Desk Analyst', skill: 'Incident triage depth', current: 2, target: 3, priority: 'Low' },
+  { id: 'E-589', name: 'Sofia Keller', dept: 'Operations', role: 'Warehouse Lead', skill: 'Cycle count variance RCA', current: 2, target: 5, priority: 'High' }
+];
+
+const stateMachine = ['Draft', 'Manager Review', 'HR Calibration', 'Approved'];
+const appState = {
+  role: 'manager',
+  step: 1,
+  selectedEmployee: null,
+  selectedGaps: [],
+  plan: null,
+  stage: 0,
+  audit: []
+};
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const deptFilter = document.getElementById('deptFilter');
+const priorityFilter = document.getElementById('priorityFilter');
+const sortBy = document.getElementById('sortBy');
+const employeeTable = document.getElementById('employeeTable');
+const employeeHint = document.getElementById('employeeHint');
+const stepper = document.getElementById('stepper');
+const selectedEmployeeInfo = document.getElementById('selectedEmployeeInfo');
+const skillCards = document.getElementById('skillCards');
+const policyAck = document.getElementById('policyAck');
+const scopeError = document.getElementById('scopeError');
+const planForm = document.getElementById('planForm');
+const policyCheck = document.getElementById('policyCheck');
+const summary = document.getElementById('summary');
+const auditTrail = document.getElementById('auditTrail');
+
+function nowStamp() {
+  return new Date().toLocaleString('en-GB', { hour12: false });
+}
+
+function addAudit(action) {
+  const actor = appState.role === 'hr' ? 'HR Partner' : 'Team Manager';
+  appState.audit.unshift({ ts: nowStamp(), action, actor });
+  renderAudit();
+}
+
+function renderAudit() {
+  auditTrail.innerHTML = '';
+  if (!appState.audit.length) {
+    auditTrail.innerHTML = '<li class="text-slate-400">No actions yet.</li>';
+    return;
+  }
+  for (const item of appState.audit.slice(0, 8)) {
+    const li = document.createElement('li');
+    li.className = 'rounded border border-slate-800 bg-slate-950 p-2';
+    li.innerHTML = `<div class="text-slate-200">${item.action}</div><div class="text-slate-400 text-xs">${item.ts} · ${item.actor}</div>`;
+    auditTrail.appendChild(li);
+  }
+}
+
+function renderStepper() {
+  stepper.innerHTML = '';
+  ['Select', 'Scope', 'Plan', 'Approve'].forEach((label, i) => {
+    const active = appState.step === i + 1;
+    const done = appState.step > i + 1;
+    const div = document.createElement('div');
+    div.className = `rounded-lg px-3 py-2 text-sm border ${active ? 'border-amber-400 bg-amber-500/10 text-amber-200' : done ? 'border-emerald-500 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 text-slate-400'}`;
+    div.textContent = `${i + 1}. ${label}`;
+    stepper.appendChild(div);
+  });
+}
+
+function showStep(step) {
+  appState.step = step;
+  [1,2,3,4].forEach(n => {
+    document.getElementById(`panel-step-${n}`).classList.toggle('hidden', n !== step);
+  });
+  renderStepper();
+}
+
+function getFilteredEmployees() {
+  const q = searchInput.value.trim().toLowerCase();
+  const dept = deptFilter.value;
+  const prio = priorityFilter.value;
+
+  let list = employees.filter(e => {
+    if (dept !== 'all' && e.dept !== dept) return false;
+    if (prio !== 'all' && e.priority !== prio) return false;
+    const hay = `${e.name} ${e.role} ${e.skill}`.toLowerCase();
+    if (q && !hay.includes(q)) return false;
+    return true;
+  });
+
+  const toGap = (e) => e.target - e.current;
+  if (sortBy.value === 'gap-desc') list.sort((a,b) => toGap(b) - toGap(a));
+  if (sortBy.value === 'gap-asc') list.sort((a,b) => toGap(a) - toGap(b));
+  if (sortBy.value === 'name-asc') list.sort((a,b) => a.name.localeCompare(b.name));
+
+  return list;
+}
+
+function renderEmployeeTable() {
+  const list = getFilteredEmployees();
+  employeeTable.innerHTML = '';
+  if (!list.length) {
+    employeeTable.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-400">No matching employees.</td></tr>';
+    return;
+  }
+
+  for (const e of list) {
+    const gap = e.target - e.current;
+    const selected = appState.selectedEmployee?.id === e.id;
+    const tr = document.createElement('tr');
+    tr.className = `border-t border-slate-800 cursor-pointer ${selected ? 'bg-amber-500/10' : 'hover:bg-slate-800/50'}`;
+    tr.tabIndex = 0;
+    tr.setAttribute('role', 'button');
+    tr.innerHTML = `
+      <td class="p-2">${e.name}</td>
+      <td class="p-2">${e.dept}</td>
+      <td class="p-2">${e.role}</td>
+      <td class="p-2">${e.skill}</td>
+      <td class="p-2">${gap}</td>
+      <td class="p-2">${e.priority}</td>
+    `;
+    const select = () => {
+      appState.selectedEmployee = e;
+      appState.selectedGaps = [
+        { skill: e.skill, current: e.current, target: e.target },
+        { skill: 'Data-informed decision making', current: Math.max(1, e.current - 1), target: Math.min(5, e.target) }
+      ];
+      employeeHint.textContent = `${e.name} selected. Critical gap: ${gap} levels.`;
+      renderEmployeeTable();
+    };
+    tr.addEventListener('click', select);
+    tr.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        select();
+      }
+    });
+    employeeTable.appendChild(tr);
+  }
+}
+
+function renderSkillCards() {
+  if (!appState.selectedEmployee) return;
+  selectedEmployeeInfo.textContent = `${appState.selectedEmployee.name} · ${appState.selectedEmployee.role} · ${appState.selectedEmployee.dept}`;
+  skillCards.innerHTML = '';
+
+  appState.selectedGaps.forEach((g, idx) => {
+    const gap = g.target - g.current;
+    const pct = Math.max(8, gap * 20);
+    const card = document.createElement('div');
+    card.className = 'rounded-lg border border-slate-800 bg-slate-950 p-3';
+    card.innerHTML = `
+      <div class="font-medium">${g.skill}</div>
+      <div class="text-slate-300 text-sm mt-1">Current: ${g.current} / Target: ${g.target}</div>
+      <div class="mt-2 h-2 bg-slate-800 rounded"><div class="h-2 bg-amber-400 rounded" style="width:${pct}%"></div></div>
+      <label class="mt-3 flex items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" data-gap="${idx}" checked class="h-4 w-4 gap-include" /> Include in plan
+      </label>
+    `;
+    skillCards.appendChild(card);
+  });
+
+  document.querySelectorAll('.gap-include').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const i = Number(e.target.dataset.gap);
+      if (!e.target.checked) {
+        appState.selectedGaps[i].disabled = true;
+      } else {
+        delete appState.selectedGaps[i].disabled;
+      }
+    });
+  });
+}
+
+function validateScope() {
+  scopeError.textContent = '';
+  const enabled = appState.selectedGaps.filter(g => !g.disabled);
+  const hasBigGap = enabled.some(g => (g.target - g.current) >= 2);
+  if (!enabled.length) {
+    scopeError.textContent = 'Select at least one skill gap.';
+    return false;
+  }
+  if (!hasBigGap) {
+    scopeError.textContent = 'At least one selected gap must be 2+ levels per HR-12 policy.';
+    return false;
+  }
+  if (!policyAck.checked) {
+    scopeError.textContent = 'Policy acknowledgment is required before continuing.';
+    return false;
+  }
+  return true;
+}
+
+function validatePlan(showMessage = true) {
+  policyCheck.textContent = '';
+  if (!planForm.reportValidity()) return false;
+
+  const start = new Date(document.getElementById('startDate').value + 'T00:00:00');
+  const minStart = new Date();
+  minStart.setDate(minStart.getDate() + 7);
+  minStart.setHours(0,0,0,0);
+
+  const budget = Number(document.getElementById('budgetInput').value || 0);
+  const note = document.getElementById('impactNote').value.trim();
+
+  if (start < minStart) {
+    if (showMessage) {
+      policyCheck.textContent = '❌ Start date must be at least 7 days ahead for staffing readiness.';
+      policyCheck.className = 'mt-3 text-sm text-rose-300';
+    }
+    return false;
+  }
+
+  if (budget > 4000 && appState.role !== 'hr') {
+    if (showMessage) {
+      policyCheck.textContent = '❌ Budget above €4,000 requires HR view for override.';
+      policyCheck.className = 'mt-3 text-sm text-rose-300';
+    }
+    return false;
+  }
+
+  if (note.length < 30) {
+    if (showMessage) {
+      policyCheck.textContent = '❌ Business impact note must be at least 30 characters.';
+      policyCheck.className = 'mt-3 text-sm text-rose-300';
+    }
+    return false;
+  }
+
+  if (showMessage) {
+    policyCheck.textContent = '✅ Policy checks passed: staffing lead-time, budget threshold, and impact quality.';
+    policyCheck.className = 'mt-3 text-sm text-emerald-300';
+  }
+
+  appState.plan = {
+    mode: document.getElementById('deliveryMode').value,
+    startDate: document.getElementById('startDate').value,
+    budget,
+    note,
+    gaps: appState.selectedGaps.filter(g => !g.disabled)
+  };
+  return true;
+}
+
+function renderSummary() {
+  if (!appState.plan || !appState.selectedEmployee) return;
+  const s = appState.selectedEmployee;
+  const stage = stateMachine[appState.stage];
+  const gaps = appState.plan.gaps.map(g => `<li>${g.skill} (${g.current} → ${g.target})</li>`).join('');
+  summary.innerHTML = `
+    <div class="text-sm text-slate-300">Current stage</div>
+    <div class="text-lg font-semibold mt-1">${stage}</div>
+    <div class="mt-4 text-sm text-slate-300">Employee</div>
+    <div>${s.name} · ${s.role} · ${s.dept}</div>
+    <div class="mt-3 text-sm text-slate-300">Plan</div>
+    <div>${appState.plan.mode}, start ${appState.plan.startDate}, budget €${appState.plan.budget.toLocaleString('de-DE')}</div>
+    <div class="mt-3 text-sm text-slate-300">Selected gaps</div>
+    <ul class="list-disc pl-5 mt-1 space-y-1">${gaps}</ul>
+    <div class="mt-3 text-sm text-slate-300">Business impact</div>
+    <p class="mt-1">${appState.plan.note}</p>
+  `;
+}
+
+function exportCsv() {
+  if (!appState.plan || !appState.selectedEmployee) return;
+  const s = appState.selectedEmployee;
+  const rows = [
+    ['employee_id','employee_name','department','skill','current_level','target_level','delivery_mode','start_date','budget_eur','stage'],
+    ...appState.plan.gaps.map(g => [
+      s.id,
+      s.name,
+      s.dept,
+      g.skill,
+      g.current,
+      g.target,
+      appState.plan.mode,
+      appState.plan.startDate,
+      appState.plan.budget,
+      stateMachine[appState.stage]
+    ])
+  ];
+  const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `skills-gap-closure-${s.id}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  addAudit('Exported closure CSV');
+}
+
+roleSelect.addEventListener('change', (e) => {
+  appState.role = e.target.value;
+  addAudit(`Switched role view to ${appState.role === 'hr' ? 'HR Partner' : 'Team Manager'}`);
+});
+
+[searchInput, deptFilter, priorityFilter, sortBy].forEach(el => el.addEventListener('input', renderEmployeeTable));
+
+Array.from(document.querySelectorAll('[data-back]')).forEach(btn => {
+  btn.addEventListener('click', () => showStep(Number(btn.dataset.back)));
+});
+
+document.getElementById('toStep2').addEventListener('click', () => {
+  if (!appState.selectedEmployee) {
+    employeeHint.textContent = 'Pick an employee before continuing.';
+    return;
+  }
+  renderSkillCards();
+  addAudit(`Selected ${appState.selectedEmployee.name} for gap closure intake`);
+  showStep(2);
+});
+
+document.getElementById('toStep3').addEventListener('click', () => {
+  if (!validateScope()) return;
+  addAudit('Validated scope against HR-12 policy');
+  showStep(3);
+});
+
+document.getElementById('toStep4').addEventListener('click', () => {
+  if (!validatePlan(true)) return;
+  appState.stage = 1;
+  addAudit('Submitted package to Manager Review');
+  renderSummary();
+  showStep(4);
+});
+
+document.getElementById('advanceState').addEventListener('click', () => {
+  if (appState.stage < stateMachine.length - 1) {
+    appState.stage += 1;
+    addAudit(`Advanced workflow to ${stateMachine[appState.stage]}`);
+    renderSummary();
+  } else {
+    addAudit('Attempted advance, already at final approved state');
+  }
+});
+
+document.getElementById('rejectState').addEventListener('click', () => {
+  appState.stage = 0;
+  addAudit('Sent package back to Draft for rework');
+  renderSummary();
+});
+
+document.getElementById('exportCsv').addEventListener('click', exportCsv);
+
+planForm.addEventListener('input', () => {
+  if (appState.step === 3) validatePlan(false);
+});
+
+renderStepper();
+renderEmployeeTable();
+renderAudit();
+addAudit('Wizard initialized');
+</script>
+</body>
+</html>

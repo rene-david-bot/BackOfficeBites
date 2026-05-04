@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**RACI Builder Ownership Dragboard** — Planning drag-and-drop workspace for RACI governance with role-gated approvals, policy validation, audit trail actions, and CSV export.
+**Skills Matrix Gap Closure Wizard** — HR wizard for selecting critical capability gaps, validating policy constraints, and routing upskilling plans through staged approvals with audit trail + CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
