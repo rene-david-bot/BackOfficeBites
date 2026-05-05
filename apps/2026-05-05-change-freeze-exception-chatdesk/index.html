@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Change Freeze Exception Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-3">Change Freeze Exception Chatdesk</h1>
+    <p class="text-slate-300 mt-2 max-w-4xl">IT Ops chat-first workspace for urgent production changes during freeze windows, with policy checks, role-based approvals, searchable queue views, and exportable audit-ready decisions.</p>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="flex flex-wrap gap-3 items-end text-sm">
+        <label class="flex items-center gap-2">
+          <span class="text-slate-300">View as</span>
+          <select id="roleSelect" class="bg-slate-950 border border-slate-700 rounded px-2 py-1">
+            <option value="requestor">Requestor</option>
+            <option value="ops">Ops Lead</option>
+            <option value="security">Security</option>
+            <option value="cab">CAB Chair</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-slate-300">Search</span>
+          <input id="searchInput" class="mt-1 bg-slate-950 border border-slate-700 rounded px-3 py-1.5" placeholder="ticket, service, owner" />
+        </label>
+        <label>
+          <span class="text-slate-300">Status</span>
+          <select id="statusFilter" class="mt-1 bg-slate-950 border border-slate-700 rounded px-3 py-1.5">
+            <option value="all">All</option>
+            <option>Draft</option>
+            <option>Risk Review</option>
+            <option>CAB Review</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-slate-300">Sort</span>
+          <select id="sortBy" class="mt-1 bg-slate-950 border border-slate-700 rounded px-3 py-1.5">
+            <option value="risk-desc">Risk high → low</option>
+            <option value="planned-asc">Earliest change window</option>
+            <option value="id-desc">Newest ticket first</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-12 gap-4">
+      <div class="lg:col-span-4 rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <h2 class="text-lg font-semibold">Exception queue</h2>
+        <p class="text-xs text-slate-400 mt-1">Keyboard friendly. Use Enter on a ticket to open details.</p>
+        <div id="ticketList" class="mt-3 space-y-2"></div>
+      </div>
+
+      <div class="lg:col-span-8 rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div class="flex flex-wrap justify-between gap-3">
+          <div>
+            <h2 id="ticketTitle" class="text-xl font-semibold">Select a ticket</h2>
+            <p id="ticketMeta" class="text-slate-300 text-sm mt-1"></p>
+          </div>
+          <div id="stateBadge" class="rounded-full px-3 py-1 text-xs border border-slate-700 text-slate-300 h-fit">No ticket selected</div>
+        </div>
+
+        <div class="mt-4 grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Policy package</h3>
+            <label for="rollbackPlan" class="text-sm text-slate-300 mt-3 block">Rollback plan (required)</label>
+            <textarea id="rollbackPlan" rows="3" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" placeholder="Describe exact rollback steps..."></textarea>
+
+            <label for="testEvidence" class="text-sm text-slate-300 mt-3 block">Pre-prod evidence</label>
+            <input id="testEvidence" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" placeholder="Change test run ID / link" />
+
+            <div class="mt-3 space-y-2 text-sm">
+              <label class="flex items-center gap-2"><input id="opsAck" type="checkbox" class="h-4 w-4" /> Ops on-call acknowledged</label>
+              <label class="flex items-center gap-2"><input id="securityAck" type="checkbox" class="h-4 w-4" /> Security reviewer acknowledged</label>
+            </div>
+
+            <p id="policyResult" class="mt-3 text-sm text-slate-300"></p>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Decision actions</h3>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="routeRisk" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-medium">Route to Risk Review</button>
+              <button id="routeCab" class="px-3 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">Route to CAB Review</button>
+              <button id="approveBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Approve Exception</button>
+              <button id="rejectBtn" class="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500 text-sm font-medium">Reject</button>
+              <button id="exportBtn" class="px-3 py-2 rounded border border-slate-700 hover:bg-slate-800 text-sm">Export CSV</button>
+            </div>
+            <p class="text-xs text-slate-400 mt-3">Workflow: Draft → Risk Review → CAB Review → Approved/Rejected</p>
+
+            <h4 class="font-semibold mt-4">Audit trail</h4>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
+          <h3 class="font-semibold">Thread</h3>
+          <div id="thread" class="mt-3 space-y-2 max-h-64 overflow-auto pr-1"></div>
+          <form id="chatForm" class="mt-3 flex flex-col sm:flex-row gap-2">
+            <label for="chatInput" class="sr-only">Add message</label>
+            <input id="chatInput" class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2" placeholder="Add update or approval note..." />
+            <button class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2" type="submit">Post</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const tickets = [
+  {
+    id: 'CR-8421',
+    service: 'Checkout API',
+    owner: 'Leonie Kruger',
+    risk: 8,
+    plannedAt: '2026-05-06 21:30',
+    status: 'Draft',
+    impact: 'Fix duplicate payment capture in DE.',
+    rollbackPlan: '',
+    testEvidence: '',
+    approvals: { ops: false, security: false },
+    messages: [
+      { by: 'Leonie', role: 'Requestor', text: 'Need hotfix before promo window.', ts: '08:04' }
+    ],
+    audit: []
+  },
+  {
+    id: 'CR-8420',
+    service: 'Warehouse Scanner Gateway',
+    owner: 'Nina Brandt',
+    risk: 5,
+    plannedAt: '2026-05-05 23:00',
+    status: 'Risk Review',
+    impact: 'Prevent scanner reconnect storm in night shift.',
+    rollbackPlan: 'Revert container image to 1.14.2 and restore queue timeout to 40ms.',
+    testEvidence: 'LAB-5531',
+    approvals: { ops: true, security: false },
+    messages: [
+      { by: 'Nina', role: 'Requestor', text: 'Canary in staging was stable for 45m.', ts: '07:52' },
+      { by: 'Marcel', role: 'Ops Lead', text: 'Need security ack because scanner tunnels were touched.', ts: '07:58' }
+    ],
+    audit: []
+  },
+  {
+    id: 'CR-8419',
+    service: 'Identity Sync Worker',
+    owner: 'Tim Adler',
+    risk: 3,
+    plannedAt: '2026-05-07 20:00',
+    status: 'CAB Review',
+    impact: 'Resolve delayed joiner provisioning for new hires.',
+    rollbackPlan: 'Disable feature flag identity_sync_delta and trigger full sync batch job.',
+    testEvidence: 'IT-1128',
+    approvals: { ops: true, security: true },
+    messages: [
+      { by: 'Tim', role: 'Requestor', text: 'Rollback script tested in pre-prod.', ts: '07:44' }
+    ],
+    audit: []
+  }
+];
+
+const stateOrder = ['Draft', 'Risk Review', 'CAB Review', 'Approved', 'Rejected'];
+const roleLabel = {
+  requestor: 'Requestor',
+  ops: 'Ops Lead',
+  security: 'Security',
+  cab: 'CAB Chair'
+};
+
+const app = {
+  role: 'requestor',
+  selectedId: tickets[0].id
+};
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const sortBy = document.getElementById('sortBy');
+const ticketList = document.getElementById('ticketList');
+const ticketTitle = document.getElementById('ticketTitle');
+const ticketMeta = document.getElementById('ticketMeta');
+const stateBadge = document.getElementById('stateBadge');
+const rollbackPlan = document.getElementById('rollbackPlan');
+const testEvidence = document.getElementById('testEvidence');
+const opsAck = document.getElementById('opsAck');
+const securityAck = document.getElementById('securityAck');
+const policyResult = document.getElementById('policyResult');
+const thread = document.getElementById('thread');
+const auditTrail = document.getElementById('auditTrail');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+
+function stamp() {
+  return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function selectedTicket() {
+  return tickets.find(t => t.id === app.selectedId);
+}
+
+function addAudit(ticket, action) {
+  ticket.audit.unshift({ ts: new Date().toLocaleString('en-GB', { hour12: false }), actor: roleLabel[app.role], action });
+  renderAudit(ticket);
+}
+
+function badgeClass(status) {
+  if (status === 'Approved') return 'border-emerald-500/50 text-emerald-200 bg-emerald-500/10';
+  if (status === 'Rejected') return 'border-rose-500/50 text-rose-200 bg-rose-500/10';
+  if (status === 'CAB Review') return 'border-violet-500/50 text-violet-200 bg-violet-500/10';
+  if (status === 'Risk Review') return 'border-blue-500/50 text-blue-200 bg-blue-500/10';
+  return 'border-slate-600 text-slate-200 bg-slate-800';
+}
+
+function filterAndSort() {
+  const q = searchInput.value.trim().toLowerCase();
+  const status = statusFilter.value;
+  let list = tickets.filter(t => {
+    if (status !== 'all' && t.status !== status) return false;
+    const hay = `${t.id} ${t.service} ${t.owner}`.toLowerCase();
+    return !q || hay.includes(q);
+  });
+
+  if (sortBy.value === 'risk-desc') list.sort((a,b) => b.risk - a.risk);
+  if (sortBy.value === 'planned-asc') list.sort((a,b) => a.plannedAt.localeCompare(b.plannedAt));
+  if (sortBy.value === 'id-desc') list.sort((a,b) => b.id.localeCompare(a.id));
+  return list;
+}
+
+function renderList() {
+  const items = filterAndSort();
+  ticketList.innerHTML = '';
+  if (!items.length) {
+    ticketList.innerHTML = '<div class="text-sm text-slate-400 p-2">No matching tickets.</div>';
+    return;
+  }
+
+  for (const t of items) {
+    const btn = document.createElement('button');
+    const active = t.id === app.selectedId;
+    btn.className = `w-full text-left rounded-lg border p-3 ${active ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800 hover:bg-slate-800/50'}`;
+    btn.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-medium">${t.id}</div>
+        <span class="text-xs rounded-full px-2 py-0.5 border ${badgeClass(t.status)}">${t.status}</span>
+      </div>
+      <div class="text-sm text-slate-300 mt-1">${t.service}</div>
+      <div class="text-xs text-slate-400 mt-1">Owner: ${t.owner} · Risk ${t.risk}/10 · ${t.plannedAt}</div>
+    `;
+    btn.addEventListener('click', () => {
+      app.selectedId = t.id;
+      renderAll();
+    });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        app.selectedId = t.id;
+        renderAll();
+      }
+    });
+    ticketList.appendChild(btn);
+  }
+}
+
+function validatePolicy(ticket, show = true) {
+  const failures = [];
+  const rollback = rollbackPlan.value.trim();
+  const evidence = testEvidence.value.trim();
+
+  if (rollback.length < 35) failures.push('Rollback plan needs at least 35 characters.');
+  if (!evidence) failures.push('Pre-prod evidence is required.');
+  if (!opsAck.checked) failures.push('Ops acknowledgment is mandatory.');
+  if (ticket.risk >= 6 && !securityAck.checked) failures.push('Security acknowledgment is required for risk >= 6.');
+  if (ticket.status !== 'CAB Review') failures.push('Ticket must be in CAB Review before approval.');
+  if (app.role !== 'cab') failures.push('Only CAB Chair can approve freeze exceptions.');
+
+  if (show) {
+    if (failures.length) {
+      policyResult.className = 'mt-3 text-sm text-rose-300';
+      policyResult.innerHTML = `❌ ${failures.join(' ')}`;
+    } else {
+      policyResult.className = 'mt-3 text-sm text-emerald-300';
+      policyResult.textContent = '✅ Policy checks passed. Ready for approval.';
+    }
+  }
+
+  return { ok: failures.length === 0, failures, rollback, evidence };
+}
+
+function renderThread(ticket) {
+  thread.innerHTML = '';
+  if (!ticket.messages.length) {
+    thread.innerHTML = '<p class="text-sm text-slate-400">No messages yet.</p>';
+    return;
+  }
+  ticket.messages.forEach(msg => {
+    const row = document.createElement('div');
+    row.className = 'rounded border border-slate-800 bg-slate-900 p-2';
+    row.innerHTML = `<div class="text-xs text-slate-400">${msg.ts} · ${msg.by} (${msg.role})</div><div class="text-sm mt-1">${msg.text}</div>`;
+    thread.appendChild(row);
+  });
+}
+
+function renderAudit(ticket) {
+  auditTrail.innerHTML = '';
+  const all = [...ticket.audit];
+  if (!all.length) {
+    auditTrail.innerHTML = '<li class="text-slate-400 text-sm">No audit events yet.</li>';
+    return;
+  }
+  all.slice(0, 7).forEach(e => {
+    const li = document.createElement('li');
+    li.className = 'rounded border border-slate-800 bg-slate-900 p-2';
+    li.innerHTML = `<div>${e.action}</div><div class="text-xs text-slate-400 mt-1">${e.ts} · ${e.actor}</div>`;
+    auditTrail.appendChild(li);
+  });
+}
+
+function renderDetail() {
+  const t = selectedTicket();
+  if (!t) return;
+  ticketTitle.textContent = `${t.id} · ${t.service}`;
+  ticketMeta.textContent = `${t.owner} · Risk ${t.risk}/10 · Planned window ${t.plannedAt} · Impact: ${t.impact}`;
+  stateBadge.className = `rounded-full px-3 py-1 text-xs border h-fit ${badgeClass(t.status)}`;
+  stateBadge.textContent = t.status;
+
+  rollbackPlan.value = t.rollbackPlan || '';
+  testEvidence.value = t.testEvidence || '';
+  opsAck.checked = !!t.approvals.ops;
+  securityAck.checked = !!t.approvals.security;
+
+  renderThread(t);
+  renderAudit(t);
+  validatePolicy(t, true);
+}
+
+function transition(ticket, next) {
+  if (!stateOrder.includes(next)) return;
+  ticket.status = next;
+  addAudit(ticket, `Moved to ${next}`);
+  renderAll();
+}
+
+function exportCsv(ticket) {
+  const rows = [
+    ['ticket_id','service','owner','risk','status','planned_window','ops_ack','security_ack','test_evidence','rollback_plan'],
+    [ticket.id, ticket.service, ticket.owner, ticket.risk, ticket.status, ticket.plannedAt, ticket.approvals.ops, ticket.approvals.security, ticket.testEvidence, ticket.rollbackPlan]
+  ];
+  const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${ticket.id.toLowerCase()}-freeze-exception.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  addAudit(ticket, 'Exported exception package CSV');
+}
+
+function renderAll() {
+  renderList();
+  renderDetail();
+}
+
+[searchInput, statusFilter, sortBy].forEach(el => el.addEventListener('input', renderList));
+roleSelect.addEventListener('change', () => {
+  app.role = roleSelect.value;
+  const t = selectedTicket();
+  if (t) addAudit(t, `Switched role to ${roleLabel[app.role]}`);
+  renderAll();
+});
+
+[rollbackPlan, testEvidence, opsAck, securityAck].forEach(el => {
+  el.addEventListener('input', () => {
+    const t = selectedTicket();
+    if (!t) return;
+    t.rollbackPlan = rollbackPlan.value;
+    t.testEvidence = testEvidence.value;
+    t.approvals.ops = opsAck.checked;
+    t.approvals.security = securityAck.checked;
+    validatePolicy(t, true);
+  });
+  el.addEventListener('change', () => {
+    const t = selectedTicket();
+    if (!t) return;
+    t.rollbackPlan = rollbackPlan.value;
+    t.testEvidence = testEvidence.value;
+    t.approvals.ops = opsAck.checked;
+    t.approvals.security = securityAck.checked;
+    validatePolicy(t, true);
+  });
+});
+
+document.getElementById('routeRisk').addEventListener('click', () => {
+  const t = selectedTicket();
+  if (!t) return;
+  if (!['ops', 'security', 'cab'].includes(app.role)) {
+    policyResult.className = 'mt-3 text-sm text-rose-300';
+    policyResult.textContent = '❌ Only Ops/Security/CAB can route this request.';
+    return;
+  }
+  t.rollbackPlan = rollbackPlan.value.trim();
+  t.testEvidence = testEvidence.value.trim();
+  t.approvals.ops = opsAck.checked;
+  t.approvals.security = securityAck.checked;
+  transition(t, 'Risk Review');
+});
+
+document.getElementById('routeCab').addEventListener('click', () => {
+  const t = selectedTicket();
+  if (!t) return;
+  if (!['security', 'cab'].includes(app.role)) {
+    policyResult.className = 'mt-3 text-sm text-rose-300';
+    policyResult.textContent = '❌ Security or CAB role required to route to CAB review.';
+    return;
+  }
+  t.rollbackPlan = rollbackPlan.value.trim();
+  t.testEvidence = testEvidence.value.trim();
+  t.approvals.ops = opsAck.checked;
+  t.approvals.security = securityAck.checked;
+  transition(t, 'CAB Review');
+});
+
+document.getElementById('approveBtn').addEventListener('click', () => {
+  const t = selectedTicket();
+  if (!t) return;
+  t.rollbackPlan = rollbackPlan.value.trim();
+  t.testEvidence = testEvidence.value.trim();
+  t.approvals.ops = opsAck.checked;
+  t.approvals.security = securityAck.checked;
+  const check = validatePolicy(t, true);
+  if (!check.ok) return;
+  transition(t, 'Approved');
+});
+
+document.getElementById('rejectBtn').addEventListener('click', () => {
+  const t = selectedTicket();
+  if (!t) return;
+  if (!['ops', 'security', 'cab'].includes(app.role)) {
+    policyResult.className = 'mt-3 text-sm text-rose-300';
+    policyResult.textContent = '❌ Only Ops/Security/CAB can reject requests.';
+    return;
+  }
+  transition(t, 'Rejected');
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const t = selectedTicket();
+  if (!t) return;
+  exportCsv(t);
+});
+
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const t = selectedTicket();
+  const text = chatInput.value.trim();
+  if (!t || !text) return;
+  t.messages.push({ by: app.role === 'requestor' ? t.owner : roleLabel[app.role], role: roleLabel[app.role], text, ts: stamp() });
+  addAudit(t, 'Posted thread message');
+  chatInput.value = '';
+  renderThread(t);
+});
+
+for (const t of tickets) {
+  t.audit.unshift({ ts: new Date().toLocaleString('en-GB', { hour12: false }), actor: 'System', action: 'Ticket loaded from freeze exception queue' });
+}
+
+renderAll();
+</script>
+</body>
+</html>

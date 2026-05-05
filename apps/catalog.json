@@ -2361,5 +2361,29 @@
       "wizard"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-05",
+    "day": 105,
+    "slug": "2026-05-05-change-freeze-exception-chatdesk",
+    "name": "Change Freeze Exception Chatdesk",
+    "description": "IT Ops chat-first desk for freeze-window change exceptions with policy validation, role-based approvals, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Chat UI",
+    "tags": [
+      "change requests",
+      "it ops",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
