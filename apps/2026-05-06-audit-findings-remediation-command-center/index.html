@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Audit Findings Remediation Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-3">Audit Findings Remediation Command Center</h1>
+    <p class="mt-2 text-slate-300 max-w-4xl">Legal dashboard to triage audit findings, enforce closure policy, route escalations, and keep an exportable audit trail for control owners and reviewers.</p>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid md:grid-cols-2 xl:grid-cols-6 gap-3 text-sm">
+        <label>
+          <span class="text-slate-300">View as</span>
+          <select id="roleSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="auditor">Auditor</option>
+            <option value="owner">Control Owner</option>
+            <option value="legal">Legal Lead</option>
+            <option value="ciso">CISO</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-slate-300">Search</span>
+          <input id="searchInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="id, control, owner" />
+        </label>
+        <label>
+          <span class="text-slate-300">Severity</span>
+          <select id="severityFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All severities</option>
+            <option>Critical</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-slate-300">Status</span>
+          <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All statuses</option>
+            <option>New</option>
+            <option>Triage</option>
+            <option>Remediation</option>
+            <option>Validation</option>
+            <option>Closed</option>
+            <option>Escalated</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-slate-300">Sort</span>
+          <select id="sortBy" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="severity-desc">Severity high → low</option>
+            <option value="due-asc">Closest due date</option>
+            <option value="age-desc">Oldest finding</option>
+          </select>
+        </label>
+        <div class="flex items-end">
+          <button id="exportBtn" class="w-full rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-2">Export filtered CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="mt-5 grid xl:grid-cols-12 gap-4">
+      <div class="xl:col-span-4 rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <h2 class="text-lg font-semibold">Findings queue</h2>
+        <p class="text-xs text-slate-400 mt-1">Select a row to update status, evidence, and closure notes.</p>
+        <div id="findingList" class="mt-3 space-y-2"></div>
+      </div>
+
+      <div class="xl:col-span-8 space-y-4">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="detailTitle" class="text-xl font-semibold">Select a finding</h2>
+              <p id="detailMeta" class="text-sm text-slate-300 mt-1"></p>
+            </div>
+            <div id="stateBadge" class="rounded-full border border-slate-700 px-3 py-1 text-xs">No selection</div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <h3 class="font-semibold">Remediation package</h3>
+              <label for="ownerInput" class="block text-sm text-slate-300 mt-3">Remediation owner</label>
+              <input id="ownerInput" class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+
+              <label for="dueDateInput" class="block text-sm text-slate-300 mt-3">Due date</label>
+              <input id="dueDateInput" type="date" class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+
+              <label for="evidenceInput" class="block text-sm text-slate-300 mt-3">Evidence artifacts uploaded</label>
+              <input id="evidenceInput" type="number" min="0" class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" />
+
+              <label for="exceptionReason" class="block text-sm text-slate-300 mt-3">Policy exception reason (optional)</label>
+              <textarea id="exceptionReason" rows="3" class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2" placeholder="Only needed if due date breaches policy..."></textarea>
+
+              <label class="mt-3 flex items-center gap-2 text-sm">
+                <input id="legalReviewAck" type="checkbox" class="h-4 w-4" />
+                Legal impact review completed
+              </label>
+              <p id="policyResult" class="mt-3 text-sm text-slate-300"></p>
+            </div>
+
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <h3 class="font-semibold">Workflow actions</h3>
+              <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <button id="triageBtn" class="rounded bg-blue-600 hover:bg-blue-500 px-3 py-2 font-medium">Move to Triage</button>
+                <button id="remediateBtn" class="rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-2 font-medium">Start Remediation</button>
+                <button id="validateBtn" class="rounded bg-violet-600 hover:bg-violet-500 px-3 py-2 font-medium">Request Validation</button>
+                <button id="closeBtn" class="rounded bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-medium">Close Finding</button>
+                <button id="escalateBtn" class="rounded bg-rose-600 hover:bg-rose-500 px-3 py-2 font-medium sm:col-span-2">Escalate to CISO</button>
+              </div>
+
+              <h4 class="font-semibold mt-5">Status distribution</h4>
+              <div id="statusBars" class="mt-2 space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <h3 class="font-semibold">Audit trail</h3>
+          <ul id="auditTrail" class="mt-3 space-y-2 text-sm"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const findings = [
+  { id: 'AF-113', control: 'Vendor access recertification', owner: 'Mila Peters', severity: 'Critical', status: 'Triage', dueDate: '2026-05-09', ageDays: 26, evidenceCount: 1, legalReview: false, exceptionReason: '', note: 'Privileged vendor roles still active after project closure.', audit: [] },
+  { id: 'AF-109', control: 'SOX change approval traceability', owner: 'Jonas Weber', severity: 'High', status: 'Remediation', dueDate: '2026-05-14', ageDays: 18, evidenceCount: 2, legalReview: true, exceptionReason: '', note: 'CAB ticket links missing in 17% of sampled changes.', audit: [] },
+  { id: 'AF-104', control: 'Contract retention evidence', owner: 'Lina Hoffmann', severity: 'Medium', status: 'New', dueDate: '2026-05-20', ageDays: 11, evidenceCount: 0, legalReview: false, exceptionReason: '', note: 'Archived contract appendix scans are incomplete.', audit: [] },
+  { id: 'AF-101', control: 'Data export lawful basis log', owner: 'Tobias Hahn', severity: 'High', status: 'Validation', dueDate: '2026-05-10', ageDays: 32, evidenceCount: 3, legalReview: true, exceptionReason: '', note: 'Missing lawful-basis reason for marketing export jobs.', audit: [] },
+  { id: 'AF-097', control: 'Audit log immutability policy', owner: 'Rina Ceylan', severity: 'Critical', status: 'Escalated', dueDate: '2026-05-08', ageDays: 41, evidenceCount: 1, legalReview: false, exceptionReason: 'Storage migration delayed evidence sealing by 2 days.', note: 'One retention cluster can still rewrite historical entries.', audit: [] },
+  { id: 'AF-095', control: 'Third-country transfer screening', owner: 'Nadia Braun', severity: 'Low', status: 'Closed', dueDate: '2026-05-02', ageDays: 9, evidenceCount: 4, legalReview: true, exceptionReason: '', note: 'Legacy destination list cleaned and tested.', audit: [] }
+];
+
+const severityRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+const roles = { auditor: 'Auditor', owner: 'Control Owner', legal: 'Legal Lead', ciso: 'CISO' };
+const app = { selectedId: findings[0].id, role: 'auditor' };
+
+const roleSelect = document.getElementById('roleSelect');
+const searchInput = document.getElementById('searchInput');
+const severityFilter = document.getElementById('severityFilter');
+const statusFilter = document.getElementById('statusFilter');
+const sortBy = document.getElementById('sortBy');
+
+const kpis = document.getElementById('kpis');
+const findingList = document.getElementById('findingList');
+const detailTitle = document.getElementById('detailTitle');
+const detailMeta = document.getElementById('detailMeta');
+const stateBadge = document.getElementById('stateBadge');
+const ownerInput = document.getElementById('ownerInput');
+const dueDateInput = document.getElementById('dueDateInput');
+const evidenceInput = document.getElementById('evidenceInput');
+const exceptionReason = document.getElementById('exceptionReason');
+const legalReviewAck = document.getElementById('legalReviewAck');
+const policyResult = document.getElementById('policyResult');
+const auditTrail = document.getElementById('auditTrail');
+const statusBars = document.getElementById('statusBars');
+
+function nowStamp() {
+  return new Date().toLocaleString('en-GB', { hour12: false });
+}
+
+function selectedFinding() {
+  return findings.find(f => f.id === app.selectedId);
+}
+
+function badge(status) {
+  if (status === 'Closed') return 'border-emerald-500/50 bg-emerald-500/10 text-emerald-200';
+  if (status === 'Validation') return 'border-violet-500/50 bg-violet-500/10 text-violet-200';
+  if (status === 'Remediation') return 'border-indigo-500/50 bg-indigo-500/10 text-indigo-200';
+  if (status === 'Triage') return 'border-blue-500/50 bg-blue-500/10 text-blue-200';
+  if (status === 'Escalated') return 'border-rose-500/50 bg-rose-500/10 text-rose-200';
+  return 'border-slate-600 bg-slate-800 text-slate-200';
+}
+
+function addAudit(finding, action) {
+  finding.audit.unshift({ ts: nowStamp(), actor: roles[app.role], action });
+  renderAudit(finding);
+}
+
+function getFilteredSorted() {
+  const q = searchInput.value.trim().toLowerCase();
+  const severity = severityFilter.value;
+  const status = statusFilter.value;
+
+  let list = findings.filter(f => {
+    if (severity !== 'all' && f.severity !== severity) return false;
+    if (status !== 'all' && f.status !== status) return false;
+    const hay = `${f.id} ${f.control} ${f.owner}`.toLowerCase();
+    return !q || hay.includes(q);
+  });
+
+  if (sortBy.value === 'severity-desc') list.sort((a,b) => severityRank[b.severity] - severityRank[a.severity]);
+  if (sortBy.value === 'due-asc') list.sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  if (sortBy.value === 'age-desc') list.sort((a,b) => b.ageDays - a.ageDays);
+  return list;
+}
+
+function renderKpis() {
+  const open = findings.filter(f => !['Closed'].includes(f.status)).length;
+  const criticalOpen = findings.filter(f => f.severity === 'Critical' && f.status !== 'Closed').length;
+  const dueSoon = findings.filter(f => f.status !== 'Closed' && f.dueDate <= '2026-05-10').length;
+  const closureRate = Math.round((findings.filter(f => f.status === 'Closed').length / findings.length) * 100);
+
+  const cards = [
+    { label: 'Open findings', value: open, tone: 'text-amber-300' },
+    { label: 'Critical open', value: criticalOpen, tone: 'text-rose-300' },
+    { label: 'Due by May 10', value: dueSoon, tone: 'text-violet-300' },
+    { label: 'Closure rate', value: `${closureRate}%`, tone: 'text-emerald-300' }
+  ];
+
+  kpis.innerHTML = cards.map(c => `
+    <article class="rounded-lg border border-slate-800 bg-slate-900 p-3">
+      <p class="text-xs text-slate-400">${c.label}</p>
+      <p class="text-2xl font-bold mt-1 ${c.tone}">${c.value}</p>
+    </article>
+  `).join('');
+}
+
+function renderStatusBars() {
+  const statuses = ['New','Triage','Remediation','Validation','Escalated','Closed'];
+  const max = Math.max(...statuses.map(s => findings.filter(f => f.status === s).length));
+  statusBars.innerHTML = statuses.map(s => {
+    const count = findings.filter(f => f.status === s).length;
+    const width = max ? Math.round((count / max) * 100) : 0;
+    return `
+      <div>
+        <div class="flex justify-between text-xs text-slate-300"><span>${s}</span><span>${count}</span></div>
+        <div class="h-2 mt-1 rounded bg-slate-800"><div class="h-2 rounded bg-amber-400" style="width:${width}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderList() {
+  const list = getFilteredSorted();
+  findingList.innerHTML = '';
+
+  if (!list.length) {
+    findingList.innerHTML = '<div class="text-sm text-slate-400 p-2">No findings match the current filters.</div>';
+    return;
+  }
+
+  list.forEach(f => {
+    const active = f.id === app.selectedId;
+    const btn = document.createElement('button');
+    btn.className = `w-full text-left rounded-lg border p-3 ${active ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800 hover:bg-slate-800/50'}`;
+    btn.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <span class="font-medium">${f.id}</span>
+        <span class="text-xs rounded-full border px-2 py-0.5 ${badge(f.status)}">${f.status}</span>
+      </div>
+      <p class="mt-1 text-sm text-slate-300">${f.control}</p>
+      <p class="mt-1 text-xs text-slate-400">${f.owner} · ${f.severity} · Due ${f.dueDate} · Age ${f.ageDays}d</p>
+    `;
+    btn.addEventListener('click', () => { app.selectedId = f.id; renderAll(); });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        app.selectedId = f.id;
+        renderAll();
+      }
+    });
+    findingList.appendChild(btn);
+  });
+}
+
+function validateFor(nextStatus, finding) {
+  const errors = [];
+  const owner = ownerInput.value.trim();
+  const due = dueDateInput.value;
+  const evidence = Number(evidenceInput.value || 0);
+  const exception = exceptionReason.value.trim();
+
+  if (!owner) errors.push('Remediation owner is required.');
+  if (!due) errors.push('Due date is required.');
+
+  if (nextStatus === 'Validation' || nextStatus === 'Closed') {
+    if (evidence < 2) errors.push('At least 2 evidence artifacts are required for validation/closure.');
+  }
+
+  if ((finding.severity === 'Critical' || finding.severity === 'High') && !legalReviewAck.checked && nextStatus === 'Closed') {
+    errors.push('High/Critical findings require legal impact review before closure.');
+  }
+
+  if (finding.dueDate < '2026-05-10' && !exception && nextStatus === 'Escalated') {
+    errors.push('Escalation requires a policy exception reason for overdue findings.');
+  }
+
+  if (errors.length) {
+    policyResult.className = 'mt-3 text-sm text-rose-300';
+    policyResult.textContent = `❌ ${errors.join(' ')}`;
+  } else {
+    policyResult.className = 'mt-3 text-sm text-emerald-300';
+    policyResult.textContent = '✅ Policy checks passed.';
+  }
+
+  return { ok: errors.length === 0, owner, due, evidence, exception };
+}
+
+function persistCurrentFields(finding) {
+  finding.owner = ownerInput.value.trim() || finding.owner;
+  finding.dueDate = dueDateInput.value || finding.dueDate;
+  finding.evidenceCount = Number(evidenceInput.value || finding.evidenceCount || 0);
+  finding.exceptionReason = exceptionReason.value.trim();
+  finding.legalReview = legalReviewAck.checked;
+}
+
+function moveTo(nextStatus) {
+  const f = selectedFinding();
+  if (!f) return;
+  const check = validateFor(nextStatus, f);
+  if (!check.ok) return;
+
+  persistCurrentFields(f);
+  f.status = nextStatus;
+  addAudit(f, `Changed status to ${nextStatus}`);
+  renderAll();
+}
+
+function renderDetail() {
+  const f = selectedFinding();
+  if (!f) return;
+
+  detailTitle.textContent = `${f.id} · ${f.control}`;
+  detailMeta.textContent = `${f.owner} · ${f.severity} · Due ${f.dueDate} · Age ${f.ageDays}d · ${f.note}`;
+  stateBadge.className = `rounded-full border px-3 py-1 text-xs ${badge(f.status)}`;
+  stateBadge.textContent = f.status;
+
+  ownerInput.value = f.owner;
+  dueDateInput.value = f.dueDate;
+  evidenceInput.value = f.evidenceCount;
+  exceptionReason.value = f.exceptionReason || '';
+  legalReviewAck.checked = !!f.legalReview;
+
+  renderAudit(f);
+  validateFor(f.status, f);
+}
+
+function renderAudit(finding) {
+  auditTrail.innerHTML = '';
+  if (!finding.audit.length) {
+    auditTrail.innerHTML = '<li class="text-slate-400">No actions recorded yet.</li>';
+    return;
+  }
+  finding.audit.slice(0, 8).forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'rounded border border-slate-800 bg-slate-950 p-2';
+    li.innerHTML = `<div>${item.action}</div><div class="text-xs text-slate-400 mt-1">${item.ts} · ${item.actor}</div>`;
+    auditTrail.appendChild(li);
+  });
+}
+
+function exportFilteredCsv() {
+  const rows = getFilteredSorted();
+  const header = ['id','control','owner','severity','status','due_date','age_days','evidence_count','legal_review','policy_exception_reason'];
+  const lines = [header.join(',')];
+  rows.forEach(r => {
+    const line = [r.id,r.control,r.owner,r.severity,r.status,r.dueDate,r.ageDays,r.evidenceCount,r.legalReview,r.exceptionReason || '']
+      .map(v => `"${String(v).replaceAll('"','""')}"`).join(',');
+    lines.push(line);
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'audit-findings-filtered-export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const selected = selectedFinding();
+  if (selected) addAudit(selected, `Exported ${rows.length} filtered findings to CSV`);
+}
+
+function renderAll() {
+  renderKpis();
+  renderStatusBars();
+  renderList();
+  renderDetail();
+}
+
+[searchInput, severityFilter, statusFilter, sortBy].forEach(el => el.addEventListener('input', renderAll));
+roleSelect.addEventListener('change', () => {
+  app.role = roleSelect.value;
+  const f = selectedFinding();
+  if (f) addAudit(f, `Switched role to ${roles[app.role]}`);
+  renderAll();
+});
+
+[ownerInput, dueDateInput, evidenceInput, exceptionReason, legalReviewAck].forEach(el => {
+  el.addEventListener('input', () => {
+    const f = selectedFinding();
+    if (!f) return;
+    persistCurrentFields(f);
+    validateFor(f.status, f);
+  });
+  el.addEventListener('change', () => {
+    const f = selectedFinding();
+    if (!f) return;
+    persistCurrentFields(f);
+    validateFor(f.status, f);
+  });
+});
+
+document.getElementById('triageBtn').addEventListener('click', () => moveTo('Triage'));
+document.getElementById('remediateBtn').addEventListener('click', () => moveTo('Remediation'));
+document.getElementById('validateBtn').addEventListener('click', () => moveTo('Validation'));
+document.getElementById('closeBtn').addEventListener('click', () => moveTo('Closed'));
+document.getElementById('escalateBtn').addEventListener('click', () => moveTo('Escalated'));
+document.getElementById('exportBtn').addEventListener('click', exportFilteredCsv);
+
+findings.forEach(f => {
+  f.audit.unshift({ ts: nowStamp(), actor: 'System', action: 'Loaded from legal audit findings queue' });
+});
+
+renderAll();
+</script>
+</body>
+</html>
