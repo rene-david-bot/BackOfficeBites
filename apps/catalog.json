@@ -2410,5 +2410,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-07",
+    "day": 107,
+    "slug": "2026-05-07-service-ticket-deflection-grid",
+    "name": "Service Ticket Deflection Grid",
+    "description": "Sales ticket triage grid with concession policy checks, approval routing, and audit-ready decision tracking.",
+    "category": "Sales",
+    "pattern": "Data Grid",
+    "tags": [
+      "service tickets",
+      "sales",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine",
+      "role-based views"
+    ],
+    "thumb": ""
   }
 ]

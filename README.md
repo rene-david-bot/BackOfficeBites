@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Audit Findings Remediation Command Center** — Legal dashboard for audit finding triage with policy validation, escalation routing, status analytics, audit trail, and CSV export.
+**Service Ticket Deflection Grid** — Sales data-grid workspace for triaging service tickets with concession policy checks, approval routing, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

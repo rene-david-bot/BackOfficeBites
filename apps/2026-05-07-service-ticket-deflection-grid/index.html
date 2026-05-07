@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Service Ticket Deflection Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-3">Service Ticket Deflection Grid</h1>
+    <p class="text-slate-300 mt-2 max-w-4xl">Sales operations reviews service tickets, validates concession policies, and routes high-risk cases through approvals before credits are issued.</p>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid md:grid-cols-6 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="text-sm text-slate-300">Search</label>
+          <input id="searchInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="ticket, account, owner" />
+        </div>
+        <div>
+          <label for="segmentFilter" class="text-sm text-slate-300">Segment</label>
+          <select id="segmentFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>SMB</option>
+            <option>Mid-Market</option>
+            <option>Enterprise</option>
+          </select>
+        </div>
+        <div>
+          <label for="riskFilter" class="text-sm text-slate-300">Risk</label>
+          <select id="riskFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="text-sm text-slate-300">Status</label>
+          <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>New</option>
+            <option>In Review</option>
+            <option>Needs Approval</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-sm text-slate-300">Sort</label>
+          <select id="sortBy" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="risk-desc">Risk high→low</option>
+            <option value="credit-desc">Credit high→low</option>
+            <option value="sla-asc">SLA expiry soonest</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3 text-sm">
+        <label class="flex items-center gap-2">
+          <span class="text-slate-300">View as</span>
+          <select id="roleSelect" class="bg-slate-950 border border-slate-700 rounded px-2 py-1">
+            <option value="agent">Triage Agent</option>
+            <option value="manager">Sales Manager</option>
+          </select>
+        </label>
+        <div class="text-slate-400">Policy: credits above €1,500 require manager approval.</div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900 p-4 overflow-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-950 text-slate-300 sticky top-0">
+            <tr>
+              <th class="text-left p-2">Ticket</th>
+              <th class="text-left p-2">Account</th>
+              <th class="text-left p-2">Segment</th>
+              <th class="text-left p-2">Risk</th>
+              <th class="text-left p-2">SLA (h)</th>
+              <th class="text-left p-2">Credit (€)</th>
+              <th class="text-left p-2">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ticketTable"></tbody>
+        </table>
+      </div>
+
+      <aside class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <h2 class="text-lg font-semibold">Ticket Decision</h2>
+        <p id="selectionHint" class="text-sm text-slate-300 mt-2">Select a ticket to review policy and route a decision.</p>
+
+        <form id="decisionForm" class="mt-4 space-y-3">
+          <div>
+            <label for="actionSelect" class="text-sm text-slate-300">Action</label>
+            <select id="actionSelect" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
+              <option value="">Select…</option>
+              <option value="review">Move to In Review</option>
+              <option value="approval">Request Approval</option>
+              <option value="approve">Approve Credit</option>
+              <option value="reject">Reject Credit</option>
+            </select>
+          </div>
+          <div>
+            <label for="justification" class="text-sm text-slate-300">Justification</label>
+            <textarea id="justification" rows="3" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="Why this action is valid" required></textarea>
+          </div>
+          <div>
+            <label for="creditInput" class="text-sm text-slate-300">Approved credit (€)</label>
+            <input id="creditInput" type="number" min="0" step="50" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" />
+          </div>
+          <button class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2" type="submit">Apply Decision</button>
+        </form>
+
+        <p id="policyMessage" class="mt-3 text-sm"></p>
+
+        <button id="exportCsv" class="mt-4 w-full border border-slate-700 rounded px-4 py-2 hover:bg-slate-800">Export filtered CSV</button>
+
+        <h3 class="font-semibold mt-6">Audit Trail</h3>
+        <ul id="auditTrail" class="mt-2 text-sm space-y-2"></ul>
+      </aside>
+    </section>
+  </main>
+
+<script>
+const tickets = [
+  { id: 'ST-3012', account: 'Nordlicht Telecom', segment: 'Enterprise', risk: 'High', slaHours: 6, credit: 2200, status: 'Needs Approval', owner: 'Mia' },
+  { id: 'ST-3018', account: 'GreenFleet Mobility', segment: 'Mid-Market', risk: 'Medium', slaHours: 12, credit: 900, status: 'New', owner: 'Tom' },
+  { id: 'ST-3021', account: 'Atlas Components', segment: 'SMB', risk: 'Low', slaHours: 18, credit: 350, status: 'In Review', owner: 'Sara' },
+  { id: 'ST-3027', account: 'CloudForge Labs', segment: 'Enterprise', risk: 'High', slaHours: 4, credit: 1800, status: 'Needs Approval', owner: 'Mia' },
+  { id: 'ST-3034', account: 'Brightline Retail', segment: 'Mid-Market', risk: 'Medium', slaHours: 9, credit: 1250, status: 'New', owner: 'Tom' },
+  { id: 'ST-3041', account: 'Aurora Medical', segment: 'Enterprise', risk: 'High', slaHours: 20, credit: 600, status: 'In Review', owner: 'Sara' }
+];
+
+const state = {
+  role: 'agent',
+  selectedId: null,
+  audit: []
+};
+
+const riskRank = { High: 3, Medium: 2, Low: 1 };
+
+const searchInput = document.getElementById('searchInput');
+const segmentFilter = document.getElementById('segmentFilter');
+const riskFilter = document.getElementById('riskFilter');
+const statusFilter = document.getElementById('statusFilter');
+const sortBy = document.getElementById('sortBy');
+const ticketTable = document.getElementById('ticketTable');
+const roleSelect = document.getElementById('roleSelect');
+const decisionForm = document.getElementById('decisionForm');
+const selectionHint = document.getElementById('selectionHint');
+const policyMessage = document.getElementById('policyMessage');
+const auditTrail = document.getElementById('auditTrail');
+
+function stamp() {
+  return new Date().toLocaleString('en-GB', { hour12: false });
+}
+
+function addAudit(text) {
+  const actor = state.role === 'manager' ? 'Sales Manager' : 'Triage Agent';
+  state.audit.unshift({ text, actor, at: stamp() });
+  renderAudit();
+}
+
+function renderAudit() {
+  auditTrail.innerHTML = '';
+  if (!state.audit.length) {
+    auditTrail.innerHTML = '<li class="text-slate-400">No actions yet.</li>';
+    return;
+  }
+  state.audit.slice(0, 8).forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'rounded border border-slate-800 bg-slate-950 p-2';
+    li.innerHTML = `<div>${item.text}</div><div class="text-slate-400 text-xs mt-1">${item.at} · ${item.actor}</div>`;
+    auditTrail.appendChild(li);
+  });
+}
+
+function getFilteredTickets() {
+  const q = searchInput.value.trim().toLowerCase();
+  let rows = tickets.filter(t => {
+    if (segmentFilter.value !== 'all' && t.segment !== segmentFilter.value) return false;
+    if (riskFilter.value !== 'all' && t.risk !== riskFilter.value) return false;
+    if (statusFilter.value !== 'all' && t.status !== statusFilter.value) return false;
+    const hay = `${t.id} ${t.account} ${t.owner}`.toLowerCase();
+    if (q && !hay.includes(q)) return false;
+    return true;
+  });
+
+  if (sortBy.value === 'risk-desc') rows.sort((a,b) => riskRank[b.risk] - riskRank[a.risk]);
+  if (sortBy.value === 'credit-desc') rows.sort((a,b) => b.credit - a.credit);
+  if (sortBy.value === 'sla-asc') rows.sort((a,b) => a.slaHours - b.slaHours);
+
+  return rows;
+}
+
+function renderTable() {
+  const rows = getFilteredTickets();
+  ticketTable.innerHTML = '';
+
+  if (!rows.length) {
+    ticketTable.innerHTML = '<tr><td class="p-3 text-slate-400" colspan="7">No tickets match current filters.</td></tr>';
+    return;
+  }
+
+  rows.forEach(t => {
+    const selected = state.selectedId === t.id;
+    const tr = document.createElement('tr');
+    tr.className = `border-t border-slate-800 cursor-pointer ${selected ? 'bg-amber-500/10' : 'hover:bg-slate-800/50'}`;
+    tr.tabIndex = 0;
+    tr.setAttribute('role', 'button');
+    tr.innerHTML = `
+      <td class="p-2">${t.id}</td>
+      <td class="p-2">${t.account}</td>
+      <td class="p-2">${t.segment}</td>
+      <td class="p-2">${t.risk}</td>
+      <td class="p-2">${t.slaHours}</td>
+      <td class="p-2">${t.credit.toLocaleString('de-DE')}</td>
+      <td class="p-2">${t.status}</td>
+    `;
+
+    const pick = () => {
+      state.selectedId = t.id;
+      selectionHint.textContent = `${t.id} · ${t.account} · Requested credit €${t.credit.toLocaleString('de-DE')}`;
+      policyMessage.textContent = '';
+      renderTable();
+    };
+
+    tr.addEventListener('click', pick);
+    tr.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        pick();
+      }
+    });
+
+    ticketTable.appendChild(tr);
+  });
+}
+
+function validatePolicy(ticket, action, note, creditValue) {
+  if (!ticket) return 'Select a ticket first.';
+  if (note.trim().length < 20) return 'Justification must be at least 20 characters.';
+
+  if (action === 'approve') {
+    if (!Number.isFinite(creditValue) || creditValue < 0) return 'Approved credit must be 0 or higher.';
+    if (creditValue > 1500 && state.role !== 'manager') return 'Only managers can approve credits above €1,500.';
+    if (creditValue > ticket.credit * 1.1) return 'Approved credit cannot exceed 110% of requested amount.';
+  }
+
+  if (action === 'approval' && ticket.credit <= 1500) {
+    return 'Approval request is only needed for credits above €1,500.';
+  }
+
+  return '';
+}
+
+function applyAction(ticket, action, creditValue) {
+  if (action === 'review') ticket.status = 'In Review';
+  if (action === 'approval') ticket.status = 'Needs Approval';
+  if (action === 'approve') {
+    ticket.status = 'Approved';
+    ticket.credit = creditValue;
+  }
+  if (action === 'reject') ticket.status = 'Rejected';
+}
+
+function exportCsv() {
+  const rows = getFilteredTickets();
+  const csvRows = [
+    ['ticket_id','account','segment','risk','sla_hours','credit_eur','status','owner'],
+    ...rows.map(r => [r.id, r.account, r.segment, r.risk, r.slaHours, r.credit, r.status, r.owner])
+  ];
+  const csv = csvRows.map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'service-ticket-deflection-grid.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  addAudit(`Exported ${rows.length} tickets to CSV`);
+}
+
+[searchInput, segmentFilter, riskFilter, statusFilter, sortBy].forEach(el => el.addEventListener('input', renderTable));
+
+roleSelect.addEventListener('change', (e) => {
+  state.role = e.target.value;
+  addAudit(`Switched role view to ${state.role === 'manager' ? 'Sales Manager' : 'Triage Agent'}`);
+});
+
+decisionForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const action = document.getElementById('actionSelect').value;
+  const note = document.getElementById('justification').value;
+  const creditValue = Number(document.getElementById('creditInput').value);
+  const ticket = tickets.find(t => t.id === state.selectedId);
+
+  const policyError = validatePolicy(ticket, action, note, creditValue);
+  if (policyError) {
+    policyMessage.textContent = `❌ ${policyError}`;
+    policyMessage.className = 'mt-3 text-sm text-rose-300';
+    return;
+  }
+
+  applyAction(ticket, action, Number.isFinite(creditValue) ? creditValue : ticket.credit);
+  policyMessage.textContent = `✅ ${ticket.id} updated to ${ticket.status}.`;
+  policyMessage.className = 'mt-3 text-sm text-emerald-300';
+  addAudit(`${ticket.id}: ${action} action applied`);
+  renderTable();
+});
+
+document.getElementById('exportCsv').addEventListener('click', exportCsv);
+
+renderTable();
+renderAudit();
+addAudit('Grid initialized with today\'s queue');
+</script>
+</body>
+</html>
