@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Service Ticket Deflection Grid** — Sales data-grid workspace for triaging service tickets with concession policy checks, approval routing, audit trail, and CSV export.
+**Renewal Forecast Risk Grid** — Sales data-grid workspace for renewal risk triage with policy-safe discount approvals, stage-state controls, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

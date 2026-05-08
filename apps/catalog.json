@@ -2434,5 +2434,29 @@
       "role-based views"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-08",
+    "day": 108,
+    "slug": "2026-05-08-renewal-forecast-risk-grid",
+    "name": "Renewal Forecast Risk Grid",
+    "description": "Sales data-grid workspace for renewal risk triage with policy-safe discount approvals, stage-state controls, audit trail, and CSV export.",
+    "category": "Sales",
+    "pattern": "Data Grid",
+    "tags": [
+      "renewal forecast",
+      "sales",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

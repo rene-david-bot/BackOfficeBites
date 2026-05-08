@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Renewal Forecast Risk Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#060b16'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">Renewal Forecast Risk Grid</h1>
+        <p class="text-slate-400 mt-1 text-sm sm:text-base">Sales renewal control desk for policy-safe discounts, stage transitions, and audit-ready execution.</p>
+      </div>
+      <div class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+        <p><span class="text-slate-500">Role:</span> <span id="roleLabel">Sales Rep</span></p>
+        <p><span class="text-slate-500">Policy cap:</span> <span id="policyCapLabel">8%</span></p>
+      </div>
+    </div>
+
+    <section class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="mt-5 rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-2">
+          <label for="roleSelect" class="text-xs text-slate-400 block mb-1">Role view</label>
+          <select id="roleSelect" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>Sales Rep</option>
+            <option>RevOps Manager</option>
+            <option>VP Sales</option>
+          </select>
+        </div>
+        <div class="lg:col-span-3">
+          <label for="searchInput" class="text-xs text-slate-400 block mb-1">Search account or owner</label>
+          <input id="searchInput" type="text" placeholder="Type to search..." class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div class="lg:col-span-2">
+          <label for="regionFilter" class="text-xs text-slate-400 block mb-1">Region</label>
+          <select id="regionFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+        </div>
+        <div class="lg:col-span-2">
+          <label for="riskFilter" class="text-xs text-slate-400 block mb-1">Risk</label>
+          <select id="riskFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+        </div>
+        <div class="lg:col-span-3 flex items-end gap-2">
+          <button id="exportBtn" class="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-medium px-3 py-2 text-sm">Export CSV</button>
+          <button id="resetBtn" class="w-full rounded-lg border border-slate-700 hover:bg-slate-800 px-3 py-2 text-sm">Reset</button>
+        </div>
+      </div>
+
+      <div class="mt-4 overflow-x-auto rounded-lg border border-slate-800">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-800/70 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="account">Account</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="owner">Owner</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="arr">ARR (€)</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="renewalDate">Renewal Date</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="risk">Risk</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="requestedDiscount">Discount</button></th>
+              <th class="px-3 py-2 text-left"><button class="sort" data-key="stage">Stage</button></th>
+              <th class="px-3 py-2 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody id="gridBody" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Keyboard tip: tab to a row and press Enter to open details.</p>
+    </section>
+
+    <section class="mt-5 grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <article class="lg:col-span-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <h2 class="text-lg font-semibold">Deal action panel</h2>
+        <p class="text-slate-400 text-sm mt-1" id="panelHint">Select a deal in the grid to edit discount and stage.</p>
+
+        <form id="actionForm" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3" novalidate>
+          <div>
+            <label for="discountInput" class="text-xs text-slate-400 block mb-1">Requested discount (%)</label>
+            <input id="discountInput" type="number" min="0" max="30" step="1" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="stageSelect" class="text-xs text-slate-400 block mb-1">Next stage</label>
+            <select id="stageSelect" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="reasonInput" class="text-xs text-slate-400 block mb-1">Reason</label>
+            <textarea id="reasonInput" rows="2" placeholder="Explain risk and decision" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+          </div>
+          <div class="sm:col-span-2 flex gap-2">
+            <button type="submit" class="rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 text-sm font-medium">Apply update</button>
+            <button type="button" id="approveBtn" class="rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 text-sm font-medium">Approve discount</button>
+          </div>
+        </form>
+        <p id="formFeedback" class="mt-3 text-sm"></p>
+      </article>
+
+      <article class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <h2 class="text-lg font-semibold">Audit trail</h2>
+        <ul id="auditTrail" class="mt-3 space-y-2 text-sm max-h-80 overflow-y-auto pr-1"></ul>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const roleCaps = {
+      'Sales Rep': 8,
+      'RevOps Manager': 15,
+      'VP Sales': 25
+    };
+
+    const stageFlow = {
+      Draft: ['Manager Review'],
+      'Manager Review': ['VP Approval', 'Draft'],
+      'VP Approval': ['Approved', 'Manager Review'],
+      Approved: ['Scheduled'],
+      Scheduled: []
+    };
+
+    const initialDeals = [
+      { id: 'R-1842', account: 'Nordbahn Logistics', owner: 'M. Weber', region: 'DACH', arr: 182000, renewalDate: '2026-06-14', risk: 'High', requestedDiscount: 12, stage: 'Manager Review', approved: false },
+      { id: 'R-1851', account: 'Vento Robotics', owner: 'J. Barke', region: 'Nordics', arr: 95000, renewalDate: '2026-06-28', risk: 'Medium', requestedDiscount: 7, stage: 'Draft', approved: false },
+      { id: 'R-1869', account: 'Aurelia Pharma', owner: 'S. Krüger', region: 'DACH', arr: 245000, renewalDate: '2026-07-02', risk: 'High', requestedDiscount: 17, stage: 'VP Approval', approved: false },
+      { id: 'R-1884', account: 'CloudHarbor AG', owner: 'L. Senn', region: 'UKI', arr: 76000, renewalDate: '2026-05-30', risk: 'Low', requestedDiscount: 4, stage: 'Approved', approved: true },
+      { id: 'R-1890', account: 'Meridian Mobility', owner: 'A. Klose', region: 'Benelux', arr: 132000, renewalDate: '2026-06-20', risk: 'Medium', requestedDiscount: 10, stage: 'Manager Review', approved: false },
+      { id: 'R-1901', account: 'NovaGrid Energy', owner: 'R. Lange', region: 'DACH', arr: 214000, renewalDate: '2026-07-12', risk: 'High', requestedDiscount: 19, stage: 'VP Approval', approved: false }
+    ];
+
+    const state = {
+      deals: structuredClone(initialDeals),
+      selectedId: null,
+      search: '',
+      region: 'All',
+      risk: 'All',
+      role: 'Sales Rep',
+      sortKey: 'renewalDate',
+      sortDir: 'asc',
+      audit: [
+        { at: now(), text: 'System loaded 6 renewal opportunities.' },
+        { at: now(), text: 'Policy profile set to Sales Rep (max 8% discount).' }
+      ]
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      roleSelect: document.getElementById('roleSelect'),
+      roleLabel: document.getElementById('roleLabel'),
+      policyCapLabel: document.getElementById('policyCapLabel'),
+      searchInput: document.getElementById('searchInput'),
+      regionFilter: document.getElementById('regionFilter'),
+      riskFilter: document.getElementById('riskFilter'),
+      gridBody: document.getElementById('gridBody'),
+      panelHint: document.getElementById('panelHint'),
+      discountInput: document.getElementById('discountInput'),
+      stageSelect: document.getElementById('stageSelect'),
+      reasonInput: document.getElementById('reasonInput'),
+      actionForm: document.getElementById('actionForm'),
+      approveBtn: document.getElementById('approveBtn'),
+      formFeedback: document.getElementById('formFeedback'),
+      exportBtn: document.getElementById('exportBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      auditTrail: document.getElementById('auditTrail')
+    };
+
+    function now() {
+      return new Date().toLocaleString('en-GB', { hour12: false });
+    }
+
+    function euro(value) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function riskPill(risk) {
+      if (risk === 'High') return 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+      if (risk === 'Medium') return 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+      return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+    }
+
+    function stagePill(stage) {
+      const map = {
+        Draft: 'bg-slate-700 text-slate-200',
+        'Manager Review': 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/40',
+        'VP Approval': 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/40',
+        Approved: 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40',
+        Scheduled: 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40'
+      };
+      return map[stage] || 'bg-slate-700 text-slate-200';
+    }
+
+    function addAudit(text) {
+      state.audit.unshift({ at: now(), text });
+      state.audit = state.audit.slice(0, 40);
+      renderAudit();
+    }
+
+    function filteredDeals() {
+      return state.deals
+        .filter(d => state.region === 'All' || d.region === state.region)
+        .filter(d => state.risk === 'All' || d.risk === state.risk)
+        .filter(d => {
+          if (!state.search.trim()) return true;
+          const q = state.search.toLowerCase();
+          return d.account.toLowerCase().includes(q) || d.owner.toLowerCase().includes(q) || d.id.toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          const key = state.sortKey;
+          const dir = state.sortDir === 'asc' ? 1 : -1;
+          const va = a[key];
+          const vb = b[key];
+          if (typeof va === 'number') return (va - vb) * dir;
+          return String(va).localeCompare(String(vb)) * dir;
+        });
+    }
+
+    function renderKpis() {
+      const deals = filteredDeals();
+      const high = deals.filter(d => d.risk === 'High').length;
+      const needsApproval = deals.filter(d => d.requestedDiscount > roleCaps[state.role] && !d.approved).length;
+      const totalArr = deals.reduce((sum, d) => sum + d.arr, 0);
+      const dueIn30 = deals.filter(d => (new Date(d.renewalDate) - new Date()) / (1000 * 60 * 60 * 24) <= 30).length;
+
+      const cards = [
+        { label: 'Pipeline ARR', value: euro(totalArr), tone: 'text-emerald-300' },
+        { label: 'High risk deals', value: String(high), tone: 'text-rose-300' },
+        { label: 'Policy exceptions', value: String(needsApproval), tone: 'text-amber-300' },
+        { label: 'Renewals <= 30 days', value: String(dueIn30), tone: 'text-cyan-300' }
+      ];
+
+      els.kpis.innerHTML = cards.map(card => `
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <p class="text-xs text-slate-400">${card.label}</p>
+          <p class="mt-1 text-xl font-semibold ${card.tone}">${card.value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid() {
+      const rows = filteredDeals().map(deal => {
+        const selected = state.selectedId === deal.id;
+        return `
+          <tr tabindex="0" data-id="${deal.id}" class="cursor-pointer ${selected ? 'bg-slate-800/60' : 'hover:bg-slate-800/40'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500">
+            <td class="px-3 py-2">
+              <p class="font-medium">${deal.account}</p>
+              <p class="text-xs text-slate-400">${deal.id} · ${deal.region}</p>
+            </td>
+            <td class="px-3 py-2">${deal.owner}</td>
+            <td class="px-3 py-2">${euro(deal.arr)}</td>
+            <td class="px-3 py-2">${deal.renewalDate}</td>
+            <td class="px-3 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${riskPill(deal.risk)}">${deal.risk}</span></td>
+            <td class="px-3 py-2">${deal.requestedDiscount}% ${deal.approved ? '<span class="text-xs text-emerald-300">(approved)</span>' : ''}</td>
+            <td class="px-3 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${stagePill(deal.stage)}">${deal.stage}</span></td>
+            <td class="px-3 py-2">${deal.requestedDiscount > roleCaps[state.role] && !deal.approved ? '<span class="text-xs text-amber-300">Escalate</span>' : '<span class="text-xs text-slate-400">In policy</span>'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      els.gridBody.innerHTML = rows || `<tr><td colspan="8" class="px-3 py-6 text-center text-slate-400">No deals match current filters.</td></tr>`;
+
+      els.gridBody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => selectDeal(row.dataset.id));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') selectDeal(row.dataset.id);
+        });
+      });
+    }
+
+    function renderAudit() {
+      els.auditTrail.innerHTML = state.audit.map(item => `
+        <li class="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+          <p class="text-xs text-slate-500">${item.at}</p>
+          <p class="mt-1 text-slate-200">${item.text}</p>
+        </li>
+      `).join('');
+    }
+
+    function selectDeal(id) {
+      state.selectedId = id;
+      const deal = state.deals.find(d => d.id === id);
+      if (!deal) return;
+
+      els.panelHint.textContent = `${deal.account} · ${deal.id} · ${deal.region}`;
+      els.discountInput.value = deal.requestedDiscount;
+      els.reasonInput.value = '';
+      els.formFeedback.textContent = '';
+      els.formFeedback.className = 'mt-3 text-sm';
+
+      const options = stageFlow[deal.stage] || [];
+      els.stageSelect.innerHTML = options.length
+        ? options.map(opt => `<option>${opt}</option>`).join('')
+        : '<option>No transition available</option>';
+
+      renderGrid();
+    }
+
+    function currentCap() {
+      return roleCaps[state.role];
+    }
+
+    function validateUpdate(deal, discount, reason) {
+      if (!reason.trim()) return 'Reason is required for all updates.';
+      if (Number.isNaN(discount) || discount < 0 || discount > 30) return 'Discount must be between 0 and 30.';
+      if (discount > currentCap() && !deal.approved) {
+        return `Discount ${discount}% exceeds ${state.role} cap (${currentCap()}%). Use Approve discount or switch role.`;
+      }
+      return null;
+    }
+
+    function updateRole(role) {
+      state.role = role;
+      els.roleLabel.textContent = role;
+      els.policyCapLabel.textContent = `${currentCap()}%`;
+      addAudit(`Role changed to ${role} (cap ${currentCap()}%).`);
+      renderKpis();
+      renderGrid();
+    }
+
+    function setupFilters() {
+      const regions = ['All', ...new Set(state.deals.map(d => d.region))];
+      const risks = ['All', ...new Set(state.deals.map(d => d.risk))];
+      els.regionFilter.innerHTML = regions.map(v => `<option>${v}</option>`).join('');
+      els.riskFilter.innerHTML = risks.map(v => `<option>${v}</option>`).join('');
+    }
+
+    function exportCsv() {
+      const columns = ['id', 'account', 'owner', 'region', 'arr', 'renewalDate', 'risk', 'requestedDiscount', 'stage', 'approved'];
+      const lines = [columns.join(',')];
+      filteredDeals().forEach(d => {
+        lines.push(columns.map(c => `"${String(d[c]).replace(/"/g, '""')}"`).join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'renewal-forecast-risk-grid.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit(`CSV export generated (${filteredDeals().length} rows).`);
+    }
+
+    els.roleSelect.addEventListener('change', (e) => updateRole(e.target.value));
+    els.searchInput.addEventListener('input', (e) => {
+      state.search = e.target.value;
+      renderKpis();
+      renderGrid();
+    });
+    els.regionFilter.addEventListener('change', (e) => {
+      state.region = e.target.value;
+      renderKpis();
+      renderGrid();
+    });
+    els.riskFilter.addEventListener('change', (e) => {
+      state.risk = e.target.value;
+      renderKpis();
+      renderGrid();
+    });
+
+    document.querySelectorAll('.sort').forEach(btn => {
+      btn.className = 'sort hover:text-white';
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (state.sortKey === key) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortKey = key;
+          state.sortDir = 'asc';
+        }
+        renderGrid();
+      });
+    });
+
+    els.actionForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const deal = state.deals.find(d => d.id === state.selectedId);
+      if (!deal) {
+        els.formFeedback.textContent = 'Select a deal first.';
+        els.formFeedback.className = 'mt-3 text-sm text-amber-300';
+        return;
+      }
+
+      const discount = Number(els.discountInput.value);
+      const reason = els.reasonInput.value;
+      const nextStage = els.stageSelect.value;
+      const error = validateUpdate(deal, discount, reason);
+
+      if (error) {
+        els.formFeedback.textContent = error;
+        els.formFeedback.className = 'mt-3 text-sm text-rose-300';
+        return;
+      }
+
+      deal.requestedDiscount = discount;
+      if (nextStage && nextStage !== 'No transition available') deal.stage = nextStage;
+      deal.approved = discount <= currentCap();
+      els.formFeedback.textContent = 'Update saved.';
+      els.formFeedback.className = 'mt-3 text-sm text-emerald-300';
+      addAudit(`${deal.id} updated by ${state.role}: discount ${discount}%, stage ${deal.stage}. Reason: ${reason.trim()}`);
+      renderKpis();
+      renderGrid();
+      selectDeal(deal.id);
+    });
+
+    els.approveBtn.addEventListener('click', () => {
+      const deal = state.deals.find(d => d.id === state.selectedId);
+      if (!deal) {
+        els.formFeedback.textContent = 'Select a deal first.';
+        els.formFeedback.className = 'mt-3 text-sm text-amber-300';
+        return;
+      }
+      if (state.role === 'Sales Rep') {
+        els.formFeedback.textContent = 'Sales Rep cannot approve out-of-policy discounts.';
+        els.formFeedback.className = 'mt-3 text-sm text-rose-300';
+        return;
+      }
+      deal.approved = true;
+      if (deal.stage === 'Manager Review' && state.role === 'RevOps Manager') {
+        deal.stage = 'VP Approval';
+      } else if (state.role === 'VP Sales') {
+        deal.stage = 'Approved';
+      }
+      els.formFeedback.textContent = `Exception approved by ${state.role}.`;
+      els.formFeedback.className = 'mt-3 text-sm text-emerald-300';
+      addAudit(`${deal.id} exception approved by ${state.role}.`);
+      renderKpis();
+      renderGrid();
+      selectDeal(deal.id);
+    });
+
+    els.exportBtn.addEventListener('click', exportCsv);
+    els.resetBtn.addEventListener('click', () => {
+      state.deals = structuredClone(initialDeals);
+      state.selectedId = null;
+      state.search = '';
+      state.region = 'All';
+      state.risk = 'All';
+      state.role = 'Sales Rep';
+      state.sortKey = 'renewalDate';
+      state.sortDir = 'asc';
+      state.audit = [
+        { at: now(), text: 'State reset to baseline demo dataset.' },
+        { at: now(), text: 'Policy profile set to Sales Rep (max 8% discount).' }
+      ];
+      els.searchInput.value = '';
+      els.roleSelect.value = 'Sales Rep';
+      els.regionFilter.value = 'All';
+      els.riskFilter.value = 'All';
+      els.panelHint.textContent = 'Select a deal in the grid to edit discount and stage.';
+      els.discountInput.value = '';
+      els.stageSelect.innerHTML = '<option>Select a deal first</option>';
+      els.reasonInput.value = '';
+      els.formFeedback.textContent = '';
+      els.roleLabel.textContent = 'Sales Rep';
+      els.policyCapLabel.textContent = '8%';
+      renderKpis();
+      renderGrid();
+      renderAudit();
+    });
+
+    setupFilters();
+    els.stageSelect.innerHTML = '<option>Select a deal first</option>';
+    renderKpis();
+    renderGrid();
+    renderAudit();
+  </script>
+</body>
+</html>
