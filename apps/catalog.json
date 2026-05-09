@@ -2458,5 +2458,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-09",
+    "day": 109,
+    "slug": "2026-05-09-visitor-access-escort-calendar",
+    "name": "Visitor Access Escort Calendar",
+    "description": "IT Ops calendar workspace for visitor scheduling with restricted-zone approvals, escort policy validation, and audit-ready check-in tracking.",
+    "category": "IT Ops",
+    "pattern": "Calendar",
+    "tags": [
+      "visitor logs",
+      "it ops",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

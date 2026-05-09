@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visitor Access Escort Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-3">Visitor Access Escort Calendar</h1>
+    <p class="text-slate-300 mt-2 max-w-4xl">IT operations coordinates visitor check-ins, escort assignment, and restricted-zone approvals through one policy-aware calendar workspace.</p>
+
+    <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid md:grid-cols-6 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="text-sm text-slate-300">Search</label>
+          <input id="searchInput" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="visitor, host, company" />
+        </div>
+        <div>
+          <label for="zoneFilter" class="text-sm text-slate-300">Zone</label>
+          <select id="zoneFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>HQ</option>
+            <option>Data Center</option>
+            <option>Lab</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="text-sm text-slate-300">Status</label>
+          <select id="statusFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>Pre-Registered</option>
+            <option>Pending Approval</option>
+            <option>Approved</option>
+            <option>Checked-In</option>
+            <option>Checked-Out</option>
+            <option>Denied</option>
+          </select>
+        </div>
+        <div>
+          <label for="riskFilter" class="text-sm text-slate-300">Risk</label>
+          <select id="riskFilter" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="all">All</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="text-sm text-slate-300">Sort</label>
+          <select id="sortBy" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            <option value="time-asc">Start time earliest</option>
+            <option value="risk-desc">Risk high→low</option>
+            <option value="company-asc">Company A→Z</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3 text-sm">
+        <label for="roleSelect" class="text-slate-300">Role</label>
+        <select id="roleSelect" class="bg-slate-950 border border-slate-700 rounded px-2 py-1">
+          <option value="reception">Reception Desk</option>
+          <option value="security">Security Supervisor</option>
+          <option value="host">Employee Host</option>
+        </select>
+        <div class="text-slate-400">Policy: Data Center and Lab visits require Security approval + assigned escort.</div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold">This Week's Access Calendar</h2>
+          <button id="exportCsv" class="text-sm border border-slate-700 rounded px-3 py-1.5 hover:bg-slate-800">Export filtered CSV</button>
+        </div>
+        <div id="calendarGrid" class="mt-4 grid md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+      </div>
+
+      <aside class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <h2 class="text-lg font-semibold">Visitor Access Desk</h2>
+        <p id="selectionHint" class="text-sm text-slate-300 mt-2">Select a visit to run check-in actions, or create a new visitor booking.</p>
+
+        <div class="mt-4 space-y-2">
+          <button id="approveBtn" class="w-full border border-emerald-700 text-emerald-300 rounded px-3 py-2 hover:bg-emerald-950/40">Approve access</button>
+          <button id="checkInBtn" class="w-full border border-sky-700 text-sky-300 rounded px-3 py-2 hover:bg-sky-950/40">Check in visitor</button>
+          <button id="checkOutBtn" class="w-full border border-violet-700 text-violet-300 rounded px-3 py-2 hover:bg-violet-950/40">Check out visitor</button>
+          <button id="denyBtn" class="w-full border border-rose-700 text-rose-300 rounded px-3 py-2 hover:bg-rose-950/40">Deny access</button>
+        </div>
+
+        <p id="policyMessage" class="mt-3 text-sm"></p>
+
+        <form id="visitForm" class="mt-6 space-y-3 border-t border-slate-800 pt-4">
+          <h3 class="font-semibold">Create visit</h3>
+          <div>
+            <label for="visitorName" class="text-sm text-slate-300">Visitor name</label>
+            <input id="visitorName" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+          </div>
+          <div>
+            <label for="company" class="text-sm text-slate-300">Company</label>
+            <input id="company" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+          </div>
+          <div>
+            <label for="host" class="text-sm text-slate-300">Host employee</label>
+            <input id="host" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="visitDate" class="text-sm text-slate-300">Date</label>
+              <input id="visitDate" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label for="visitTime" class="text-sm text-slate-300">Start time</label>
+              <input id="visitTime" type="time" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="zone" class="text-sm text-slate-300">Zone</label>
+              <select id="zone" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
+                <option>HQ</option>
+                <option>Data Center</option>
+                <option>Lab</option>
+              </select>
+            </div>
+            <div>
+              <label for="risk" class="text-sm text-slate-300">Risk</label>
+              <select id="risk" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="escort" class="text-sm text-slate-300">Escort assignment</label>
+            <input id="escort" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" placeholder="Required for Data Center/Lab" />
+          </div>
+          <button class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded px-4 py-2" type="submit">Save visitor booking</button>
+        </form>
+
+        <h3 class="font-semibold mt-6">Audit Trail</h3>
+        <ul id="auditTrail" class="mt-2 text-sm space-y-2 max-h-56 overflow-auto pr-1"></ul>
+      </aside>
+    </section>
+  </main>
+
+<script>
+const visits = [
+  { id: 'V-4412', date: '2026-05-11', time: '08:45', visitor: 'Nina Falk', company: 'Rheingrid Systems', host: 'Jonas Weber', zone: 'Data Center', risk: 'High', escort: 'Paul Richter', status: 'Pending Approval' },
+  { id: 'V-4416', date: '2026-05-11', time: '10:15', visitor: 'Markus Heer', company: 'BlueNova Legal', host: 'Lea Jung', zone: 'HQ', risk: 'Low', escort: '', status: 'Pre-Registered' },
+  { id: 'V-4421', date: '2026-05-12', time: '09:30', visitor: 'Aylin Kara', company: 'Vertex Cloud', host: 'Mina Lorenz', zone: 'Lab', risk: 'Medium', escort: 'Omar Klee', status: 'Approved' },
+  { id: 'V-4428', date: '2026-05-12', time: '13:00', visitor: 'Noah Brand', company: 'HanseLogix', host: 'Kai Mertens', zone: 'HQ', risk: 'Low', escort: '', status: 'Checked-In' },
+  { id: 'V-4432', date: '2026-05-13', time: '11:00', visitor: 'Chiara Sauer', company: 'Apex Biotech', host: 'Luca Brandt', zone: 'Data Center', risk: 'High', escort: 'Ina Schwarz', status: 'Approved' },
+  { id: 'V-4439', date: '2026-05-14', time: '15:10', visitor: 'Samuel Frost', company: 'Nexora Labs', host: 'Mia Keller', zone: 'Lab', risk: 'Medium', escort: 'Timo Hahn', status: 'Pre-Registered' },
+  { id: 'V-4446', date: '2026-05-15', time: '09:00', visitor: 'Elif Neumann', company: 'Granite Audit', host: 'Jonas Weber', zone: 'HQ', risk: 'Low', escort: '', status: 'Checked-Out' }
+];
+
+const state = {
+  selectedId: null,
+  role: 'reception',
+  audit: []
+};
+
+const statusRank = {
+  'Pending Approval': 1,
+  'Pre-Registered': 2,
+  'Approved': 3,
+  'Checked-In': 4,
+  'Checked-Out': 5,
+  'Denied': 6
+};
+
+const riskRank = { High: 3, Medium: 2, Low: 1 };
+
+const searchInput = document.getElementById('searchInput');
+const zoneFilter = document.getElementById('zoneFilter');
+const statusFilter = document.getElementById('statusFilter');
+const riskFilter = document.getElementById('riskFilter');
+const sortBy = document.getElementById('sortBy');
+const roleSelect = document.getElementById('roleSelect');
+const calendarGrid = document.getElementById('calendarGrid');
+const selectionHint = document.getElementById('selectionHint');
+const policyMessage = document.getElementById('policyMessage');
+const auditTrail = document.getElementById('auditTrail');
+
+function actorLabel() {
+  if (state.role === 'security') return 'Security Supervisor';
+  if (state.role === 'host') return 'Employee Host';
+  return 'Reception Desk';
+}
+
+function stamp() {
+  return new Date().toLocaleString('en-GB', { hour12: false });
+}
+
+function addAudit(text) {
+  state.audit.unshift({ text, actor: actorLabel(), at: stamp() });
+  renderAudit();
+}
+
+function renderAudit() {
+  auditTrail.innerHTML = '';
+  if (!state.audit.length) {
+    auditTrail.innerHTML = '<li class="text-slate-400">No actions yet.</li>';
+    return;
+  }
+  state.audit.slice(0, 10).forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'rounded border border-slate-800 bg-slate-950 p-2';
+    li.innerHTML = `<div>${item.text}</div><div class="text-slate-400 text-xs mt-1">${item.at} · ${item.actor}</div>`;
+    auditTrail.appendChild(li);
+  });
+}
+
+function filteredVisits() {
+  const q = searchInput.value.trim().toLowerCase();
+  let rows = visits.filter(v => {
+    if (zoneFilter.value !== 'all' && v.zone !== zoneFilter.value) return false;
+    if (statusFilter.value !== 'all' && v.status !== statusFilter.value) return false;
+    if (riskFilter.value !== 'all' && v.risk !== riskFilter.value) return false;
+    const hay = `${v.id} ${v.visitor} ${v.company} ${v.host}`.toLowerCase();
+    if (q && !hay.includes(q)) return false;
+    return true;
+  });
+
+  if (sortBy.value === 'time-asc') rows.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  if (sortBy.value === 'risk-desc') rows.sort((a, b) => riskRank[b.risk] - riskRank[a.risk]);
+  if (sortBy.value === 'company-asc') rows.sort((a, b) => a.company.localeCompare(b.company));
+
+  return rows;
+}
+
+function dayLabel(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit' });
+}
+
+function statusBadge(status) {
+  const map = {
+    'Pre-Registered': 'bg-slate-700 text-slate-200',
+    'Pending Approval': 'bg-amber-900/70 text-amber-200',
+    'Approved': 'bg-emerald-900/70 text-emerald-200',
+    'Checked-In': 'bg-sky-900/70 text-sky-200',
+    'Checked-Out': 'bg-violet-900/70 text-violet-200',
+    'Denied': 'bg-rose-900/70 text-rose-200'
+  };
+  return map[status] || 'bg-slate-700 text-slate-200';
+}
+
+function renderCalendar() {
+  const rows = filteredVisits();
+  const groups = {};
+  rows.forEach(v => {
+    groups[v.date] = groups[v.date] || [];
+    groups[v.date].push(v);
+  });
+
+  const dates = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+  calendarGrid.innerHTML = '';
+
+  if (!dates.length) {
+    calendarGrid.innerHTML = '<div class="text-slate-400">No visits match current filters.</div>';
+    return;
+  }
+
+  dates.forEach(date => {
+    const day = document.createElement('section');
+    day.className = 'rounded-lg border border-slate-800 bg-slate-950/70 p-3';
+
+    const title = document.createElement('h3');
+    title.className = 'font-semibold text-slate-200';
+    title.textContent = dayLabel(date);
+    day.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'mt-2 space-y-2';
+
+    groups[date].sort((a, b) => `${a.time}`.localeCompare(`${b.time}`));
+    groups[date].forEach(v => {
+      const selected = state.selectedId === v.id;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `w-full text-left rounded border p-2 transition ${selected ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-900/80'}`;
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-medium">${v.time} · ${v.visitor}</div>
+          <span class="text-xs px-2 py-0.5 rounded ${statusBadge(v.status)}">${v.status}</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">${v.company} · ${v.zone} · Risk ${v.risk}</div>
+      `;
+      card.addEventListener('click', () => {
+        state.selectedId = v.id;
+        selectionHint.textContent = `${v.id} · ${v.visitor} visiting ${v.zone} at ${v.time}. Host: ${v.host}.`;
+        policyMessage.textContent = '';
+        renderCalendar();
+      });
+      list.appendChild(card);
+    });
+
+    day.appendChild(list);
+    calendarGrid.appendChild(day);
+  });
+}
+
+function selectedVisit() {
+  return visits.find(v => v.id === state.selectedId);
+}
+
+function policyCheck(visit, action) {
+  if (!visit) return 'Select a visit first.';
+
+  if (action === 'approve') {
+    if (!(state.role === 'security' || state.role === 'host')) return 'Only Security Supervisor or Employee Host can approve access.';
+    if ((visit.zone === 'Data Center' || visit.zone === 'Lab') && !visit.escort.trim()) return 'Escort is required for Data Center and Lab access.';
+    if (visit.status === 'Denied' || visit.status === 'Checked-Out') return 'This visit can no longer be approved.';
+  }
+
+  if (action === 'checkin') {
+    if (visit.status !== 'Approved') return 'Visitor must be Approved before check-in.';
+  }
+
+  if (action === 'checkout') {
+    if (visit.status !== 'Checked-In') return 'Visitor must be Checked-In before check-out.';
+  }
+
+  if (action === 'deny') {
+    if (visit.status === 'Checked-Out') return 'Checked-out visits cannot be denied.';
+  }
+
+  return '';
+}
+
+function setPolicyMessage(text, ok = false) {
+  policyMessage.textContent = text;
+  policyMessage.className = `mt-3 text-sm ${ok ? 'text-emerald-300' : 'text-rose-300'}`;
+}
+
+function applyAction(action) {
+  const visit = selectedVisit();
+  const violation = policyCheck(visit, action);
+  if (violation) {
+    setPolicyMessage(`❌ ${violation}`);
+    return;
+  }
+
+  if (action === 'approve') visit.status = 'Approved';
+  if (action === 'checkin') visit.status = 'Checked-In';
+  if (action === 'checkout') visit.status = 'Checked-Out';
+  if (action === 'deny') visit.status = 'Denied';
+
+  setPolicyMessage(`✅ ${visit.id} moved to ${visit.status}.`, true);
+  addAudit(`${visit.id}: ${action.toUpperCase()} action applied`);
+  renderCalendar();
+}
+
+function nextId() {
+  const max = visits.reduce((m, v) => Math.max(m, Number(v.id.split('-')[1])), 4446);
+  return `V-${String(max + 1)}`;
+}
+
+function validateNewVisit(formData) {
+  if (formData.visitor.trim().length < 3) return 'Visitor name must be at least 3 characters.';
+  if (formData.company.trim().length < 2) return 'Company must be at least 2 characters.';
+  if (formData.host.trim().length < 3) return 'Host employee is required.';
+  if (!formData.date || !formData.time) return 'Date and start time are required.';
+  if ((formData.zone === 'Data Center' || formData.zone === 'Lab') && !formData.escort.trim()) {
+    return 'Escort assignment is mandatory for Data Center and Lab visits.';
+  }
+  return '';
+}
+
+function exportCsv() {
+  const rows = filteredVisits();
+  const csvRows = [
+    ['visit_id', 'date', 'time', 'visitor', 'company', 'host', 'zone', 'risk', 'escort', 'status'],
+    ...rows.map(v => [v.id, v.date, v.time, v.visitor, v.company, v.host, v.zone, v.risk, v.escort, v.status])
+  ];
+  const csv = csvRows.map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'visitor-access-escort-calendar.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  addAudit(`Exported ${rows.length} visits to CSV`);
+}
+
+[searchInput, zoneFilter, statusFilter, riskFilter, sortBy].forEach(el => el.addEventListener('input', renderCalendar));
+
+roleSelect.addEventListener('change', (e) => {
+  state.role = e.target.value;
+  addAudit(`Switched role view to ${actorLabel()}`);
+});
+
+document.getElementById('approveBtn').addEventListener('click', () => applyAction('approve'));
+document.getElementById('checkInBtn').addEventListener('click', () => applyAction('checkin'));
+document.getElementById('checkOutBtn').addEventListener('click', () => applyAction('checkout'));
+document.getElementById('denyBtn').addEventListener('click', () => applyAction('deny'));
+document.getElementById('exportCsv').addEventListener('click', exportCsv);
+
+document.getElementById('visitForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const formData = {
+    visitor: document.getElementById('visitorName').value,
+    company: document.getElementById('company').value,
+    host: document.getElementById('host').value,
+    date: document.getElementById('visitDate').value,
+    time: document.getElementById('visitTime').value,
+    zone: document.getElementById('zone').value,
+    risk: document.getElementById('risk').value,
+    escort: document.getElementById('escort').value
+  };
+
+  const error = validateNewVisit(formData);
+  if (error) {
+    setPolicyMessage(`❌ ${error}`);
+    return;
+  }
+
+  const newVisit = {
+    id: nextId(),
+    ...formData,
+    status: (formData.zone === 'Data Center' || formData.zone === 'Lab') ? 'Pending Approval' : 'Pre-Registered'
+  };
+
+  visits.push(newVisit);
+  state.selectedId = newVisit.id;
+  selectionHint.textContent = `${newVisit.id} created for ${newVisit.visitor} (${newVisit.company}).`;
+  setPolicyMessage(`✅ ${newVisit.id} created with status ${newVisit.status}.`, true);
+  addAudit(`${newVisit.id}: booking created for ${newVisit.zone}`);
+  e.target.reset();
+  renderCalendar();
+});
+
+renderCalendar();
+renderAudit();
+addAudit('Calendar initialized with this week\'s visitor schedule');
+</script>
+</body>
+</html>
