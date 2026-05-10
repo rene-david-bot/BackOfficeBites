@@ -2482,5 +2482,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-10",
+    "day": 110,
+    "slug": "2026-05-10-invoice-payment-run-calendar",
+    "name": "Invoice Payment Run Calendar",
+    "description": "Finance calendar workspace for invoice payout scheduling with policy-gated approvals, role-based controls, and audit-ready exports.",
+    "category": "Finance",
+    "pattern": "Calendar",
+    "tags": [
+      "invoices",
+      "finance",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

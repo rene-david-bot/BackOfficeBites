@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Visitor Access Escort Calendar** — IT Ops calendar workspace for visitor scheduling with restricted-zone approvals, escort policy validation, check-in state tracking, and audit-ready exports.
+**Invoice Payment Run Calendar** — Finance calendar workspace for invoice payout scheduling with policy-gated approvals, role-based controls, and audit-ready exports.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
