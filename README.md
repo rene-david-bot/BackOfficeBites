@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Invoice Payment Run Calendar** — Finance calendar workspace for invoice payout scheduling with policy-gated approvals, role-based controls, and audit-ready exports.
+**Policy Acknowledgment Evidence Desk** — IT Ops master-detail workspace for policy acknowledgments with extension-rule validation, role-based controls, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

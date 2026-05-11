@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Policy Acknowledgment Evidence Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
+    <div>
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+      <h1 class="text-2xl md:text-3xl font-bold mt-2">Policy Acknowledgment Evidence Desk</h1>
+      <p class="text-slate-400 mt-2">Master-detail workspace for tracking mandatory policy acknowledgments, validating extension rules, and maintaining an audit-ready trail.</p>
+    </div>
+
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3" id="kpis"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Search</label>
+          <input id="searchInput" type="text" placeholder="Employee or policy" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Status</label>
+          <select id="statusFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+            <option>Pending</option>
+            <option>Acknowledged</option>
+            <option>Overdue</option>
+            <option>Extension Requested</option>
+            <option>Waiver Pending</option>
+          </select>
+        </div>
+        <div>
+          <label for="departmentFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Department</label>
+          <select id="departmentFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Role View</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>Reviewer</option>
+            <option>HRBP</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="csvBtn" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-medium">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-3 border border-slate-800 rounded-xl overflow-hidden">
+          <div class="overflow-auto max-h-[520px]">
+            <table class="min-w-full text-sm">
+              <thead class="sticky top-0 bg-slate-900">
+                <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-800">
+                  <th class="p-3"><button data-sort="employee" class="hover:text-emerald-300">Employee</button></th>
+                  <th class="p-3"><button data-sort="policy" class="hover:text-emerald-300">Policy</button></th>
+                  <th class="p-3"><button data-sort="requiredBy" class="hover:text-emerald-300">Due</button></th>
+                  <th class="p-3"><button data-sort="risk" class="hover:text-emerald-300">Risk</button></th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="gridBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 border border-slate-800 rounded-xl p-4 space-y-4" id="detailPanel">
+          <p class="text-slate-400">Select a record to review details.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const records = [
+      { id: 'PA-301', employee: 'Lina Weber', department: 'IT Ops', policy: 'Privileged Access Policy', requiredBy: '2026-05-14', ackDate: '', status: 'Extension Requested', criticality: 'Critical', risk: 92, owner: 'M. Krause', evidence: '', extensionDate: '2026-05-20', extensionReason: 'On-call handover week with night shifts.', audit: [{ t: '2026-05-10 08:14', who: 'Lina Weber', action: 'Requested extension', note: 'Requested +6 days.' }] },
+      { id: 'PA-302', employee: 'Jonas Richter', department: 'Finance', policy: 'Expense Anti-Fraud Standard', requiredBy: '2026-05-12', ackDate: '2026-05-09', status: 'Acknowledged', criticality: 'Standard', risk: 18, owner: 'S. Wendt', evidence: 'LMS Certificate #EF-88', extensionDate: '', extensionReason: '', audit: [{ t: '2026-05-09 11:26', who: 'Jonas Richter', action: 'Acknowledged', note: 'Certificate attached.' }] },
+      { id: 'PA-303', employee: 'Aylin Demir', department: 'HR', policy: 'AI Usage Guardrails', requiredBy: '2026-05-10', ackDate: '', status: 'Overdue', criticality: 'Critical', risk: 97, owner: 'N. Adler', evidence: '', extensionDate: '', extensionReason: '', audit: [{ t: '2026-05-10 00:01', who: 'System', action: 'Marked overdue', note: 'SLA breach on deadline.' }] },
+      { id: 'PA-304', employee: 'Paul Novak', department: 'Sales', policy: 'Customer Data Retention', requiredBy: '2026-05-13', ackDate: '', status: 'Pending', criticality: 'Standard', risk: 44, owner: 'L. Braun', evidence: '', extensionDate: '', extensionReason: '', audit: [] },
+      { id: 'PA-305', employee: 'Mara Klein', department: 'Legal', policy: 'Third-Party NDA Handling', requiredBy: '2026-05-11', ackDate: '', status: 'Waiver Pending', criticality: 'Critical', risk: 88, owner: 'T. Fischer', evidence: 'Counsel memo pending signature', extensionDate: '', extensionReason: 'Role transition in progress', audit: [{ t: '2026-05-10 17:40', who: 'T. Fischer', action: 'Raised waiver', note: 'Temporary waiver request submitted.' }] },
+      { id: 'PA-306', employee: 'Emil Vogt', department: 'Supply Chain', policy: 'Vendor Risk Intake', requiredBy: '2026-05-16', ackDate: '', status: 'Pending', criticality: 'Standard', risk: 39, owner: 'A. Hoffmann', evidence: '', extensionDate: '', extensionReason: '', audit: [] },
+      { id: 'PA-307', employee: 'Sara Blum', department: 'IT Ops', policy: 'Incident Escalation SOP', requiredBy: '2026-05-11', ackDate: '', status: 'Pending', criticality: 'Critical', risk: 73, owner: 'M. Krause', evidence: '', extensionDate: '', extensionReason: '', audit: [] },
+      { id: 'PA-308', employee: 'Noah Bauer', department: 'Planning', policy: 'Forecast Variance Controls', requiredBy: '2026-05-15', ackDate: '2026-05-08', status: 'Acknowledged', criticality: 'Standard', risk: 11, owner: 'K. Lehmann', evidence: 'LMS Certificate #PV-15', extensionDate: '', extensionReason: '', audit: [{ t: '2026-05-08 09:20', who: 'Noah Bauer', action: 'Acknowledged', note: 'Reviewed and accepted.' }] }
+    ];
+
+    const state = {
+      selectedId: records[0].id,
+      search: '',
+      status: 'all',
+      department: 'all',
+      role: 'Reviewer',
+      sortKey: 'risk',
+      sortDir: 'desc'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      searchInput: document.getElementById('searchInput'),
+      statusFilter: document.getElementById('statusFilter'),
+      departmentFilter: document.getElementById('departmentFilter'),
+      roleView: document.getElementById('roleView'),
+      csvBtn: document.getElementById('csvBtn'),
+      gridBody: document.getElementById('gridBody'),
+      detailPanel: document.getElementById('detailPanel')
+    };
+
+    const badge = {
+      Pending: 'bg-slate-700 text-slate-200',
+      Acknowledged: 'bg-emerald-900/60 text-emerald-300',
+      Overdue: 'bg-red-900/60 text-red-300',
+      'Extension Requested': 'bg-amber-900/50 text-amber-300',
+      'Waiver Pending': 'bg-violet-900/50 text-violet-300'
+    };
+
+    const sorters = {
+      employee: (a, b) => a.employee.localeCompare(b.employee),
+      policy: (a, b) => a.policy.localeCompare(b.policy),
+      requiredBy: (a, b) => a.requiredBy.localeCompare(b.requiredBy),
+      risk: (a, b) => a.risk - b.risk
+    };
+
+    function getFiltered() {
+      return records
+        .filter(r => {
+          const term = state.search.trim().toLowerCase();
+          const matchesSearch = !term || `${r.employee} ${r.policy}`.toLowerCase().includes(term);
+          const matchesStatus = state.status === 'all' || r.status === state.status;
+          const matchesDept = state.department === 'all' || r.department === state.department;
+          return matchesSearch && matchesStatus && matchesDept;
+        })
+        .sort((a, b) => {
+          const cmp = sorters[state.sortKey](a, b);
+          return state.sortDir === 'asc' ? cmp : -cmp;
+        });
+    }
+
+    function renderKPIs(filtered) {
+      const total = filtered.length;
+      const overdue = filtered.filter(r => r.status === 'Overdue').length;
+      const needsAction = filtered.filter(r => ['Pending', 'Extension Requested', 'Waiver Pending'].includes(r.status)).length;
+      const avgRisk = total ? Math.round(filtered.reduce((s, r) => s + r.risk, 0) / total) : 0;
+
+      const cards = [
+        ['Visible records', total, 'text-slate-300'],
+        ['Needs action', needsAction, 'text-amber-300'],
+        ['Overdue', overdue, 'text-red-300'],
+        ['Avg risk', avgRisk, 'text-emerald-300']
+      ];
+
+      els.kpis.innerHTML = cards.map(([label, value, c]) => `
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${c}">${value}</p>
+        </div>`).join('');
+    }
+
+    function renderGrid(filtered) {
+      if (!filtered.some(r => r.id === state.selectedId)) {
+        state.selectedId = filtered[0]?.id || null;
+      }
+      els.gridBody.innerHTML = filtered.length ? filtered.map(r => `
+        <tr tabindex="0" data-id="${r.id}" class="border-b border-slate-800/70 cursor-pointer ${state.selectedId === r.id ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}">
+          <td class="p-3">
+            <p class="font-medium">${r.employee}</p>
+            <p class="text-xs text-slate-400">${r.department}</p>
+          </td>
+          <td class="p-3">${r.policy}</td>
+          <td class="p-3">${r.requiredBy}</td>
+          <td class="p-3">${r.risk}</td>
+          <td class="p-3"><span class="text-xs px-2 py-1 rounded-full ${badge[r.status]}">${r.status}</span></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="p-6 text-center text-slate-400">No records match current filters.</td></tr>`;
+
+      els.gridBody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => { state.selectedId = row.dataset.id; render(); });
+        row.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = row.dataset.id;
+            render();
+          }
+        });
+      });
+    }
+
+    function pushAudit(record, action, note) {
+      record.audit.unshift({
+        t: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        who: state.role,
+        action,
+        note
+      });
+    }
+
+    function actionButtons(record) {
+      const locked = state.role === 'Auditor';
+      return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button data-act="ack" class="rounded-lg px-3 py-2 font-medium ${locked ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-600'}" ${locked ? 'disabled' : ''}>Mark Acknowledged</button>
+          <button data-act="approveExt" class="rounded-lg px-3 py-2 font-medium ${locked ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-amber-700 hover:bg-amber-600'}" ${locked ? 'disabled' : ''}>Approve Extension</button>
+          <button data-act="requestExt" class="rounded-lg px-3 py-2 font-medium ${locked ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-700 hover:bg-indigo-600'}" ${locked ? 'disabled' : ''}>Request Extension</button>
+          <button data-act="waiver" class="rounded-lg px-3 py-2 font-medium ${locked ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-600'}" ${locked ? 'disabled' : ''}>Flag Waiver Pending</button>
+        </div>
+      `;
+    }
+
+    function renderDetail() {
+      const record = records.find(r => r.id === state.selectedId);
+      if (!record) {
+        els.detailPanel.innerHTML = `<p class="text-slate-400">Select a record to review details.</p>`;
+        return;
+      }
+
+      const auditRows = record.audit.length ? record.audit.map(a => `
+        <li class="border border-slate-800 rounded-lg p-2">
+          <p class="text-xs text-slate-400">${a.t} · ${a.who}</p>
+          <p class="text-sm font-medium">${a.action}</p>
+          <p class="text-xs text-slate-300">${a.note}</p>
+        </li>
+      `).join('') : '<li class="text-slate-400 text-sm">No audit events yet.</li>';
+
+      const validationHint = record.criticality === 'Critical'
+        ? 'Critical policies allow max +7 day extension.'
+        : 'Standard policies allow max +14 day extension.';
+
+      els.detailPanel.innerHTML = `
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">Record</p>
+          <h2 class="text-xl font-semibold">${record.employee}</h2>
+          <p class="text-slate-400 text-sm">${record.department} · ${record.id}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2"><p class="text-xs text-slate-400">Policy</p><p>${record.policy}</p></div>
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2"><p class="text-xs text-slate-400">Due date</p><p>${record.requiredBy}</p></div>
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2"><p class="text-xs text-slate-400">Criticality</p><p>${record.criticality}</p></div>
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2"><p class="text-xs text-slate-400">Risk score</p><p>${record.risk}</p></div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-xs uppercase tracking-wide text-slate-400">Evidence</p>
+          <input id="evidenceInput" value="${record.evidence || ''}" placeholder="Attach evidence reference" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <p class="text-xs text-slate-400">${validationHint}</p>
+        </div>
+
+        ${actionButtons(record)}
+
+        <div class="border border-slate-800 rounded-lg p-3 space-y-2">
+          <p class="text-sm font-medium">Extension form</p>
+          <label class="text-xs text-slate-400" for="extDate">Requested date</label>
+          <input id="extDate" type="date" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <label class="text-xs text-slate-400" for="extReason">Reason</label>
+          <textarea id="extReason" rows="2" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Explain business reason"></textarea>
+          <p id="msg" class="text-xs"></p>
+        </div>
+
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400 mb-2">Audit trail</p>
+          <ul class="space-y-2 max-h-44 overflow-auto">${auditRows}</ul>
+        </div>
+      `;
+
+      const msgEl = document.getElementById('msg');
+      const evidenceInput = document.getElementById('evidenceInput');
+      evidenceInput.addEventListener('change', () => {
+        record.evidence = evidenceInput.value.trim();
+        pushAudit(record, 'Updated evidence', record.evidence || 'Cleared evidence');
+        render();
+      });
+
+      function setMsg(text, ok = false) {
+        msgEl.textContent = text;
+        msgEl.className = `text-xs ${ok ? 'text-emerald-300' : 'text-red-300'}`;
+      }
+
+      function validateExtension(dateValue, reasonValue) {
+        if (!dateValue || !reasonValue.trim()) return 'Date and reason are required.';
+        const due = new Date(record.requiredBy + 'T00:00:00Z');
+        const req = new Date(dateValue + 'T00:00:00Z');
+        if (req <= due) return 'Extension date must be after original due date.';
+        const maxDays = record.criticality === 'Critical' ? 7 : 14;
+        const maxDate = new Date(due);
+        maxDate.setUTCDate(maxDate.getUTCDate() + maxDays);
+        if (req > maxDate) return `Extension exceeds policy limit (+${maxDays} days).`;
+        return '';
+      }
+
+      els.detailPanel.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (state.role === 'Auditor') return setMsg('Auditor view is read-only.');
+
+          const act = btn.dataset.act;
+          if (act === 'ack') {
+            if (!record.evidence) return setMsg('Cannot acknowledge without evidence reference.');
+            record.status = 'Acknowledged';
+            record.ackDate = new Date().toISOString().slice(0, 10);
+            record.risk = Math.max(8, record.risk - 40);
+            pushAudit(record, 'Acknowledged policy', `Evidence: ${record.evidence}`);
+            setMsg('Policy marked as acknowledged.', true);
+            return render();
+          }
+
+          if (act === 'approveExt') {
+            if (record.status !== 'Extension Requested') return setMsg('No extension request to approve.');
+            record.status = 'Pending';
+            record.requiredBy = record.extensionDate || record.requiredBy;
+            record.risk = Math.max(15, record.risk - 18);
+            pushAudit(record, 'Approved extension', `New due date: ${record.requiredBy}`);
+            setMsg('Extension approved.', true);
+            return render();
+          }
+
+          if (act === 'requestExt') {
+            const dateValue = document.getElementById('extDate').value;
+            const reasonValue = document.getElementById('extReason').value;
+            const error = validateExtension(dateValue, reasonValue);
+            if (error) return setMsg(error);
+            record.status = 'Extension Requested';
+            record.extensionDate = dateValue;
+            record.extensionReason = reasonValue.trim();
+            record.risk = Math.min(99, record.risk + 8);
+            pushAudit(record, 'Requested extension', `${dateValue} · ${record.extensionReason}`);
+            setMsg('Extension request submitted.', true);
+            return render();
+          }
+
+          if (act === 'waiver') {
+            record.status = 'Waiver Pending';
+            record.risk = Math.min(99, record.risk + 6);
+            pushAudit(record, 'Raised waiver request', 'Awaiting compliance sign-off.');
+            setMsg('Waiver flagged.', true);
+            return render();
+          }
+        });
+      });
+    }
+
+    function exportCsv(rows) {
+      const header = ['id', 'employee', 'department', 'policy', 'requiredBy', 'status', 'risk', 'owner'];
+      const data = rows.map(r => header.map(k => `"${String(r[k] ?? '').replace(/"/g, '""')}"`).join(','));
+      const csv = [header.join(','), ...data].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'policy-ack-evidence-desk.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      renderKPIs(filtered);
+      renderGrid(filtered);
+      renderDetail();
+    }
+
+    const departments = [...new Set(records.map(r => r.department))].sort();
+    departments.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      els.departmentFilter.appendChild(opt);
+    });
+
+    els.searchInput.addEventListener('input', e => { state.search = e.target.value; render(); });
+    els.statusFilter.addEventListener('change', e => { state.status = e.target.value; render(); });
+    els.departmentFilter.addEventListener('change', e => { state.department = e.target.value; render(); });
+    els.roleView.addEventListener('change', e => { state.role = e.target.value; render(); });
+    els.csvBtn.addEventListener('click', () => exportCsv(getFiltered()));
+
+    document.querySelectorAll('[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort;
+        if (state.sortKey === key) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortKey = key;
+          state.sortDir = key === 'risk' ? 'desc' : 'asc';
+        }
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>

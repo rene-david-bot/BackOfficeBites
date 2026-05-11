@@ -2506,5 +2506,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-11",
+    "day": 111,
+    "slug": "2026-05-11-policy-acknowledgment-evidence-desk",
+    "name": "Policy Acknowledgment Evidence Desk",
+    "description": "IT Ops master-detail workspace for policy acknowledgments with extension-rule validation, role-based controls, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Master-Detail",
+    "tags": [
+      "policy acks",
+      "it ops",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
