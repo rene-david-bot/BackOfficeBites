@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift Scheduler Coverage Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
+    <div>
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+      <h1 class="text-2xl md:text-3xl font-bold mt-2">Shift Scheduler Coverage Timeline</h1>
+      <p class="text-slate-400 mt-2">HR timeline workspace to spot staffing gaps, validate overtime policy, process swap requests, and keep an auditable shift trail.</p>
+    </div>
+
+    <section id="kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Search</label>
+          <input id="searchInput" type="text" placeholder="Employee or role" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="teamFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Team</label>
+          <select id="teamFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="siteFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Site</label>
+          <select id="siteFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Status</label>
+          <select id="statusFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+            <option>Approved</option>
+            <option>Pending Approval</option>
+            <option>Swap Requested</option>
+            <option>Open Gap</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Role View</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>Scheduler</option>
+            <option>Team Lead</option>
+            <option>Compliance</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="csvBtn" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-medium">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-3 border border-slate-800 rounded-xl p-3">
+          <div id="timeline" class="space-y-3"></div>
+        </div>
+
+        <div class="lg:col-span-2 border border-slate-800 rounded-xl p-4 space-y-4" id="detailPanel">
+          <p class="text-slate-400">Select a timeline entry to review and take action.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">Swap Request Intake</h2>
+      <form id="swapForm" class="grid grid-cols-1 md:grid-cols-7 gap-3">
+        <div class="md:col-span-2">
+          <label for="reqEmployee" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Employee</label>
+          <input id="reqEmployee" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Name" />
+        </div>
+        <div>
+          <label for="reqTeam" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Team</label>
+          <select id="reqTeam" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">Select</option>
+          </select>
+        </div>
+        <div>
+          <label for="reqDate" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Date</label>
+          <input id="reqDate" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqStart" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Start</label>
+          <input id="reqStart" type="time" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqEnd" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">End</label>
+          <input id="reqEnd" type="time" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqSite" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Site</label>
+          <select id="reqSite" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">Select</option>
+          </select>
+        </div>
+        <div class="md:col-span-5">
+          <label for="reqReason" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Reason</label>
+          <input id="reqReason" required minlength="8" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Reason for swap request" />
+        </div>
+        <div class="md:col-span-2 flex items-end">
+          <button class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 font-medium" type="submit">Submit Swap Request</button>
+        </div>
+      </form>
+      <p id="formMsg" class="text-sm text-slate-400" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <script>
+    const shifts = [
+      { id: 'SH-801', employee: 'Lena Hoffmann', team: 'Warehouse', site: 'Leipzig DC', role: 'Picker', date: '2026-05-12', start: '06:00', end: '14:00', status: 'Approved', risk: 28, overtimeHours: 0, approver: 'M. Schrader', notes: 'Forklift certified', audit: [{ t: '2026-05-09 07:22', who: 'Scheduler', action: 'Approved shift', note: 'Weekly base plan.' }] },
+      { id: 'SH-802', employee: 'Tom Richter', team: 'Warehouse', site: 'Leipzig DC', role: 'Loader', date: '2026-05-12', start: '14:00', end: '22:00', status: 'Pending Approval', risk: 62, overtimeHours: 2, approver: 'M. Schrader', notes: '2h overtime requires lead sign-off', audit: [{ t: '2026-05-11 16:10', who: 'Scheduler', action: 'Created pending shift', note: 'Overtime threshold hit.' }] },
+      { id: 'SH-803', employee: 'Aylin Demir', team: 'Customer Care', site: 'Dresden Hub', role: 'Support Agent', date: '2026-05-13', start: '08:00', end: '16:00', status: 'Swap Requested', risk: 55, overtimeHours: 0, approver: 'N. Adler', notes: 'Requested family appointment swap', audit: [{ t: '2026-05-11 13:44', who: 'Aylin Demir', action: 'Requested swap', note: 'Need afternoon coverage.' }] },
+      { id: 'SH-804', employee: 'Open Position', team: 'Returns', site: 'Leipzig DC', role: 'Quality Checker', date: '2026-05-13', start: '10:00', end: '18:00', status: 'Open Gap', risk: 91, overtimeHours: 0, approver: 'M. Schrader', notes: 'Mandatory quality gate uncovered', audit: [{ t: '2026-05-11 18:01', who: 'System', action: 'Gap detected', note: 'No assignee 24h before shift.' }] },
+      { id: 'SH-805', employee: 'Jonas Klein', team: 'Customer Care', site: 'Dresden Hub', role: 'Escalation Agent', date: '2026-05-14', start: '12:00', end: '20:00', status: 'Approved', risk: 34, overtimeHours: 0, approver: 'N. Adler', notes: 'German/English coverage', audit: [{ t: '2026-05-10 10:27', who: 'Team Lead', action: 'Approved shift', note: 'Coverage balanced.' }] },
+      { id: 'SH-806', employee: 'Mina Weber', team: 'Returns', site: 'Berlin Node', role: 'Inspector', date: '2026-05-14', start: '07:00', end: '15:00', status: 'Pending Approval', risk: 68, overtimeHours: 1, approver: 'P. Lange', notes: 'Recent absence history', audit: [{ t: '2026-05-11 08:50', who: 'Scheduler', action: 'Queued for review', note: 'Requires reliability check.' }] },
+      { id: 'SH-807', employee: 'Rico Bauer', team: 'Warehouse', site: 'Berlin Node', role: 'Forklift Operator', date: '2026-05-15', start: '05:00', end: '13:00', status: 'Approved', risk: 31, overtimeHours: 0, approver: 'P. Lange', notes: 'Safety refresher complete', audit: [{ t: '2026-05-10 06:15', who: 'Compliance', action: 'Validated certification', note: 'License valid until 2027.' }] },
+      { id: 'SH-808', employee: 'Sara Blum', team: 'Customer Care', site: 'Dresden Hub', role: 'Support Agent', date: '2026-05-15', start: '16:00', end: '23:00', status: 'Open Gap', risk: 88, overtimeHours: 0, approver: 'N. Adler', notes: 'Late shift currently unassigned', audit: [{ t: '2026-05-11 22:03', who: 'System', action: 'Gap escalated', note: 'No backup assigned.' }] }
+    ];
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const state = {
+      selectedId: shifts[0].id,
+      search: '',
+      team: 'all',
+      site: 'all',
+      status: 'all',
+      role: 'Scheduler'
+    };
+
+    const badge = {
+      'Approved': 'bg-emerald-900/60 text-emerald-300',
+      'Pending Approval': 'bg-amber-900/60 text-amber-300',
+      'Swap Requested': 'bg-indigo-900/60 text-indigo-300',
+      'Open Gap': 'bg-red-900/60 text-red-300'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      timeline: document.getElementById('timeline'),
+      detail: document.getElementById('detailPanel'),
+      searchInput: document.getElementById('searchInput'),
+      teamFilter: document.getElementById('teamFilter'),
+      siteFilter: document.getElementById('siteFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      roleView: document.getElementById('roleView'),
+      csvBtn: document.getElementById('csvBtn'),
+      reqEmployee: document.getElementById('reqEmployee'),
+      reqTeam: document.getElementById('reqTeam'),
+      reqDate: document.getElementById('reqDate'),
+      reqStart: document.getElementById('reqStart'),
+      reqEnd: document.getElementById('reqEnd'),
+      reqSite: document.getElementById('reqSite'),
+      reqReason: document.getElementById('reqReason'),
+      swapForm: document.getElementById('swapForm'),
+      formMsg: document.getElementById('formMsg')
+    };
+
+    function asDateLabel(dateStr) {
+      const d = new Date(`${dateStr}T00:00:00`);
+      return `${dayNames[d.getDay()]} ${dateStr}`;
+    }
+
+    function pushAudit(item, action, note) {
+      item.audit.unshift({
+        t: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        who: state.role,
+        action,
+        note
+      });
+    }
+
+    function getFiltered() {
+      const term = state.search.trim().toLowerCase();
+      return shifts
+        .filter(s => {
+          const searchHit = !term || `${s.employee} ${s.role}`.toLowerCase().includes(term);
+          const teamHit = state.team === 'all' || s.team === state.team;
+          const siteHit = state.site === 'all' || s.site === state.site;
+          const statusHit = state.status === 'all' || s.status === state.status;
+          return searchHit && teamHit && siteHit && statusHit;
+        })
+        .sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`));
+    }
+
+    function groupByDay(items) {
+      return items.reduce((acc, item) => {
+        (acc[item.date] ||= []).push(item);
+        return acc;
+      }, {});
+    }
+
+    function renderKPIs(items) {
+      const openGaps = items.filter(s => s.status === 'Open Gap').length;
+      const swaps = items.filter(s => s.status === 'Swap Requested').length;
+      const pending = items.filter(s => s.status === 'Pending Approval').length;
+      const highRisk = items.filter(s => s.risk >= 70).length;
+      const cards = [
+        ['Visible Shifts', items.length, 'text-slate-200'],
+        ['Open Gaps', openGaps, 'text-red-300'],
+        ['Swap Requests', swaps, 'text-indigo-300'],
+        ['High Risk', highRisk + pending, 'text-amber-300']
+      ];
+      els.kpis.innerHTML = cards.map(([label, value, cls]) => `
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${cls}">${value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTimeline(items) {
+      if (!items.some(i => i.id === state.selectedId)) state.selectedId = items[0]?.id || null;
+      const grouped = groupByDay(items);
+      const days = Object.keys(grouped).sort();
+      els.timeline.innerHTML = days.length ? days.map(day => `
+        <article class="border border-slate-800 rounded-lg overflow-hidden">
+          <div class="px-3 py-2 bg-slate-900 flex items-center justify-between">
+            <h3 class="font-medium">${asDateLabel(day)}</h3>
+            <span class="text-xs text-slate-400">${grouped[day].length} shifts</span>
+          </div>
+          <div class="p-2 space-y-2">
+            ${grouped[day].map(item => `
+              <button data-id="${item.id}" class="w-full text-left border rounded-lg px-3 py-2 ${state.selectedId === item.id ? 'border-emerald-500 bg-emerald-900/20' : 'border-slate-800 bg-slate-950 hover:border-slate-600'}">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="font-medium">${item.start}-${item.end} · ${item.employee}</p>
+                  <span class="text-xs px-2 py-1 rounded-full ${badge[item.status]}">${item.status}</span>
+                </div>
+                <p class="text-sm text-slate-400 mt-1">${item.team} · ${item.role} · ${item.site}</p>
+                <p class="text-xs mt-1 ${item.risk >= 70 ? 'text-red-300' : 'text-slate-500'}">Coverage risk ${item.risk}</p>
+              </button>
+            `).join('')}
+          </div>
+        </article>
+      `).join('') : '<p class="text-slate-400 text-sm p-2">No shifts match the current filters.</p>';
+
+      els.timeline.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function actionButtons(item) {
+      const readOnly = state.role === 'Compliance';
+      return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button data-act="approve" ${readOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${readOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-600'}">Approve Shift</button>
+          <button data-act="swap" ${readOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${readOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-700 hover:bg-indigo-600'}">Approve Swap</button>
+          <button data-act="gap" ${readOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${readOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-red-700 hover:bg-red-600'}">Mark Open Gap</button>
+          <button data-act="backup" ${readOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${readOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-amber-700 hover:bg-amber-600'}">Assign Backup</button>
+        </div>
+      `;
+    }
+
+    function renderDetail() {
+      const item = shifts.find(s => s.id === state.selectedId);
+      if (!item) {
+        els.detail.innerHTML = '<p class="text-slate-400">Select a timeline entry to review and take action.</p>';
+        return;
+      }
+
+      const policyFlag = item.overtimeHours > 1 ? '<span class="text-amber-300">Overtime policy check required</span>' : '<span class="text-emerald-300">Policy check passed</span>';
+
+      els.detail.innerHTML = `
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">Shift ID</p>
+          <h2 class="text-lg font-semibold">${item.id}</h2>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><p class="text-slate-400">Employee</p><p>${item.employee}</p></div>
+          <div><p class="text-slate-400">Role</p><p>${item.role}</p></div>
+          <div><p class="text-slate-400">Date</p><p>${asDateLabel(item.date)}</p></div>
+          <div><p class="text-slate-400">Time</p><p>${item.start} - ${item.end}</p></div>
+          <div><p class="text-slate-400">Team</p><p>${item.team}</p></div>
+          <div><p class="text-slate-400">Site</p><p>${item.site}</p></div>
+        </div>
+        <div class="text-sm border border-slate-800 rounded-lg p-3 bg-slate-950">
+          <p class="text-slate-400">Coverage risk</p>
+          <p class="text-lg font-semibold ${item.risk >= 70 ? 'text-red-300' : 'text-emerald-300'}">${item.risk}</p>
+          <p class="text-xs mt-1">${policyFlag}</p>
+          <p class="text-xs text-slate-500 mt-2">Notes: ${item.notes}</p>
+        </div>
+        ${actionButtons(item)}
+        <div>
+          <h3 class="text-sm font-semibold mb-2">Audit Trail</h3>
+          <div class="space-y-2 max-h-44 overflow-auto pr-1">
+            ${item.audit.length ? item.audit.map(row => `
+              <div class="text-xs border border-slate-800 rounded-lg p-2 bg-slate-950">
+                <p class="text-slate-300">${row.t} · ${row.who}</p>
+                <p class="text-slate-100">${row.action}</p>
+                <p class="text-slate-500">${row.note}</p>
+              </div>
+            `).join('') : '<p class="text-slate-400 text-xs">No audit entries yet.</p>'}
+          </div>
+        </div>
+      `;
+
+      els.detail.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.act;
+          if (action === 'approve') {
+            item.status = 'Approved';
+            item.risk = Math.max(15, item.risk - 24);
+            pushAudit(item, 'Approved shift', 'Lead approved this assignment.');
+          }
+          if (action === 'swap') {
+            item.status = 'Approved';
+            item.employee = item.employee === 'Open Position' ? 'Backup Pool Agent' : item.employee;
+            item.risk = Math.max(20, item.risk - 18);
+            pushAudit(item, 'Approved swap', 'Swap accepted and schedule updated.');
+          }
+          if (action === 'gap') {
+            item.status = 'Open Gap';
+            item.employee = 'Open Position';
+            item.risk = Math.min(99, item.risk + 12);
+            pushAudit(item, 'Marked open gap', 'Coverage owner alerted for replacement.');
+          }
+          if (action === 'backup') {
+            item.status = 'Pending Approval';
+            item.employee = 'Backup Pool Agent';
+            item.risk = Math.max(30, item.risk - 14);
+            pushAudit(item, 'Assigned backup candidate', 'Awaiting final approval by team lead.');
+          }
+          render();
+        });
+      });
+    }
+
+    function exportCsv(rows) {
+      const header = ['id', 'employee', 'team', 'site', 'role', 'date', 'start', 'end', 'status', 'risk'];
+      const lines = [header.join(',')].concat(rows.map(r => header.map(k => `"${String(r[k]).replaceAll('"', '""')}"`).join(',')));
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'shift-scheduler-coverage-timeline.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function populateFilters() {
+      const teams = [...new Set(shifts.map(s => s.team))].sort();
+      const sites = [...new Set(shifts.map(s => s.site))].sort();
+
+      for (const team of teams) {
+        els.teamFilter.insertAdjacentHTML('beforeend', `<option>${team}</option>`);
+        els.reqTeam.insertAdjacentHTML('beforeend', `<option>${team}</option>`);
+      }
+      for (const site of sites) {
+        els.siteFilter.insertAdjacentHTML('beforeend', `<option>${site}</option>`);
+        els.reqSite.insertAdjacentHTML('beforeend', `<option>${site}</option>`);
+      }
+    }
+
+    function wireEvents() {
+      els.searchInput.addEventListener('input', e => {
+        state.search = e.target.value;
+        render();
+      });
+      els.teamFilter.addEventListener('change', e => {
+        state.team = e.target.value;
+        render();
+      });
+      els.siteFilter.addEventListener('change', e => {
+        state.site = e.target.value;
+        render();
+      });
+      els.statusFilter.addEventListener('change', e => {
+        state.status = e.target.value;
+        render();
+      });
+      els.roleView.addEventListener('change', e => {
+        state.role = e.target.value;
+        render();
+      });
+      els.csvBtn.addEventListener('click', () => exportCsv(getFiltered()));
+
+      els.swapForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const start = els.reqStart.value;
+        const end = els.reqEnd.value;
+        const reason = els.reqReason.value.trim();
+        if (end <= start) {
+          els.formMsg.textContent = 'End time must be later than start time.';
+          els.formMsg.className = 'text-sm text-red-300';
+          return;
+        }
+        if (reason.length < 8) {
+          els.formMsg.textContent = 'Please provide a reason with at least 8 characters.';
+          els.formMsg.className = 'text-sm text-red-300';
+          return;
+        }
+
+        const id = `SH-${Math.max(...shifts.map(s => Number(s.id.split('-')[1]))) + 1}`;
+        const overtime = start < '06:00' || end > '22:00' ? 2 : 0;
+        const baseRisk = overtime ? 72 : 49;
+
+        shifts.push({
+          id,
+          employee: els.reqEmployee.value.trim(),
+          team: els.reqTeam.value,
+          site: els.reqSite.value,
+          role: 'Support Agent',
+          date: els.reqDate.value,
+          start,
+          end,
+          status: 'Swap Requested',
+          risk: baseRisk,
+          overtimeHours: overtime,
+          approver: 'Team Lead',
+          notes: reason,
+          audit: [{
+            t: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            who: els.reqEmployee.value.trim(),
+            action: 'Submitted swap request',
+            note: reason
+          }]
+        });
+
+        state.selectedId = id;
+        els.formMsg.textContent = `Swap request ${id} submitted and queued for lead approval.`;
+        els.formMsg.className = 'text-sm text-emerald-300';
+        els.swapForm.reset();
+        render();
+      });
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      renderKPIs(filtered);
+      renderTimeline(filtered);
+      renderDetail();
+    }
+
+    populateFilters();
+    wireEvents();
+    render();
+  </script>
+</body>
+</html>

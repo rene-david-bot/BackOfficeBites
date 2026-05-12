@@ -2530,5 +2530,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-12",
+    "day": 112,
+    "slug": "2026-05-12-shift-scheduler-coverage-timeline",
+    "name": "Shift Scheduler Coverage Timeline",
+    "description": "HR timeline scheduler for coverage gaps, swap approvals, overtime policy checks, audit trail, and CSV export.",
+    "category": "HR",
+    "pattern": "Timeline",
+    "tags": [
+      "shift scheduler",
+      "hr",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "audit trail",
+      "state machine",
+      "csv export"
+    ],
+    "thumb": ""
   }
 ]
