@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capacity Planner Escalation Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
+    <header>
+      <a href="../../index.html" class="text-sm text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+      <h1 class="text-2xl md:text-3xl font-bold mt-2">Capacity Planner Escalation Calendar</h1>
+      <p class="text-slate-400 mt-2">Planning calendar to manage weekly FTE bottlenecks, validate utilization policy, and route overload requests through approval workflows.</p>
+    </header>
+
+    <section id="kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3" aria-live="polite"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Search</label>
+          <input id="searchInput" type="text" placeholder="Project, team, owner" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="teamFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Team</label>
+          <select id="teamFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Status</label>
+          <select id="statusFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+            <option>Approved</option>
+            <option>Pending Approval</option>
+            <option>Escalated</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Role View</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>Planner</option>
+            <option>Finance Controller</option>
+            <option>PMO Auditor</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Sort</label>
+          <select id="sortBy" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="date-asc">Date ↑</option>
+            <option value="date-desc">Date ↓</option>
+            <option value="risk-desc">Risk ↓</option>
+            <option value="risk-asc">Risk ↑</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="csvBtn" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-medium">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-3 border border-slate-800 rounded-xl p-3" id="calendar" aria-label="Capacity calendar"></div>
+        <aside class="lg:col-span-2 border border-slate-800 rounded-xl p-4 space-y-4" id="detailPanel" aria-live="polite">
+          <p class="text-slate-400">Select a capacity slot to review policy and take action.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+      <h2 class="font-semibold">New Capacity Request</h2>
+      <form id="requestForm" class="grid grid-cols-1 md:grid-cols-7 gap-3">
+        <div>
+          <label for="reqDate" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Date</label>
+          <input id="reqDate" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqTeam" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Team</label>
+          <select id="reqTeam" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">Select</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label for="reqProject" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Project</label>
+          <input id="reqProject" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Client rollout / initiative" />
+        </div>
+        <div>
+          <label for="reqNeed" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Requested FTE</label>
+          <input id="reqNeed" type="number" min="0.5" step="0.5" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqAvail" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Available FTE</label>
+          <input id="reqAvail" type="number" min="0" step="0.5" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="reqOwner" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Owner</label>
+          <input id="reqOwner" required minlength="4" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="First Last" />
+        </div>
+        <div class="md:col-span-6">
+          <label for="reqReason" class="block text-xs uppercase tracking-wide text-slate-400 mb-1">Business reason</label>
+          <input id="reqReason" required minlength="12" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Why this capacity increase is needed" />
+        </div>
+        <div class="md:col-span-1 flex items-end">
+          <button type="submit" class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 font-medium">Submit</button>
+        </div>
+      </form>
+      <p id="formMsg" class="text-sm text-slate-400" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <script>
+    const slots = [
+      {
+        id: 'CP-901',
+        date: '2026-05-13',
+        team: 'Platform',
+        project: 'IAM Zero-Trust rollout',
+        owner: 'Nina Kruger',
+        requestedFte: 5,
+        availableFte: 3.5,
+        status: 'Escalated',
+        risk: 88,
+        notes: 'Security deadline tied to quarter close.',
+        audit: [{ t: '2026-05-11 10:15', who: 'Planner', action: 'Escalated request', note: 'Deficit exceeds 1 FTE policy threshold.' }]
+      },
+      {
+        id: 'CP-902',
+        date: '2026-05-14',
+        team: 'Data',
+        project: 'Demand Forecasting retrain',
+        owner: 'Paul Werner',
+        requestedFte: 3,
+        availableFte: 3.5,
+        status: 'Approved',
+        risk: 29,
+        notes: 'Within baseline allocation.',
+        audit: [{ t: '2026-05-10 15:42', who: 'Finance Controller', action: 'Approved', note: 'No contingency funding needed.' }]
+      },
+      {
+        id: 'CP-903',
+        date: '2026-05-15',
+        team: 'Operations',
+        project: 'Order orchestration migration',
+        owner: 'Jasmin Adler',
+        requestedFte: 4.5,
+        availableFte: 3,
+        status: 'Pending Approval',
+        risk: 73,
+        notes: 'Vendor cutover overlaps release train.',
+        audit: [{ t: '2026-05-12 08:03', who: 'Planner', action: 'Submitted', note: 'Awaiting funding owner sign-off.' }]
+      },
+      {
+        id: 'CP-904',
+        date: '2026-05-16',
+        team: 'Product',
+        project: 'B2B portal launch sprint',
+        owner: 'Emre Kaya',
+        requestedFte: 2.5,
+        availableFte: 2,
+        status: 'Pending Approval',
+        risk: 58,
+        notes: 'Could offset through backlog trimming.',
+        audit: [{ t: '2026-05-12 14:20', who: 'Planner', action: 'Submitted', note: 'Needs PMO capacity check.' }]
+      },
+      {
+        id: 'CP-905',
+        date: '2026-05-19',
+        team: 'Platform',
+        project: 'Kubernetes node upgrade',
+        owner: 'Luca Schmitt',
+        requestedFte: 2,
+        availableFte: 2,
+        status: 'Approved',
+        risk: 22,
+        notes: 'Change freeze approved with rollback plan.',
+        audit: [{ t: '2026-05-09 09:05', who: 'Finance Controller', action: 'Approved', note: 'Budget-neutral maintenance.' }]
+      },
+      {
+        id: 'CP-906',
+        date: '2026-05-20',
+        team: 'Data',
+        project: 'Customer churn model refresh',
+        owner: 'Leyla Braun',
+        requestedFte: 3.5,
+        availableFte: 2,
+        status: 'Rejected',
+        risk: 66,
+        notes: 'Deferred to next planning wave.',
+        audit: [{ t: '2026-05-10 11:32', who: 'Finance Controller', action: 'Rejected', note: 'Insufficient contingency budget this cycle.' }]
+      },
+      {
+        id: 'CP-907',
+        date: '2026-05-21',
+        team: 'Operations',
+        project: 'Returns automation pilots',
+        owner: 'Helena Vogt',
+        requestedFte: 3,
+        availableFte: 2.5,
+        status: 'Escalated',
+        risk: 64,
+        notes: 'Manual process currently at SLA risk.',
+        audit: [{ t: '2026-05-12 17:27', who: 'Planner', action: 'Escalated request', note: 'Deficit trending 2nd week in row.' }]
+      }
+    ];
+
+    const state = {
+      selectedId: slots[0].id,
+      search: '',
+      team: 'all',
+      status: 'all',
+      role: 'Planner',
+      sortBy: 'date-asc'
+    };
+
+    const statusBadge = {
+      'Approved': 'bg-emerald-900/60 text-emerald-300',
+      'Pending Approval': 'bg-amber-900/60 text-amber-300',
+      'Escalated': 'bg-indigo-900/60 text-indigo-300',
+      'Rejected': 'bg-rose-900/60 text-rose-300'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      calendar: document.getElementById('calendar'),
+      detail: document.getElementById('detailPanel'),
+      searchInput: document.getElementById('searchInput'),
+      teamFilter: document.getElementById('teamFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      roleView: document.getElementById('roleView'),
+      sortBy: document.getElementById('sortBy'),
+      csvBtn: document.getElementById('csvBtn'),
+      requestForm: document.getElementById('requestForm'),
+      reqDate: document.getElementById('reqDate'),
+      reqTeam: document.getElementById('reqTeam'),
+      reqProject: document.getElementById('reqProject'),
+      reqNeed: document.getElementById('reqNeed'),
+      reqAvail: document.getElementById('reqAvail'),
+      reqOwner: document.getElementById('reqOwner'),
+      reqReason: document.getElementById('reqReason'),
+      formMsg: document.getElementById('formMsg')
+    };
+
+    function ts() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function policyFor(slot) {
+      const deficit = +(slot.requestedFte - slot.availableFte).toFixed(1);
+      if (deficit > 1) return { ok: false, text: `Policy: deficit ${deficit} FTE exceeds auto-approval threshold (1.0). Escalation required.` };
+      if (deficit > 0) return { ok: true, text: `Policy: deficit ${deficit} FTE is within managed buffer, approval allowed.` };
+      return { ok: true, text: 'Policy: fully covered request, no escalation needed.' };
+    }
+
+    function pushAudit(slot, action, note) {
+      slot.audit.unshift({ t: ts(), who: state.role, action, note });
+    }
+
+    function uniqueTeams(items) {
+      return [...new Set(items.map(i => i.team))].sort();
+    }
+
+    function filteredSlots() {
+      const term = state.search.trim().toLowerCase();
+      return slots.filter(slot => {
+        const hitSearch = !term || `${slot.project} ${slot.team} ${slot.owner}`.toLowerCase().includes(term);
+        const hitTeam = state.team === 'all' || slot.team === state.team;
+        const hitStatus = state.status === 'all' || slot.status === state.status;
+        return hitSearch && hitTeam && hitStatus;
+      }).sort((a, b) => {
+        if (state.sortBy === 'date-desc') return b.date.localeCompare(a.date);
+        if (state.sortBy === 'risk-desc') return b.risk - a.risk;
+        if (state.sortBy === 'risk-asc') return a.risk - b.risk;
+        return a.date.localeCompare(b.date);
+      });
+    }
+
+    function groupedByDate(items) {
+      return items.reduce((acc, item) => {
+        (acc[item.date] ||= []).push(item);
+        return acc;
+      }, {});
+    }
+
+    function renderKpis(items) {
+      const overloaded = items.filter(i => i.requestedFte > i.availableFte).length;
+      const pending = items.filter(i => i.status === 'Pending Approval').length;
+      const escalated = items.filter(i => i.status === 'Escalated').length;
+      const highRisk = items.filter(i => i.risk >= 70).length;
+      const cards = [
+        ['Visible Slots', items.length, 'text-slate-100'],
+        ['Overloaded', overloaded, 'text-rose-300'],
+        ['Pending', pending, 'text-amber-300'],
+        ['Escalated / High Risk', `${escalated} / ${highRisk}`, 'text-indigo-300']
+      ];
+      els.kpis.innerHTML = cards.map(([title, value, color]) => `
+        <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${title}</p>
+          <p class="text-2xl font-semibold ${color}">${value}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderCalendar(items) {
+      if (!items.some(i => i.id === state.selectedId)) state.selectedId = items[0]?.id || null;
+      const grouped = groupedByDate(items);
+      const dates = Object.keys(grouped).sort();
+      els.calendar.innerHTML = dates.length ? dates.map(date => `
+        <article class="border border-slate-800 rounded-lg overflow-hidden mb-3">
+          <div class="px-3 py-2 bg-slate-900 flex items-center justify-between">
+            <h3 class="font-medium">${date}</h3>
+            <span class="text-xs text-slate-400">${grouped[date].length} requests</span>
+          </div>
+          <div class="p-2 space-y-2">
+            ${grouped[date].map(slot => `
+              <button data-id="${slot.id}" class="w-full text-left border rounded-lg px-3 py-2 ${state.selectedId === slot.id ? 'border-emerald-500 bg-emerald-900/20' : 'border-slate-800 bg-slate-950 hover:border-slate-600'}">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="font-medium">${slot.project}</p>
+                  <span class="text-xs px-2 py-1 rounded-full ${statusBadge[slot.status]}">${slot.status}</span>
+                </div>
+                <p class="text-sm text-slate-400 mt-1">${slot.team} · ${slot.owner}</p>
+                <p class="text-xs mt-1 ${slot.risk >= 70 ? 'text-rose-300' : 'text-slate-500'}">Need ${slot.requestedFte} FTE, available ${slot.availableFte} FTE · Risk ${slot.risk}</p>
+              </button>
+            `).join('')}
+          </div>
+        </article>
+      `).join('') : '<p class="text-slate-400 text-sm p-2">No requests match current filters.</p>';
+
+      els.calendar.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function actionButtons(slot) {
+      const roleReadOnly = state.role === 'PMO Auditor';
+      const policy = policyFor(slot);
+      const approveDisabled = roleReadOnly || (!policy.ok && slot.status !== 'Escalated');
+      return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button data-act="approve" ${approveDisabled ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${approveDisabled ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-600'}">Approve</button>
+          <button data-act="escalate" ${roleReadOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${roleReadOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-700 hover:bg-indigo-600'}">Escalate</button>
+          <button data-act="rebalance" ${roleReadOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${roleReadOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-amber-700 hover:bg-amber-600'}">Rebalance (-0.5 FTE)</button>
+          <button data-act="reject" ${roleReadOnly ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${roleReadOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-rose-700 hover:bg-rose-600'}">Reject</button>
+        </div>
+      `;
+    }
+
+    function renderDetail(items) {
+      const slot = items.find(i => i.id === state.selectedId) || slots.find(i => i.id === state.selectedId);
+      if (!slot) {
+        els.detail.innerHTML = '<p class="text-slate-400">Select a request to inspect details.</p>';
+        return;
+      }
+      const policy = policyFor(slot);
+      const deficit = +(slot.requestedFte - slot.availableFte).toFixed(1);
+
+      els.detail.innerHTML = `
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">${slot.id}</p>
+          <h2 class="text-xl font-semibold mt-1">${slot.project}</h2>
+          <p class="text-sm text-slate-400 mt-1">${slot.team} · ${slot.owner} · ${slot.date}</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-sm">
+          <div class="rounded-lg bg-slate-950 border border-slate-800 p-2">
+            <p class="text-slate-400">Need</p>
+            <p class="font-semibold">${slot.requestedFte} FTE</p>
+          </div>
+          <div class="rounded-lg bg-slate-950 border border-slate-800 p-2">
+            <p class="text-slate-400">Available</p>
+            <p class="font-semibold">${slot.availableFte} FTE</p>
+          </div>
+          <div class="rounded-lg bg-slate-950 border border-slate-800 p-2">
+            <p class="text-slate-400">Deficit</p>
+            <p class="font-semibold ${deficit > 0 ? 'text-rose-300' : 'text-emerald-300'}">${deficit > 0 ? deficit : 0} FTE</p>
+          </div>
+        </div>
+
+        <p class="text-sm ${policy.ok ? 'text-emerald-300' : 'text-amber-300'}">${policy.text}</p>
+        <p class="text-sm text-slate-300">${slot.notes}</p>
+
+        ${actionButtons(slot)}
+
+        <div>
+          <h3 class="font-medium mb-2">Audit Trail</h3>
+          <ul class="space-y-2 text-sm max-h-52 overflow-y-auto pr-1">
+            ${slot.audit.map(a => `
+              <li class="border border-slate-800 rounded-lg p-2 bg-slate-950">
+                <p class="text-slate-300">${a.action} <span class="text-slate-500">by ${a.who}</span></p>
+                <p class="text-slate-400 text-xs mt-1">${a.t} · ${a.note}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+
+      els.detail.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const act = btn.dataset.act;
+          if (act === 'approve') {
+            slot.status = 'Approved';
+            slot.risk = Math.max(15, slot.risk - 18);
+            pushAudit(slot, 'Approved', 'Capacity approved for execution window.');
+          }
+          if (act === 'escalate') {
+            slot.status = 'Escalated';
+            slot.risk = Math.min(99, slot.risk + 8);
+            pushAudit(slot, 'Escalated', 'Escalated to steering committee due to deficit risk.');
+          }
+          if (act === 'rebalance') {
+            slot.requestedFte = Math.max(0.5, +(slot.requestedFte - 0.5).toFixed(1));
+            slot.risk = Math.max(10, slot.risk - 7);
+            pushAudit(slot, 'Rebalanced', 'Request scope adjusted by -0.5 FTE to fit capacity guardrail.');
+          }
+          if (act === 'reject') {
+            slot.status = 'Rejected';
+            slot.risk = Math.max(20, slot.risk - 10);
+            pushAudit(slot, 'Rejected', 'Request parked for next planning cycle.');
+          }
+          render();
+        });
+      });
+    }
+
+    function exportCsv(items) {
+      const rows = [
+        ['id', 'date', 'team', 'project', 'owner', 'requested_fte', 'available_fte', 'deficit_fte', 'status', 'risk'],
+        ...items.map(i => [i.id, i.date, i.team, i.project, i.owner, i.requestedFte, i.availableFte, +(i.requestedFte - i.availableFte).toFixed(1), i.status, i.risk])
+      ];
+      const csv = rows.map(row => row.map(val => {
+        const text = String(val ?? '');
+        return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+      }).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'capacity-planner-calendar.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function populateFilters() {
+      uniqueTeams(slots).forEach(team => {
+        const optA = document.createElement('option');
+        optA.value = team;
+        optA.textContent = team;
+        els.teamFilter.appendChild(optA);
+
+        const optB = document.createElement('option');
+        optB.value = team;
+        optB.textContent = team;
+        els.reqTeam.appendChild(optB);
+      });
+    }
+
+    function render() {
+      const visible = filteredSlots();
+      renderKpis(visible);
+      renderCalendar(visible);
+      renderDetail(visible);
+    }
+
+    els.searchInput.addEventListener('input', e => {
+      state.search = e.target.value;
+      render();
+    });
+
+    els.teamFilter.addEventListener('change', e => {
+      state.team = e.target.value;
+      render();
+    });
+
+    els.statusFilter.addEventListener('change', e => {
+      state.status = e.target.value;
+      render();
+    });
+
+    els.roleView.addEventListener('change', e => {
+      state.role = e.target.value;
+      render();
+    });
+
+    els.sortBy.addEventListener('change', e => {
+      state.sortBy = e.target.value;
+      render();
+    });
+
+    els.csvBtn.addEventListener('click', () => exportCsv(filteredSlots()));
+
+    els.requestForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const date = els.reqDate.value;
+      const team = els.reqTeam.value;
+      const project = els.reqProject.value.trim();
+      const requested = Number(els.reqNeed.value);
+      const available = Number(els.reqAvail.value);
+      const owner = els.reqOwner.value.trim();
+      const reason = els.reqReason.value.trim();
+
+      if (!date || !team || !project || !owner) {
+        els.formMsg.textContent = 'Please complete all required fields.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+      if (!Number.isFinite(requested) || !Number.isFinite(available) || requested <= 0 || available < 0) {
+        els.formMsg.textContent = 'FTE values are invalid.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+      if (reason.length < 12) {
+        els.formMsg.textContent = 'Business reason must be at least 12 characters.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+
+      const deficit = requested - available;
+      slots.unshift({
+        id: `CP-${Math.floor(1000 + Math.random() * 8999)}`,
+        date,
+        team,
+        project,
+        owner,
+        requestedFte: requested,
+        availableFte: available,
+        status: deficit > 1 ? 'Escalated' : 'Pending Approval',
+        risk: Math.min(95, Math.max(18, Math.round(35 + deficit * 18))),
+        notes: reason,
+        audit: [{
+          t: ts(),
+          who: state.role,
+          action: 'Submitted',
+          note: deficit > 1 ? 'Auto-escalated due to policy threshold.' : 'Submitted for approval review.'
+        }]
+      });
+
+      els.requestForm.reset();
+      state.team = 'all';
+      els.teamFilter.value = 'all';
+      els.formMsg.textContent = 'Capacity request submitted and added to calendar.';
+      els.formMsg.className = 'text-sm text-emerald-300';
+      state.selectedId = slots[0].id;
+      render();
+    });
+
+    populateFilters();
+    render();
+  </script>
+</body>
+</html>

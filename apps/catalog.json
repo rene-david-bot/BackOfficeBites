@@ -2553,5 +2553,29 @@
       "csv export"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-13",
+    "day": 113,
+    "slug": "2026-05-13-capacity-planner-escalation-calendar",
+    "name": "Capacity Planner Escalation Calendar",
+    "description": "Planning calendar to manage weekly FTE bottlenecks with policy validation, escalation routing, and audit-ready exports.",
+    "category": "Planning",
+    "pattern": "Calendar",
+    "tags": [
+      "capacity planner",
+      "planning",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
