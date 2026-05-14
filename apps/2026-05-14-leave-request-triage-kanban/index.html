@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Request Triage Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 md:py-8">
+    <header>
+      <a href="../../index.html" class="text-sm text-emerald-300 underline hover:text-emerald-200">BackOfficeBites 🍔</a>
+      <h1 class="mt-2 text-2xl font-bold md:text-3xl">Leave Request Triage Kanban</h1>
+      <p class="mt-2 text-slate-400">HR board for routing leave requests through manager and HR approvals with policy checks, drag-and-drop, and audit history.</p>
+    </header>
+
+    <section id="kpis" class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-live="polite"></section>
+
+    <section class="space-y-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-7">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="Employee, backup, team" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label for="teamFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Team</label>
+          <select id="teamFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="typeFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Leave type</label>
+          <select id="typeFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Role view</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option>People Manager</option>
+            <option>HR Coordinator</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Sort</label>
+          <select id="sortBy" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="submitted-desc">Submitted date ↓</option>
+            <option value="submitted-asc">Submitted date ↑</option>
+            <option value="days-desc">Duration ↓</option>
+            <option value="priority-desc">Priority ↓</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="csvBtn" class="w-full rounded-lg bg-emerald-600 px-3 py-2 font-medium hover:bg-emerald-500">Export CSV</button>
+        </div>
+      </div>
+
+      <p id="boardMsg" class="text-sm text-slate-400" aria-live="polite"></p>
+
+      <div id="board" class="grid grid-cols-1 gap-3 xl:grid-cols-5"></div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-5">
+      <article id="detailPanel" class="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-2" aria-live="polite">
+        <p class="text-slate-400">Select a leave request card to inspect policy and actions.</p>
+      </article>
+
+      <article class="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
+        <h2 class="text-lg font-semibold">New Leave Request</h2>
+        <form id="requestForm" class="grid grid-cols-1 gap-3 md:grid-cols-6">
+          <div class="md:col-span-2">
+            <label for="employeeName" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Employee name</label>
+            <input id="employeeName" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="First Last" />
+          </div>
+          <div>
+            <label for="teamInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Team</label>
+            <select id="teamInput" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Select</option>
+            </select>
+          </div>
+          <div>
+            <label for="leaveTypeInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Leave type</label>
+            <select id="leaveTypeInput" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Select</option>
+            </select>
+          </div>
+          <div>
+            <label for="startDateInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Start</label>
+            <input id="startDateInput" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label for="endDateInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">End</label>
+            <input id="endDateInput" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div class="md:col-span-2">
+            <label for="backupInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Backup owner</label>
+            <input id="backupInput" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Covering teammate" />
+          </div>
+          <div class="md:col-span-4">
+            <label for="reasonInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Reason</label>
+            <input id="reasonInput" required minlength="12" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Reason and handover context" />
+          </div>
+          <div class="md:col-span-6">
+            <button type="submit" class="w-full rounded-lg bg-indigo-600 px-3 py-2 font-medium hover:bg-indigo-500">Submit leave request</button>
+          </div>
+        </form>
+        <p id="formMsg" class="text-sm text-slate-400" aria-live="polite"></p>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const boardColumns = ['Pending Review', 'Manager Approval', 'HR Validation', 'Approved', 'Rejected'];
+    const leaveTypes = ['Vacation', 'Sick Leave', 'Parental Leave', 'Training'];
+
+    const requests = [
+      {
+        id: 'LR-1401',
+        employee: 'Alina Koch',
+        team: 'Customer Success',
+        type: 'Vacation',
+        start: '2026-06-03',
+        end: '2026-06-07',
+        submitted: '2026-05-10',
+        backup: 'Jonas Maier',
+        reason: 'Family trip already booked, handover notes attached.',
+        status: 'Manager Approval',
+        audit: [{ t: '2026-05-10 08:12', who: 'People Manager', action: 'Moved to Manager Approval', note: 'Coverage check requested.' }]
+      },
+      {
+        id: 'LR-1402',
+        employee: 'Ben Tiller',
+        team: 'IT Operations',
+        type: 'Sick Leave',
+        start: '2026-05-15',
+        end: '2026-05-22',
+        submitted: '2026-05-12',
+        backup: 'Deniz Acar',
+        reason: 'Medical leave extension pending doctor note upload.',
+        status: 'HR Validation',
+        audit: [{ t: '2026-05-12 10:31', who: 'People Manager', action: 'Escalated to HR Validation', note: 'Sick leave above 5 days.' }]
+      },
+      {
+        id: 'LR-1403',
+        employee: 'Carla Neumann',
+        team: 'Finance',
+        type: 'Training',
+        start: '2026-05-27',
+        end: '2026-05-29',
+        submitted: '2026-05-11',
+        backup: 'Mila Weber',
+        reason: 'Mandatory IFRS workshop with manager approval.',
+        status: 'Approved',
+        audit: [{ t: '2026-05-11 14:02', who: 'HR Coordinator', action: 'Approved', note: 'Training budget confirmed.' }]
+      },
+      {
+        id: 'LR-1404',
+        employee: 'David Ross',
+        team: 'Engineering',
+        type: 'Vacation',
+        start: '2026-07-01',
+        end: '2026-07-18',
+        submitted: '2026-05-13',
+        backup: 'Nora Henkel',
+        reason: 'Long leave request with sprint handover and release freeze plan.',
+        status: 'Pending Review',
+        audit: [{ t: '2026-05-13 09:55', who: 'People Manager', action: 'Submitted', note: 'Auto-routed for policy review.' }]
+      },
+      {
+        id: 'LR-1405',
+        employee: 'Elif Yilmaz',
+        team: 'Customer Success',
+        type: 'Parental Leave',
+        start: '2026-06-15',
+        end: '2026-07-31',
+        submitted: '2026-05-09',
+        backup: 'Noah Engel',
+        reason: 'Parental leave planning, replacement onboarding in progress.',
+        status: 'HR Validation',
+        audit: [{ t: '2026-05-09 16:48', who: 'People Manager', action: 'Escalated to HR Validation', note: 'Parental leave requires HR review.' }]
+      },
+      {
+        id: 'LR-1406',
+        employee: 'Felix Sturm',
+        team: 'IT Operations',
+        type: 'Vacation',
+        start: '2026-05-20',
+        end: '2026-05-23',
+        submitted: '2026-05-12',
+        backup: 'Lina Pfeifer',
+        reason: 'Short leave after on-call week, documented incident handover.',
+        status: 'Manager Approval',
+        audit: [{ t: '2026-05-12 07:25', who: 'People Manager', action: 'Moved to Manager Approval', note: 'On-call roster checked.' }]
+      },
+      {
+        id: 'LR-1407',
+        employee: 'Greta Hohl',
+        team: 'Finance',
+        type: 'Vacation',
+        start: '2026-05-26',
+        end: '2026-05-30',
+        submitted: '2026-05-08',
+        backup: 'Can Alkan',
+        reason: 'Month-end overlap without backup signoff.',
+        status: 'Rejected',
+        audit: [{ t: '2026-05-08 12:40', who: 'People Manager', action: 'Rejected', note: 'Critical month-end close conflict.' }]
+      },
+      {
+        id: 'LR-1408',
+        employee: 'Hannah Otto',
+        team: 'Engineering',
+        type: 'Training',
+        start: '2026-06-10',
+        end: '2026-06-13',
+        submitted: '2026-05-13',
+        backup: 'Paul Richter',
+        reason: 'Security architecture certification week with planned substitution.',
+        status: 'Pending Review',
+        audit: [{ t: '2026-05-13 11:04', who: 'People Manager', action: 'Submitted', note: 'Awaiting coverage confirmation.' }]
+      }
+    ];
+
+    const state = {
+      selectedId: requests[0].id,
+      search: '',
+      team: 'all',
+      type: 'all',
+      role: 'People Manager',
+      sortBy: 'submitted-desc'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      board: document.getElementById('board'),
+      detail: document.getElementById('detailPanel'),
+      boardMsg: document.getElementById('boardMsg'),
+      searchInput: document.getElementById('searchInput'),
+      teamFilter: document.getElementById('teamFilter'),
+      typeFilter: document.getElementById('typeFilter'),
+      roleView: document.getElementById('roleView'),
+      sortBy: document.getElementById('sortBy'),
+      csvBtn: document.getElementById('csvBtn'),
+      requestForm: document.getElementById('requestForm'),
+      employeeName: document.getElementById('employeeName'),
+      teamInput: document.getElementById('teamInput'),
+      leaveTypeInput: document.getElementById('leaveTypeInput'),
+      startDateInput: document.getElementById('startDateInput'),
+      endDateInput: document.getElementById('endDateInput'),
+      backupInput: document.getElementById('backupInput'),
+      reasonInput: document.getElementById('reasonInput'),
+      formMsg: document.getElementById('formMsg')
+    };
+
+    function nowStamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function toDate(v) {
+      return new Date(`${v}T00:00:00Z`);
+    }
+
+    function diffDaysInclusive(start, end) {
+      const ms = toDate(end) - toDate(start);
+      return Math.floor(ms / 86400000) + 1;
+    }
+
+    function daysUntil(date) {
+      return Math.floor((toDate(date) - new Date()) / 86400000);
+    }
+
+    function scorePriority(req) {
+      let score = 10;
+      if (req.days >= 10) score += 40;
+      if (req.type === 'Parental Leave') score += 35;
+      if (req.type === 'Sick Leave' && req.days > 5) score += 25;
+      if (daysUntil(req.start) < 7) score += 20;
+      if (req.status === 'Pending Review') score += 5;
+      return score;
+    }
+
+    function priorityLabel(req) {
+      const p = scorePriority(req);
+      if (p >= 75) return 'High';
+      if (p >= 45) return 'Medium';
+      return 'Low';
+    }
+
+    function policyCheck(req) {
+      const needsHr = req.type === 'Parental Leave' || req.days > 10 || (req.type === 'Sick Leave' && req.days > 5);
+      const allowManagerDirectApprove = !needsHr && req.days <= 5;
+      const text = needsHr
+        ? 'Policy requires HR Validation before final approval.'
+        : 'Policy allows manager-only approval.';
+      return { needsHr, allowManagerDirectApprove, text };
+    }
+
+    function canEdit() {
+      return state.role !== 'Auditor';
+    }
+
+    function canMoveTo(req, targetStatus) {
+      if (!canEdit()) return { ok: false, reason: 'Auditor role is read-only.' };
+
+      const policy = policyCheck(req);
+      if (targetStatus === 'Approved') {
+        if (state.role === 'People Manager' && !policy.allowManagerDirectApprove) {
+          return { ok: false, reason: 'People Manager cannot finalize this request. Move it to HR Validation.' };
+        }
+        if (policy.needsHr && req.status !== 'HR Validation' && state.role !== 'HR Coordinator') {
+          return { ok: false, reason: 'Approval blocked until HR Validation.' };
+        }
+        if (policy.needsHr && req.status !== 'HR Validation' && state.role === 'HR Coordinator') {
+          return { ok: false, reason: 'Move request to HR Validation first to capture policy gate.' };
+        }
+      }
+
+      if (targetStatus === 'HR Validation' && state.role === 'People Manager') {
+        return { ok: true };
+      }
+
+      return { ok: true };
+    }
+
+    function pushAudit(req, action, note) {
+      req.audit.unshift({ t: nowStamp(), who: state.role, action, note });
+    }
+
+    function moveRequest(id, targetStatus, source = 'action') {
+      const req = requests.find(r => r.id === id);
+      if (!req || req.status === targetStatus) return;
+
+      const gate = canMoveTo(req, targetStatus);
+      if (!gate.ok) {
+        setBoardMessage(gate.reason, true);
+        return;
+      }
+
+      const from = req.status;
+      req.status = targetStatus;
+      pushAudit(req, `Moved ${from} → ${targetStatus}`, `${source} by ${state.role}.`);
+      setBoardMessage(`${req.id} moved to ${targetStatus}.`, false);
+      render();
+    }
+
+    function setBoardMessage(text, isError) {
+      els.boardMsg.textContent = text;
+      els.boardMsg.className = `text-sm ${isError ? 'text-rose-300' : 'text-emerald-300'}`;
+    }
+
+    function unique(values) {
+      return [...new Set(values)].sort();
+    }
+
+    function hydrateComputedFields() {
+      requests.forEach(req => {
+        req.days = diffDaysInclusive(req.start, req.end);
+      });
+    }
+
+    function filteredRequests() {
+      const term = state.search.trim().toLowerCase();
+      const rows = requests.filter(req => {
+        const hitTerm = !term || `${req.employee} ${req.backup} ${req.team} ${req.id}`.toLowerCase().includes(term);
+        const hitTeam = state.team === 'all' || req.team === state.team;
+        const hitType = state.type === 'all' || req.type === state.type;
+        return hitTerm && hitTeam && hitType;
+      });
+
+      return rows.sort((a, b) => {
+        if (state.sortBy === 'submitted-asc') return a.submitted.localeCompare(b.submitted);
+        if (state.sortBy === 'days-desc') return b.days - a.days;
+        if (state.sortBy === 'priority-desc') return scorePriority(b) - scorePriority(a);
+        return b.submitted.localeCompare(a.submitted);
+      });
+    }
+
+    function renderKpis(rows) {
+      const pending = rows.filter(r => ['Pending Review', 'Manager Approval', 'HR Validation'].includes(r.status)).length;
+      const policyGated = rows.filter(r => policyCheck(r).needsHr).length;
+      const approved = rows.filter(r => r.status === 'Approved').length;
+      const highPriority = rows.filter(r => priorityLabel(r) === 'High').length;
+      const cards = [
+        ['Visible Requests', rows.length, 'text-slate-100'],
+        ['Pending Decisions', pending, 'text-amber-300'],
+        ['Needs HR Gate', policyGated, 'text-indigo-300'],
+        ['Approved / High Priority', `${approved} / ${highPriority}`, 'text-emerald-300']
+      ];
+
+      els.kpis.innerHTML = cards.map(([label, value, color]) => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${color}">${value}</p>
+        </article>
+      `).join('');
+    }
+
+    function requestCard(req) {
+      const selected = req.id === state.selectedId;
+      const priority = priorityLabel(req);
+      const priorityClass = priority === 'High'
+        ? 'bg-rose-900/60 text-rose-300'
+        : priority === 'Medium'
+          ? 'bg-amber-900/60 text-amber-300'
+          : 'bg-emerald-900/60 text-emerald-300';
+
+      return `
+        <article
+          class="rounded-lg border p-3 ${selected ? 'border-emerald-500 bg-emerald-900/20' : 'border-slate-800 bg-slate-950'}"
+          draggable="${canEdit()}"
+          tabindex="0"
+          role="button"
+          aria-label="${req.id} ${req.employee} ${req.type}"
+          data-id="${req.id}"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">${req.employee}</p>
+            <span class="rounded-full px-2 py-0.5 text-xs ${priorityClass}">${priority}</span>
+          </div>
+          <p class="mt-1 text-sm text-slate-400">${req.team} · ${req.type}</p>
+          <p class="text-xs text-slate-500">${req.start} → ${req.end} (${req.days} days)</p>
+          <p class="mt-1 text-xs text-slate-400">${req.id} · Backup: ${req.backup}</p>
+        </article>
+      `;
+    }
+
+    function renderBoard(rows) {
+      if (!rows.some(r => r.id === state.selectedId)) state.selectedId = rows[0]?.id || null;
+
+      els.board.innerHTML = boardColumns.map(col => {
+        const cards = rows.filter(r => r.status === col);
+        return `
+          <section class="rounded-xl border border-slate-800 bg-slate-950/50 p-3" data-col="${col}">
+            <div class="mb-2 flex items-center justify-between">
+              <h2 class="font-semibold">${col}</h2>
+              <span class="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300">${cards.length}</span>
+            </div>
+            <div class="min-h-40 space-y-2" data-dropzone="${col}" aria-label="${col} drop zone">
+              ${cards.length ? cards.map(requestCard).join('') : '<p class="rounded border border-dashed border-slate-700 p-3 text-xs text-slate-500">Drop here</p>'}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      els.board.querySelectorAll('[data-id]').forEach(card => {
+        card.addEventListener('click', () => {
+          state.selectedId = card.dataset.id;
+          render();
+        });
+
+        card.addEventListener('keydown', (e) => {
+          const req = requests.find(r => r.id === card.dataset.id);
+          if (!req) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = req.id;
+            render();
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            const idx = boardColumns.indexOf(req.status);
+            const target = boardColumns[Math.min(boardColumns.length - 1, idx + 1)];
+            moveRequest(req.id, target, 'keyboard');
+          }
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const idx = boardColumns.indexOf(req.status);
+            const target = boardColumns[Math.max(0, idx - 1)];
+            moveRequest(req.id, target, 'keyboard');
+          }
+        });
+
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+      });
+
+      els.board.querySelectorAll('[data-dropzone]').forEach(zone => {
+        zone.addEventListener('dragover', e => {
+          if (!canEdit()) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        zone.addEventListener('drop', e => {
+          if (!canEdit()) return;
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          moveRequest(id, zone.dataset.dropzone, 'drag-and-drop');
+        });
+      });
+    }
+
+    function renderDetail(rows) {
+      const req = rows.find(r => r.id === state.selectedId) || requests.find(r => r.id === state.selectedId);
+      if (!req) {
+        els.detail.innerHTML = '<p class="text-slate-400">Select a leave request card to inspect policy and actions.</p>';
+        return;
+      }
+
+      const policy = policyCheck(req);
+      const idx = boardColumns.indexOf(req.status);
+      const prev = boardColumns[Math.max(0, idx - 1)];
+      const next = boardColumns[Math.min(boardColumns.length - 1, idx + 1)];
+
+      const disableEdit = !canEdit();
+
+      els.detail.innerHTML = `
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-400">${req.id}</p>
+          <h2 class="mt-1 text-xl font-semibold">${req.employee}</h2>
+          <p class="text-sm text-slate-400">${req.team} · ${req.type} · ${req.days} days</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="rounded border border-slate-800 bg-slate-950 p-2">
+            <p class="text-slate-400">Dates</p>
+            <p class="font-medium">${req.start} → ${req.end}</p>
+          </div>
+          <div class="rounded border border-slate-800 bg-slate-950 p-2">
+            <p class="text-slate-400">Current status</p>
+            <p class="font-medium">${req.status}</p>
+          </div>
+        </div>
+
+        <p class="text-sm ${policy.needsHr ? 'text-amber-300' : 'text-emerald-300'}">${policy.text}</p>
+        <p class="text-sm text-slate-300">Reason: ${req.reason}</p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button data-act="prev" ${disableEdit ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${disableEdit ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 hover:bg-slate-600'}">Move left (${prev})</button>
+          <button data-act="next" ${disableEdit ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${disableEdit ? 'bg-slate-800 text-slate-500' : 'bg-indigo-700 hover:bg-indigo-600'}">Move right (${next})</button>
+          <button data-act="hr" ${disableEdit ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${disableEdit ? 'bg-slate-800 text-slate-500' : 'bg-amber-700 hover:bg-amber-600'}">Send to HR Validation</button>
+          <button data-act="reject" ${disableEdit ? 'disabled' : ''} class="rounded-lg px-3 py-2 font-medium ${disableEdit ? 'bg-slate-800 text-slate-500' : 'bg-rose-700 hover:bg-rose-600'}">Reject</button>
+        </div>
+
+        <div>
+          <h3 class="mb-2 font-medium">Audit trail</h3>
+          <ul class="max-h-56 space-y-2 overflow-y-auto pr-1 text-sm">
+            ${req.audit.map(a => `
+              <li class="rounded border border-slate-800 bg-slate-950 p-2">
+                <p class="text-slate-200">${a.action} <span class="text-slate-500">by ${a.who}</span></p>
+                <p class="mt-1 text-xs text-slate-400">${a.t} · ${a.note}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+
+      els.detail.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const act = btn.dataset.act;
+          if (act === 'prev') moveRequest(req.id, prev, 'detail action');
+          if (act === 'next') moveRequest(req.id, next, 'detail action');
+          if (act === 'hr') moveRequest(req.id, 'HR Validation', 'detail action');
+          if (act === 'reject') moveRequest(req.id, 'Rejected', 'detail action');
+        });
+      });
+    }
+
+    function exportCsv(rows) {
+      const cols = ['id', 'employee', 'team', 'type', 'start', 'end', 'days', 'status', 'priority', 'backup', 'submitted'];
+      const csvRows = [
+        cols,
+        ...rows.map(r => [r.id, r.employee, r.team, r.type, r.start, r.end, r.days, r.status, priorityLabel(r), r.backup, r.submitted])
+      ];
+
+      const csv = csvRows.map(row => row.map(v => {
+        const text = String(v ?? '');
+        return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+      }).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'leave-request-triage-kanban.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function populateFilters() {
+      unique(requests.map(r => r.team)).forEach(team => {
+        const a = document.createElement('option');
+        a.value = team;
+        a.textContent = team;
+        els.teamFilter.appendChild(a);
+
+        const b = document.createElement('option');
+        b.value = team;
+        b.textContent = team;
+        els.teamInput.appendChild(b);
+      });
+
+      leaveTypes.forEach(type => {
+        const a = document.createElement('option');
+        a.value = type;
+        a.textContent = type;
+        els.typeFilter.appendChild(a);
+
+        const b = document.createElement('option');
+        b.value = type;
+        b.textContent = type;
+        els.leaveTypeInput.appendChild(b);
+      });
+    }
+
+    function render() {
+      const rows = filteredRequests();
+      renderKpis(rows);
+      renderBoard(rows);
+      renderDetail(rows);
+    }
+
+    els.searchInput.addEventListener('input', e => {
+      state.search = e.target.value;
+      render();
+    });
+
+    els.teamFilter.addEventListener('change', e => {
+      state.team = e.target.value;
+      render();
+    });
+
+    els.typeFilter.addEventListener('change', e => {
+      state.type = e.target.value;
+      render();
+    });
+
+    els.roleView.addEventListener('change', e => {
+      state.role = e.target.value;
+      setBoardMessage(`Role changed to ${state.role}.`, false);
+      render();
+    });
+
+    els.sortBy.addEventListener('change', e => {
+      state.sortBy = e.target.value;
+      render();
+    });
+
+    els.csvBtn.addEventListener('click', () => exportCsv(filteredRequests()));
+
+    els.requestForm.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const employee = els.employeeName.value.trim();
+      const team = els.teamInput.value;
+      const type = els.leaveTypeInput.value;
+      const start = els.startDateInput.value;
+      const end = els.endDateInput.value;
+      const backup = els.backupInput.value.trim();
+      const reason = els.reasonInput.value.trim();
+
+      if (!employee || !team || !type || !start || !end || !backup || !reason) {
+        els.formMsg.textContent = 'Please fill in all required fields.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+
+      if (toDate(end) < toDate(start)) {
+        els.formMsg.textContent = 'End date must be on or after start date.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+
+      const days = diffDaysInclusive(start, end);
+      if (days > 60) {
+        els.formMsg.textContent = 'Requested duration is above policy max (60 days).';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+
+      if (reason.length < 12) {
+        els.formMsg.textContent = 'Reason must be at least 12 characters.';
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+
+      const newId = `LR-${Math.floor(2000 + Math.random() * 7000)}`;
+      const req = {
+        id: newId,
+        employee,
+        team,
+        type,
+        start,
+        end,
+        submitted: nowStamp().slice(0, 10),
+        backup,
+        reason,
+        status: 'Pending Review',
+        days,
+        audit: [{ t: nowStamp(), who: state.role, action: 'Submitted', note: 'New leave request created from intake form.' }]
+      };
+
+      requests.unshift(req);
+      state.selectedId = newId;
+      els.requestForm.reset();
+      els.formMsg.textContent = `${newId} created and added to Pending Review.`;
+      els.formMsg.className = 'text-sm text-emerald-300';
+      setBoardMessage(`${newId} submitted.`, false);
+      render();
+    });
+
+    hydrateComputedFields();
+    populateFilters();
+    render();
+  </script>
+</body>
+</html>

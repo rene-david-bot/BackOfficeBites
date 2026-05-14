@@ -2577,5 +2577,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-14",
+    "day": 114,
+    "slug": "2026-05-14-leave-request-triage-kanban",
+    "name": "Leave Request Triage Kanban",
+    "description": "HR kanban workspace for leave approvals with policy gates, drag-and-drop routing, and audit-ready exports.",
+    "category": "HR",
+    "pattern": "Kanban",
+    "tags": [
+      "leave requests",
+      "hr",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "drag-and-drop",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
