@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legal Hold Waiver Chatdesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6 md:py-8">
+    <header>
+      <a href="../../index.html" class="text-sm text-amber-300 underline hover:text-amber-200">BackOfficeBites 🍔</a>
+      <h1 class="mt-2 text-2xl font-bold md:text-3xl">Legal Hold Waiver Chatdesk</h1>
+      <p class="mt-2 max-w-4xl text-slate-300">Chat-first legal workspace for retention-waiver requests, with role-based review, policy validation, audit trail, and CSV export.</p>
+    </header>
+
+    <section id="kpis" class="grid grid-cols-2 gap-3 md:grid-cols-4" aria-live="polite"></section>
+
+    <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-6">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="Matter, custodian, region" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+        </div>
+        <div>
+          <label for="statusFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Status</label>
+          <select id="statusFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="all">All</option>
+            <option>Draft Intake</option>
+            <option>Counsel Review</option>
+            <option>Compliance Approval</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="regionFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Region</label>
+          <select id="regionFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Role view</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option>Requestor</option>
+            <option>Legal Analyst</option>
+            <option>Compliance Officer</option>
+            <option>General Counsel</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Sort</label>
+          <select id="sortBy" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="risk-desc">Risk score ↓</option>
+            <option value="due-asc">Retention deadline ↑</option>
+            <option value="id-desc">Newest request</option>
+          </select>
+        </div>
+      </div>
+      <p id="boardMsg" class="mt-3 text-sm text-slate-400" aria-live="polite"></p>
+    </section>
+
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <aside class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 lg:col-span-4">
+        <div class="mb-2 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Waiver queue</h2>
+          <button id="csvBtn" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium hover:bg-emerald-500">Export CSV</button>
+        </div>
+        <p class="text-xs text-slate-400">Use Enter to open a selected request.</p>
+        <div id="requestList" class="mt-3 space-y-2"></div>
+      </aside>
+
+      <section class="space-y-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-8">
+        <article id="detailPanel" class="space-y-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3" aria-live="polite">
+          <p class="text-slate-400">Select a waiver request to inspect policy and actions.</p>
+        </article>
+
+        <article class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <h3 class="text-lg font-semibold">Discussion thread</h3>
+          <div id="thread" class="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1"></div>
+          <form id="chatForm" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <label for="chatInput" class="sr-only">Add thread message</label>
+            <input id="chatInput" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Add legal note, evidence, or approval rationale" />
+            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 font-medium hover:bg-indigo-500">Post</button>
+          </form>
+        </article>
+
+        <article class="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <h3 class="text-lg font-semibold">New waiver request</h3>
+          <form id="waiverForm" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6">
+            <div class="md:col-span-2">
+              <label for="matterInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Matter</label>
+              <input id="matterInput" required minlength="6" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Matter or investigation name" />
+            </div>
+            <div>
+              <label for="regionInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Region</label>
+              <select id="regionInput" required class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Select</option>
+              </select>
+            </div>
+            <div>
+              <label for="custodianInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Custodian</label>
+              <input id="custodianInput" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Primary custodian" />
+            </div>
+            <div>
+              <label for="deadlineInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Retention deadline</label>
+              <input id="deadlineInput" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label for="daysInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Requested days</label>
+              <input id="daysInput" type="number" min="30" max="3650" required class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 180" />
+            </div>
+            <div class="md:col-span-6">
+              <label for="justificationInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Business justification</label>
+              <textarea id="justificationInput" required minlength="25" rows="2" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Why retention waiver is requested"></textarea>
+            </div>
+            <div class="md:col-span-6">
+              <button type="submit" class="w-full rounded-lg bg-amber-600 px-3 py-2 font-medium hover:bg-amber-500">Create waiver request</button>
+            </div>
+          </form>
+          <p id="formMsg" class="mt-2 text-sm text-slate-400" aria-live="polite"></p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const requests = [
+      {
+        id: 'LW-3107',
+        matter: 'Vendor kickback internal investigation',
+        region: 'EU',
+        custodian: 'Sven Gerber',
+        requestedBy: 'Marta Klein',
+        risk: 9,
+        retentionDeadline: '2026-06-01',
+        requestedDays: 120,
+        policyMinDays: 365,
+        holdNoticeSent: true,
+        legalOpsAck: true,
+        complianceAck: false,
+        mitigationPlan: 'Segregate waiver documents, preserve mailbox snapshot, and keep finance export immutable in cold archive.',
+        justification: 'Cross-border litigation exposure remains unresolved and external counsel requested a time-limited retention waiver.',
+        status: 'Compliance Approval',
+        messages: [
+          { by: 'Marta Klein', role: 'Requestor', text: 'Need expedited review before regulator call tomorrow.', ts: '07:44' },
+          { by: 'Legal Analyst', role: 'Legal Analyst', text: 'Counsel review completed, waiting for compliance acknowledgment.', ts: '08:03' }
+        ],
+        audit: [
+          { t: '2026-05-15 08:03', who: 'Legal Analyst', action: 'Moved Counsel Review → Compliance Approval', note: 'Risk and jurisdiction flagged for compliance sign-off.' }
+        ]
+      },
+      {
+        id: 'LW-3106',
+        matter: 'Customer deletion appeal batch 4',
+        region: 'US',
+        custodian: 'Noah Brand',
+        requestedBy: 'Ines Roth',
+        risk: 5,
+        retentionDeadline: '2026-05-22',
+        requestedDays: 270,
+        policyMinDays: 180,
+        holdNoticeSent: true,
+        legalOpsAck: true,
+        complianceAck: true,
+        mitigationPlan: 'Redact non-essential identifiers and store signed approval packet in legal vault.',
+        justification: 'Appeal workflow requires delayed deletion for unresolved payment disputes.',
+        status: 'Counsel Review',
+        messages: [
+          { by: 'Ines Roth', role: 'Requestor', text: 'Support appeals team attached dispute IDs in evidence bundle.', ts: '07:15' }
+        ],
+        audit: [
+          { t: '2026-05-15 07:21', who: 'Legal Analyst', action: 'Submitted for Counsel Review', note: 'Policy baseline met, legal review still required.' }
+        ]
+      },
+      {
+        id: 'LW-3105',
+        matter: 'APAC distributor arbitration hold',
+        region: 'APAC',
+        custodian: 'Min Seo',
+        requestedBy: 'Ravi Chopra',
+        risk: 7,
+        retentionDeadline: '2026-05-20',
+        requestedDays: 540,
+        policyMinDays: 365,
+        holdNoticeSent: true,
+        legalOpsAck: true,
+        complianceAck: true,
+        mitigationPlan: 'Retain invoice exports and arbitration correspondence under restricted legal hold workspace.',
+        justification: 'Arbitration timeline extended and evidence must remain discoverable.',
+        status: 'Approved',
+        messages: [
+          { by: 'General Counsel', role: 'General Counsel', text: 'Approved with quarterly revalidation checkpoint.', ts: '06:58' }
+        ],
+        audit: [
+          { t: '2026-05-15 06:58', who: 'General Counsel', action: 'Approved waiver', note: 'Quarterly checkpoint required.' }
+        ]
+      },
+      {
+        id: 'LW-3104',
+        matter: 'Former employee mailbox release request',
+        region: 'EU',
+        custodian: 'Lena Vogt',
+        requestedBy: 'Paul Meyer',
+        risk: 6,
+        retentionDeadline: '2026-05-18',
+        requestedDays: 90,
+        policyMinDays: 365,
+        holdNoticeSent: false,
+        legalOpsAck: false,
+        complianceAck: false,
+        mitigationPlan: '',
+        justification: 'Mailbox cleanup requested before storage cap is reached.',
+        status: 'Draft Intake',
+        messages: [
+          { by: 'Paul Meyer', role: 'Requestor', text: 'Can this be approved quickly? storage pressure is high.', ts: '07:02' }
+        ],
+        audit: [
+          { t: '2026-05-15 07:02', who: 'Requestor', action: 'Draft created', note: 'Awaiting legal intake checks.' }
+        ]
+      },
+      {
+        id: 'LW-3103',
+        matter: 'Product liability claim archive release',
+        region: 'US',
+        custodian: 'Dana Keller',
+        requestedBy: 'Omar Yildiz',
+        risk: 8,
+        retentionDeadline: '2026-05-25',
+        requestedDays: 120,
+        policyMinDays: 365,
+        holdNoticeSent: true,
+        legalOpsAck: true,
+        complianceAck: true,
+        mitigationPlan: 'Freeze evidence folder and preserve chain-of-custody log before partial release.',
+        justification: 'Settlement signed but indemnity tail still open.',
+        status: 'Rejected',
+        messages: [
+          { by: 'Compliance Officer', role: 'Compliance Officer', text: 'Rejected due to unresolved indemnity obligations.', ts: '06:31' }
+        ],
+        audit: [
+          { t: '2026-05-15 06:31', who: 'Compliance Officer', action: 'Rejected waiver', note: 'Release blocked until indemnity close.' }
+        ]
+      }
+    ];
+
+    const regions = ['EU', 'US', 'APAC', 'LATAM'];
+    const states = ['Draft Intake', 'Counsel Review', 'Compliance Approval', 'Approved', 'Rejected'];
+
+    const roleMap = {
+      Requestor: { canEdit: true, canRouteCounsel: false, canRouteCompliance: false, canReject: false },
+      'Legal Analyst': { canEdit: true, canRouteCounsel: true, canRouteCompliance: true, canReject: true },
+      'Compliance Officer': { canEdit: true, canRouteCounsel: true, canRouteCompliance: true, canReject: true },
+      'General Counsel': { canEdit: true, canRouteCounsel: true, canRouteCompliance: true, canReject: true },
+      Auditor: { canEdit: false, canRouteCounsel: false, canRouteCompliance: false, canReject: false }
+    };
+
+    const state = {
+      selectedId: requests[0].id,
+      search: '',
+      status: 'all',
+      region: 'all',
+      sortBy: 'risk-desc',
+      role: 'Requestor'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      requestList: document.getElementById('requestList'),
+      detail: document.getElementById('detailPanel'),
+      thread: document.getElementById('thread'),
+      boardMsg: document.getElementById('boardMsg'),
+      searchInput: document.getElementById('searchInput'),
+      statusFilter: document.getElementById('statusFilter'),
+      regionFilter: document.getElementById('regionFilter'),
+      sortBy: document.getElementById('sortBy'),
+      roleView: document.getElementById('roleView'),
+      csvBtn: document.getElementById('csvBtn'),
+      chatForm: document.getElementById('chatForm'),
+      chatInput: document.getElementById('chatInput'),
+      waiverForm: document.getElementById('waiverForm'),
+      matterInput: document.getElementById('matterInput'),
+      regionInput: document.getElementById('regionInput'),
+      custodianInput: document.getElementById('custodianInput'),
+      deadlineInput: document.getElementById('deadlineInput'),
+      daysInput: document.getElementById('daysInput'),
+      justificationInput: document.getElementById('justificationInput'),
+      formMsg: document.getElementById('formMsg')
+    };
+
+    function nowStamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function policyCheck(req) {
+      const errors = [];
+      if (!req.mitigationPlan || req.mitigationPlan.trim().length < 30) errors.push('Mitigation plan must be at least 30 characters.');
+      if (!req.legalOpsAck) errors.push('Legal Ops acknowledgment is required.');
+      if (req.risk >= 7 && !req.complianceAck) errors.push('Compliance acknowledgment is required for risk >= 7.');
+      if (req.region === 'EU' && !req.holdNoticeSent) errors.push('EU matters require hold notice confirmation.');
+      if (req.requestedDays < req.policyMinDays) errors.push(`Requested retention (${req.requestedDays} days) is below policy minimum (${req.policyMinDays} days).`);
+      return {
+        ok: errors.length === 0,
+        errors,
+        label: errors.length ? 'Policy blocked' : 'Policy pass'
+      };
+    }
+
+    function riskLabel(risk) {
+      if (risk >= 8) return { text: 'High', cls: 'bg-rose-900/60 text-rose-300' };
+      if (risk >= 5) return { text: 'Medium', cls: 'bg-amber-900/60 text-amber-300' };
+      return { text: 'Low', cls: 'bg-emerald-900/60 text-emerald-300' };
+    }
+
+    function pushAudit(req, action, note = '') {
+      req.audit.unshift({ t: nowStamp(), who: state.role, action, note });
+    }
+
+    function setMessage(text, isError = false) {
+      els.boardMsg.textContent = text;
+      els.boardMsg.className = `mt-3 text-sm ${isError ? 'text-rose-300' : 'text-emerald-300'}`;
+    }
+
+    function filteredRequests() {
+      const term = state.search.trim().toLowerCase();
+      let rows = requests.filter(req => {
+        const hitTerm = !term || `${req.id} ${req.matter} ${req.custodian} ${req.region}`.toLowerCase().includes(term);
+        const hitStatus = state.status === 'all' || req.status === state.status;
+        const hitRegion = state.region === 'all' || req.region === state.region;
+        return hitTerm && hitStatus && hitRegion;
+      });
+
+      rows = rows.sort((a, b) => {
+        if (state.sortBy === 'due-asc') return a.retentionDeadline.localeCompare(b.retentionDeadline);
+        if (state.sortBy === 'id-desc') return b.id.localeCompare(a.id);
+        return b.risk - a.risk;
+      });
+
+      return rows;
+    }
+
+    function renderKpis(rows) {
+      const awaiting = rows.filter(r => ['Counsel Review', 'Compliance Approval'].includes(r.status)).length;
+      const highRisk = rows.filter(r => r.risk >= 8).length;
+      const approved = rows.filter(r => r.status === 'Approved').length;
+      const blocked = rows.filter(r => !policyCheck(r).ok && ['Compliance Approval', 'Approved'].includes(r.status)).length;
+
+      const cards = [
+        ['Visible Requests', rows.length, 'text-slate-100'],
+        ['Awaiting Decision', awaiting, 'text-amber-300'],
+        ['High Risk', highRisk, 'text-rose-300'],
+        ['Approved / Policy Blocked', `${approved} / ${blocked}`, 'text-emerald-300']
+      ];
+
+      els.kpis.innerHTML = cards.map(([label, value, cls]) => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="text-2xl font-semibold ${cls}">${value}</p>
+        </article>
+      `).join('');
+    }
+
+    function requestCard(req) {
+      const active = req.id === state.selectedId;
+      const risk = riskLabel(req.risk);
+      return `
+        <article data-id="${req.id}" tabindex="0" role="button" aria-label="${req.id} ${req.matter}" class="rounded-lg border p-3 ${active ? 'border-amber-500 bg-amber-900/20' : 'border-slate-800 bg-slate-950 hover:border-slate-700'}">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-medium">${req.id}</p>
+            <span class="rounded-full px-2 py-0.5 text-xs ${risk.cls}">${risk.text}</span>
+          </div>
+          <p class="mt-1 text-sm text-slate-200">${req.matter}</p>
+          <p class="text-xs text-slate-400">${req.region} · Custodian: ${req.custodian}</p>
+          <p class="mt-1 text-xs text-slate-500">${req.status} · Deadline ${req.retentionDeadline}</p>
+        </article>
+      `;
+    }
+
+    function renderList(rows) {
+      if (!rows.some(r => r.id === state.selectedId)) state.selectedId = rows[0]?.id || null;
+      if (!rows.length) {
+        els.requestList.innerHTML = '<p class="rounded-lg border border-dashed border-slate-700 p-3 text-sm text-slate-400">No matching waiver requests.</p>';
+        return;
+      }
+
+      els.requestList.innerHTML = rows.map(requestCard).join('');
+
+      els.requestList.querySelectorAll('[data-id]').forEach(card => {
+        card.addEventListener('click', () => {
+          state.selectedId = card.dataset.id;
+          render();
+        });
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = card.dataset.id;
+            render();
+          }
+        });
+      });
+    }
+
+    function canTransition(req, target) {
+      const role = roleMap[state.role];
+      if (!role.canEdit) return { ok: false, reason: 'Auditor role is read-only.' };
+
+      if (target === 'Counsel Review' && !role.canRouteCounsel) {
+        return { ok: false, reason: 'Only legal/compliance roles can route to Counsel Review.' };
+      }
+
+      if (target === 'Compliance Approval' && !role.canRouteCompliance) {
+        return { ok: false, reason: 'Only legal/compliance roles can route to Compliance Approval.' };
+      }
+
+      if (target === 'Approved') {
+        if (req.status !== 'Compliance Approval') {
+          return { ok: false, reason: 'Request must be in Compliance Approval before final approval.' };
+        }
+        if (req.risk >= 7 && state.role !== 'General Counsel') {
+          return { ok: false, reason: 'High-risk waivers require General Counsel approval.' };
+        }
+        if (!['Compliance Officer', 'General Counsel'].includes(state.role)) {
+          return { ok: false, reason: 'Only Compliance Officer or General Counsel can approve.' };
+        }
+        const gate = policyCheck(req);
+        if (!gate.ok) return { ok: false, reason: gate.errors.join(' ') };
+      }
+
+      if (target === 'Rejected' && !role.canReject) {
+        return { ok: false, reason: 'Current role cannot reject requests.' };
+      }
+
+      return { ok: true };
+    }
+
+    function moveStatus(id, target, source = 'action') {
+      const req = requests.find(r => r.id === id);
+      if (!req || req.status === target) return;
+      const gate = canTransition(req, target);
+      if (!gate.ok) {
+        setMessage(gate.reason, true);
+        return;
+      }
+      const from = req.status;
+      req.status = target;
+      pushAudit(req, `Moved ${from} → ${target}`, `${source} by ${state.role}`);
+      setMessage(`${req.id} moved to ${target}.`);
+      render();
+    }
+
+    function renderThread(req) {
+      if (!req?.messages?.length) {
+        els.thread.innerHTML = '<p class="text-sm text-slate-400">No messages yet.</p>';
+        return;
+      }
+      els.thread.innerHTML = req.messages.map(msg => `
+        <article class="rounded border border-slate-800 bg-slate-900 p-2">
+          <p class="text-xs text-slate-400">${msg.ts} · ${msg.by} (${msg.role})</p>
+          <p class="mt-1 text-sm text-slate-100">${msg.text}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderDetail(rows) {
+      const req = rows.find(r => r.id === state.selectedId) || requests.find(r => r.id === state.selectedId);
+      if (!req) {
+        els.detail.innerHTML = '<p class="text-slate-400">Select a waiver request to inspect policy and actions.</p>';
+        els.thread.innerHTML = '<p class="text-sm text-slate-400">No messages yet.</p>';
+        return;
+      }
+
+      const role = roleMap[state.role];
+      const gate = policyCheck(req);
+      const risk = riskLabel(req.risk);
+      const disable = role.canEdit ? '' : 'disabled';
+
+      els.detail.innerHTML = `
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-slate-400">${req.id}</p>
+            <h2 class="mt-1 text-xl font-semibold">${req.matter}</h2>
+            <p class="text-sm text-slate-400">${req.region} · Custodian ${req.custodian} · Requested by ${req.requestedBy}</p>
+          </div>
+          <div class="rounded-full px-2 py-1 text-xs ${risk.cls}">Risk ${req.risk}/10 · ${risk.text}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="rounded border border-slate-800 bg-slate-900 p-2">
+            <p class="text-slate-400">Current status</p>
+            <p class="font-medium">${req.status}</p>
+          </div>
+          <div class="rounded border border-slate-800 bg-slate-900 p-2">
+            <p class="text-slate-400">Retention deadline</p>
+            <p class="font-medium">${req.retentionDeadline}</p>
+          </div>
+          <div class="rounded border border-slate-800 bg-slate-900 p-2">
+            <p class="text-slate-400">Requested / Policy min</p>
+            <p class="font-medium">${req.requestedDays}d / ${req.policyMinDays}d</p>
+          </div>
+          <div class="rounded border border-slate-800 bg-slate-900 p-2">
+            <p class="text-slate-400">Hold notice</p>
+            <p class="font-medium">${req.holdNoticeSent ? 'Sent' : 'Missing'}</p>
+          </div>
+        </div>
+
+        <div class="space-y-2 rounded border border-slate-800 bg-slate-900 p-3">
+          <label for="mitigationPlan" class="text-xs uppercase tracking-wide text-slate-400">Mitigation plan</label>
+          <textarea id="mitigationPlan" rows="2" ${role.canEdit ? '' : 'disabled'} class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">${req.mitigationPlan || ''}</textarea>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3 text-sm">
+            <label class="flex items-center gap-2"><input id="holdNoticeSent" type="checkbox" ${req.holdNoticeSent ? 'checked' : ''} ${role.canEdit ? '' : 'disabled'} /> Hold notice sent</label>
+            <label class="flex items-center gap-2"><input id="legalOpsAck" type="checkbox" ${req.legalOpsAck ? 'checked' : ''} ${role.canEdit ? '' : 'disabled'} /> Legal Ops acknowledged</label>
+            <label class="flex items-center gap-2"><input id="complianceAck" type="checkbox" ${req.complianceAck ? 'checked' : ''} ${role.canEdit ? '' : 'disabled'} /> Compliance acknowledged</label>
+          </div>
+          <p class="text-sm ${gate.ok ? 'text-emerald-300' : 'text-rose-300'}">${gate.ok ? '✅ Policy checks passed.' : `❌ ${gate.errors.join(' ')}`}</p>
+        </div>
+
+        <p class="text-sm text-slate-300">Justification: ${req.justification}</p>
+
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <button data-act="counsel" ${disable} class="rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">Route Counsel</button>
+          <button data-act="compliance" ${disable} class="rounded-lg bg-violet-700 px-3 py-2 text-sm font-medium hover:bg-violet-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">Route Compliance</button>
+          <button data-act="approve" ${disable} class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">Approve</button>
+          <button data-act="reject" ${disable} class="rounded-lg bg-rose-700 px-3 py-2 text-sm font-medium hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">Reject</button>
+        </div>
+
+        <div>
+          <h3 class="mb-2 font-medium">Audit trail</h3>
+          <ul class="max-h-44 space-y-2 overflow-y-auto pr-1 text-sm">
+            ${req.audit.map(a => `
+              <li class="rounded border border-slate-800 bg-slate-900 p-2">
+                <p class="text-slate-200">${a.action} <span class="text-slate-500">by ${a.who}</span></p>
+                <p class="mt-1 text-xs text-slate-400">${a.t}${a.note ? ` · ${a.note}` : ''}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+
+      const mitigationInput = document.getElementById('mitigationPlan');
+      const holdNotice = document.getElementById('holdNoticeSent');
+      const legalOps = document.getElementById('legalOpsAck');
+      const compliance = document.getElementById('complianceAck');
+
+      [mitigationInput, holdNotice, legalOps, compliance].forEach(input => {
+        if (!input) return;
+        const eventName = input.tagName === 'TEXTAREA' ? 'input' : 'change';
+        input.addEventListener(eventName, () => {
+          req.mitigationPlan = mitigationInput.value.trim();
+          req.holdNoticeSent = holdNotice.checked;
+          req.legalOpsAck = legalOps.checked;
+          req.complianceAck = compliance.checked;
+          pushAudit(req, 'Updated policy package', 'Mitigation and acknowledgments changed.');
+          render();
+        });
+      });
+
+      els.detail.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.act === 'counsel') moveStatus(req.id, 'Counsel Review', 'detail action');
+          if (btn.dataset.act === 'compliance') moveStatus(req.id, 'Compliance Approval', 'detail action');
+          if (btn.dataset.act === 'approve') moveStatus(req.id, 'Approved', 'detail action');
+          if (btn.dataset.act === 'reject') moveStatus(req.id, 'Rejected', 'detail action');
+        });
+      });
+
+      renderThread(req);
+    }
+
+    function exportCsv(rows) {
+      const cols = ['id', 'matter', 'region', 'custodian', 'risk', 'status', 'retentionDeadline', 'requestedDays', 'policyMinDays', 'holdNoticeSent', 'legalOpsAck', 'complianceAck'];
+      const data = [cols, ...rows.map(r => [r.id, r.matter, r.region, r.custodian, r.risk, r.status, r.retentionDeadline, r.requestedDays, r.policyMinDays, r.holdNoticeSent, r.legalOpsAck, r.complianceAck])];
+      const csv = data.map(row => row.map(cell => {
+        const text = String(cell ?? '');
+        return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+      }).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'legal-hold-waiver-chatdesk.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setMessage('CSV export generated.');
+    }
+
+    function render() {
+      const rows = filteredRequests();
+      renderKpis(rows);
+      renderList(rows);
+      renderDetail(rows);
+    }
+
+    function populateRegionOptions() {
+      regions.forEach(region => {
+        const optionA = document.createElement('option');
+        optionA.value = region;
+        optionA.textContent = region;
+        els.regionFilter.appendChild(optionA);
+
+        const optionB = document.createElement('option');
+        optionB.value = region;
+        optionB.textContent = region;
+        els.regionInput.appendChild(optionB);
+      });
+    }
+
+    els.searchInput.addEventListener('input', e => {
+      state.search = e.target.value;
+      render();
+    });
+
+    els.statusFilter.addEventListener('change', e => {
+      state.status = e.target.value;
+      render();
+    });
+
+    els.regionFilter.addEventListener('change', e => {
+      state.region = e.target.value;
+      render();
+    });
+
+    els.sortBy.addEventListener('change', e => {
+      state.sortBy = e.target.value;
+      render();
+    });
+
+    els.roleView.addEventListener('change', e => {
+      state.role = e.target.value;
+      setMessage(`Role changed to ${state.role}.`);
+      render();
+    });
+
+    els.csvBtn.addEventListener('click', () => exportCsv(filteredRequests()));
+
+    els.chatForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const req = requests.find(r => r.id === state.selectedId);
+      const text = els.chatInput.value.trim();
+      if (!req || !text) return;
+
+      req.messages.push({ by: state.role === 'Requestor' ? req.requestedBy : state.role, role: state.role, text, ts: nowStamp().slice(11) });
+      pushAudit(req, 'Posted thread message', 'Discussion updated.');
+      els.chatInput.value = '';
+      render();
+    });
+
+    els.waiverForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const matter = els.matterInput.value.trim();
+      const region = els.regionInput.value;
+      const custodian = els.custodianInput.value.trim();
+      const retentionDeadline = els.deadlineInput.value;
+      const requestedDays = Number(els.daysInput.value);
+      const justification = els.justificationInput.value.trim();
+
+      if (!matter || !region || !custodian || !retentionDeadline || !requestedDays || !justification) {
+        els.formMsg.textContent = 'Fill in all required fields.';
+        els.formMsg.className = 'mt-2 text-sm text-rose-300';
+        return;
+      }
+
+      if (justification.length < 25) {
+        els.formMsg.textContent = 'Business justification must be at least 25 characters.';
+        els.formMsg.className = 'mt-2 text-sm text-rose-300';
+        return;
+      }
+
+      const id = `LW-${Math.floor(3200 + Math.random() * 600)}`;
+      const req = {
+        id,
+        matter,
+        region,
+        custodian,
+        requestedBy: state.role,
+        risk: Math.min(9, Math.max(3, Math.round((requestedDays < 180 ? 8 : 5) + (region === 'EU' ? 1 : 0)))),
+        retentionDeadline,
+        requestedDays,
+        policyMinDays: region === 'EU' ? 365 : 180,
+        holdNoticeSent: false,
+        legalOpsAck: false,
+        complianceAck: false,
+        mitigationPlan: '',
+        justification,
+        status: 'Draft Intake',
+        messages: [{ by: state.role, role: state.role, text: 'Waiver intake created and ready for legal review.', ts: nowStamp().slice(11) }],
+        audit: [{ t: nowStamp(), who: state.role, action: 'Created waiver request', note: 'New intake created from form.' }]
+      };
+
+      requests.unshift(req);
+      state.selectedId = id;
+      els.waiverForm.reset();
+      els.formMsg.textContent = `${id} created in Draft Intake.`;
+      els.formMsg.className = 'mt-2 text-sm text-emerald-300';
+      setMessage(`${id} added to queue.`);
+      render();
+    });
+
+    populateRegionOptions();
+    render();
+  </script>
+</body>
+</html>

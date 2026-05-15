@@ -2602,5 +2602,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-15",
+    "day": 115,
+    "slug": "2026-05-15-legal-hold-waiver-chatdesk",
+    "name": "Legal Hold Waiver Chatdesk",
+    "description": "Legal chat-first workspace for retention waiver requests with policy checks, role-based approvals, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Chat UI",
+    "tags": [
+      "legal hold",
+      "retention waiver",
+      "legal",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
