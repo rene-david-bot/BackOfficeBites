@@ -2627,5 +2627,28 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-16",
+    "day": 116,
+    "slug": "2026-05-16-rma-disposition-wizard",
+    "name": "RMA Disposition Workflow Wizard",
+    "description": "Guide return cases through policy checks, approvals, and final disposition routing.",
+    "category": "Supply Chain",
+    "pattern": "Wizard",
+    "tags": [
+      "rma portal",
+      "supply chain",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]

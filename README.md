@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Legal Hold Waiver Chatdesk** — Legal chat-first workspace for retention waiver requests with policy checks, role-based approvals, audit trail, and CSV export.
+**RMA Disposition Workflow Wizard** — Supply-chain return workflow wizard with policy checks, role-based approvals, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
