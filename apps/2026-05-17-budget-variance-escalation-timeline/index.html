@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Variance Escalation Timeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6 md:py-8">
+    <header>
+      <a href="../../index.html" class="text-sm text-amber-300 underline hover:text-amber-200">BackOfficeBites 🍔</a>
+      <h1 class="mt-2 text-2xl font-bold md:text-3xl">Budget Variance Escalation Timeline</h1>
+      <p class="mt-2 max-w-4xl text-slate-300">Finance timeline desk to investigate budget overruns, enforce approval policy, and route corrective actions with role-based controls, audit trail, and CSV export.</p>
+    </header>
+
+    <section id="kpis" class="grid grid-cols-2 gap-3 md:grid-cols-5" aria-live="polite"></section>
+
+    <section class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-6">
+        <div class="md:col-span-2">
+          <label for="searchInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Search</label>
+          <input id="searchInput" type="text" placeholder="Case, department, owner" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+        </div>
+        <div>
+          <label for="deptFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Department</label>
+          <select id="deptFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Status</label>
+          <select id="statusFilter" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="all">All</option>
+            <option>Investigate</option>
+            <option>Controller Review</option>
+            <option>CFO Approval</option>
+            <option>Execution</option>
+            <option>Closed</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="roleView" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Role view</label>
+          <select id="roleView" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option>Budget Analyst</option>
+            <option>Finance Controller</option>
+            <option>CFO</option>
+            <option>Department Owner</option>
+            <option>Auditor</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Sort</label>
+          <select id="sortBy" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <option value="variance-desc">Variance € ↓</option>
+            <option value="due-asc">Due soonest</option>
+            <option value="updated-desc">Recently updated</option>
+          </select>
+        </div>
+      </div>
+      <p id="boardMsg" class="mt-3 text-sm text-slate-400" aria-live="polite"></p>
+    </section>
+
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <aside class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 lg:col-span-4">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold">Variance cases</h2>
+          <button id="csvBtn" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium hover:bg-emerald-500">Export CSV</button>
+        </div>
+        <p class="text-xs text-slate-400">Keyboard: tab to a case and press Enter to open details.</p>
+        <div id="caseList" class="mt-3 space-y-2"></div>
+      </aside>
+
+      <section class="space-y-4 lg:col-span-8">
+        <article id="detailPanel" class="rounded-xl border border-slate-800 bg-slate-900/70 p-4" aria-live="polite">
+          <p class="text-slate-400">Select a case to inspect timeline and take approval actions.</p>
+        </article>
+
+        <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <h3 class="text-lg font-semibold">Log new variance case</h3>
+          <form id="createForm" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6">
+            <div class="md:col-span-2">
+              <label for="deptInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Department</label>
+              <input id="deptInput" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Department" />
+            </div>
+            <div>
+              <label for="periodInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Period</label>
+              <input id="periodInput" required pattern="^[A-Z]{1}[1-4]\s20\d{2}$" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Q2 2026" />
+            </div>
+            <div>
+              <label for="budgetInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Budget €</label>
+              <input id="budgetInput" type="number" min="10000" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label for="actualInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Actual €</label>
+              <input id="actualInput" type="number" min="10000" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label for="ownerInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Owner</label>
+              <input id="ownerInput" required minlength="3" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Owner" />
+            </div>
+            <div>
+              <label for="dueInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Mitigation due</label>
+              <input id="dueInput" type="date" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-6">
+              <label for="reasonInput" class="mb-1 block text-xs uppercase tracking-wide text-slate-400">Reason + mitigation plan</label>
+              <textarea id="reasonInput" rows="2" minlength="18" required class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Explain overrun and proposed correction"></textarea>
+            </div>
+            <div class="md:col-span-6 flex flex-wrap items-center gap-2">
+              <button type="submit" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium hover:bg-amber-500">Create case</button>
+              <p id="formMsg" class="text-sm text-slate-400" aria-live="polite"></p>
+            </div>
+          </form>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const stages = ['Investigate', 'Controller Review', 'CFO Approval', 'Execution', 'Closed'];
+    const roleMatrix = {
+      'Budget Analyst': ['advance:Investigate', 'return:CFO Approval', 'comment'],
+      'Finance Controller': ['advance:Controller Review', 'return:CFO Approval', 'reject', 'comment'],
+      'CFO': ['advance:CFO Approval', 'advance:Execution', 'reject', 'comment'],
+      'Department Owner': ['comment'],
+      'Auditor': ['comment']
+    };
+
+    const records = [
+      {
+        id: 'BVA-631',
+        department: 'Manufacturing',
+        period: 'Q2 2026',
+        budget: 820000,
+        actual: 948000,
+        variance: 128000,
+        variancePct: 15.6,
+        status: 'CFO Approval',
+        owner: 'Lena Vogt',
+        dueDate: '2026-05-20',
+        updatedAt: '2026-05-17T07:10:00Z',
+        reason: 'Supplier energy surcharge exceeded contracted rate and required emergency line uptime commitment.',
+        policyFlags: ['Variance > 10% requires CFO approval', 'Mitigation horizon under 14 days'],
+        timeline: [
+          { t: '2026-05-15 08:35', who: 'Budget Analyst', action: 'Case created', note: 'Detected by budget watcher.' },
+          { t: '2026-05-16 10:05', who: 'Finance Controller', action: 'Advanced to CFO Approval', note: 'Controller checks complete.' }
+        ]
+      },
+      {
+        id: 'BVA-628',
+        department: 'Field Services',
+        period: 'Q2 2026',
+        budget: 460000,
+        actual: 511500,
+        variance: 51500,
+        variancePct: 11.2,
+        status: 'Controller Review',
+        owner: 'Omar Khaled',
+        dueDate: '2026-05-21',
+        updatedAt: '2026-05-17T06:22:00Z',
+        reason: 'Unplanned subcontractor overtime for emergency onsite deployments.',
+        policyFlags: ['Variance > 8% requires controller review'],
+        timeline: [
+          { t: '2026-05-16 07:50', who: 'Budget Analyst', action: 'Case created', note: 'Auto-opened from ERP variance report.' }
+        ]
+      },
+      {
+        id: 'BVA-624',
+        department: 'IT Operations',
+        period: 'Q2 2026',
+        budget: 390000,
+        actual: 427800,
+        variance: 37800,
+        variancePct: 9.7,
+        status: 'Execution',
+        owner: 'Niko Hartmann',
+        dueDate: '2026-05-19',
+        updatedAt: '2026-05-17T05:42:00Z',
+        reason: 'Security patch wave drove temporary cloud burst and premium support usage.',
+        policyFlags: [],
+        timeline: [
+          { t: '2026-05-15 11:15', who: 'Budget Analyst', action: 'Case created', note: 'Detected in weekly run.' },
+          { t: '2026-05-16 09:40', who: 'Finance Controller', action: 'Advanced to Execution', note: 'Containment budget accepted.' }
+        ]
+      },
+      {
+        id: 'BVA-619',
+        department: 'Customer Support',
+        period: 'Q2 2026',
+        budget: 540000,
+        actual: 552000,
+        variance: 12000,
+        variancePct: 2.2,
+        status: 'Closed',
+        owner: 'Eva Marin',
+        dueDate: '2026-05-16',
+        updatedAt: '2026-05-16T18:20:00Z',
+        reason: 'Minor seasonal volume increase absorbed by revised shift mix.',
+        policyFlags: [],
+        timeline: [
+          { t: '2026-05-14 12:01', who: 'Budget Analyst', action: 'Case created', note: 'Low severity variance.' },
+          { t: '2026-05-16 18:20', who: 'Finance Controller', action: 'Closed', note: 'Back within threshold.' }
+        ]
+      }
+    ];
+
+    const state = {
+      selectedId: records[0].id,
+      search: '',
+      department: 'all',
+      status: 'all',
+      role: 'Budget Analyst',
+      sortBy: 'variance-desc'
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      searchInput: document.getElementById('searchInput'),
+      deptFilter: document.getElementById('deptFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      roleView: document.getElementById('roleView'),
+      sortBy: document.getElementById('sortBy'),
+      boardMsg: document.getElementById('boardMsg'),
+      caseList: document.getElementById('caseList'),
+      detailPanel: document.getElementById('detailPanel'),
+      csvBtn: document.getElementById('csvBtn'),
+      createForm: document.getElementById('createForm'),
+      formMsg: document.getElementById('formMsg')
+    };
+
+    const formFields = {
+      dept: document.getElementById('deptInput'),
+      period: document.getElementById('periodInput'),
+      budget: document.getElementById('budgetInput'),
+      actual: document.getElementById('actualInput'),
+      owner: document.getElementById('ownerInput'),
+      due: document.getElementById('dueInput'),
+      reason: document.getElementById('reasonInput')
+    };
+
+    const fmtCurrency = n => `€${n.toLocaleString('en-US')}`;
+
+    function nowStamp() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+
+    function nextStage(status) {
+      const idx = stages.indexOf(status);
+      if (idx === -1 || idx >= stages.length - 1) return status;
+      return stages[idx + 1];
+    }
+
+    function hasPerm(action) {
+      return (roleMatrix[state.role] || []).includes(action);
+    }
+
+    function renderDeptFilter() {
+      const depts = [...new Set(records.map(r => r.department))].sort();
+      const current = state.department;
+      els.deptFilter.innerHTML = '<option value="all">All</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+      if (depts.includes(current)) els.deptFilter.value = current;
+      else state.department = 'all';
+    }
+
+    function getFiltered() {
+      const term = state.search.trim().toLowerCase();
+      return records
+        .filter(r => {
+          const hit = !term || [r.id, r.department, r.owner, r.reason].some(v => String(v).toLowerCase().includes(term));
+          const depOk = state.department === 'all' || r.department === state.department;
+          const statOk = state.status === 'all' || r.status === state.status;
+          return hit && depOk && statOk;
+        })
+        .sort((a, b) => {
+          if (state.sortBy === 'due-asc') return new Date(a.dueDate) - new Date(b.dueDate);
+          if (state.sortBy === 'updated-desc') return new Date(b.updatedAt) - new Date(a.updatedAt);
+          return b.variance - a.variance;
+        });
+    }
+
+    function renderKpis(filtered) {
+      const open = records.filter(r => !['Closed', 'Rejected'].includes(r.status)).length;
+      const cfoQueue = records.filter(r => r.status === 'CFO Approval').length;
+      const flagged = records.filter(r => r.policyFlags.length).length;
+      const totalVar = records.reduce((s, r) => s + r.variance, 0);
+      const visibleVar = filtered.reduce((s, r) => s + r.variance, 0);
+      const cards = [
+        ['Open cases', String(open), 'text-amber-300'],
+        ['Waiting CFO', String(cfoQueue), 'text-orange-300'],
+        ['Policy-flagged', String(flagged), 'text-rose-300'],
+        ['Total variance', fmtCurrency(totalVar), 'text-emerald-300'],
+        ['Visible variance', fmtCurrency(visibleVar), 'text-cyan-300']
+      ];
+      els.kpis.innerHTML = cards.map(([label, value, tone]) => `
+        <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+          <p class="text-xs uppercase tracking-wide text-slate-400">${label}</p>
+          <p class="mt-1 text-xl font-semibold ${tone}">${value}</p>
+        </article>`).join('');
+    }
+
+    function renderList(filtered) {
+      if (!filtered.length) {
+        els.caseList.innerHTML = '<p class="rounded-lg border border-dashed border-slate-700 p-3 text-sm text-slate-400">No cases match current filters.</p>';
+        return;
+      }
+      els.caseList.innerHTML = filtered.map(r => {
+        const selected = r.id === state.selectedId;
+        const tone = selected ? 'border-amber-500 bg-amber-500/10' : 'border-slate-700 bg-slate-950/70 hover:border-slate-500';
+        return `
+          <button type="button" data-id="${r.id}" class="w-full rounded-lg border p-3 text-left ${tone}" aria-label="Open ${r.id}">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-semibold">${r.id}</p>
+              <span class="rounded-full bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-200">${r.status}</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-200">${r.department} · ${r.period}</p>
+            <p class="text-xs text-slate-400">Owner: ${r.owner}</p>
+            <p class="mt-1 text-xs text-amber-200">Variance ${fmtCurrency(r.variance)} (${r.variancePct.toFixed(1)}%)</p>
+            ${r.policyFlags.length ? `<p class="mt-2 text-xs text-rose-300">⚠ ${r.policyFlags.join(' · ')}</p>` : '<p class="mt-2 text-xs text-emerald-300">✓ No blocking policy flags</p>'}
+          </button>`;
+      }).join('');
+
+      els.caseList.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+        btn.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') {
+            state.selectedId = btn.dataset.id;
+            render();
+          }
+        });
+      });
+    }
+
+    function selectedRecord(filtered) {
+      const found = records.find(r => r.id === state.selectedId);
+      if (found) return found;
+      if (filtered[0]) state.selectedId = filtered[0].id;
+      return filtered[0] || null;
+    }
+
+    function updateStatus(record, next, note) {
+      const prev = record.status;
+      record.status = next;
+      record.updatedAt = new Date().toISOString();
+      record.timeline.unshift({ t: nowStamp(), who: state.role, action: `${prev} → ${next}`, note });
+    }
+
+    function renderDetail(record) {
+      if (!record) {
+        els.detailPanel.innerHTML = '<p class="text-slate-400">No case selected.</p>';
+        return;
+      }
+
+      const canAdvance = hasPerm(`advance:${record.status}`) || (record.status === 'Execution' && hasPerm('advance:Execution'));
+      const canReject = hasPerm('reject');
+      const canReturn = hasPerm(`return:${record.status}`);
+
+      els.detailPanel.innerHTML = `
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold">${record.id} · ${record.department}</h3>
+            <p class="text-sm text-slate-300">${record.reason}</p>
+            <p class="mt-1 text-xs text-slate-400">Owner ${record.owner} · Due ${record.dueDate} · Last update ${new Date(record.updatedAt).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC</p>
+          </div>
+          <div class="rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-right">
+            <p class="text-xs uppercase tracking-wide text-slate-400">Current status</p>
+            <p class="font-semibold text-amber-300">${record.status}</p>
+            <p class="text-xs text-slate-400">Role: ${state.role}</p>
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-2"><p class="text-xs text-slate-400">Budget</p><p class="font-semibold">${fmtCurrency(record.budget)}</p></div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-2"><p class="text-xs text-slate-400">Actual</p><p class="font-semibold">${fmtCurrency(record.actual)}</p></div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-2"><p class="text-xs text-slate-400">Variance</p><p class="font-semibold text-amber-200">${fmtCurrency(record.variance)}</p></div>
+          <div class="rounded-lg border border-slate-800 bg-slate-950/70 p-2"><p class="text-xs text-slate-400">Variance %</p><p class="font-semibold">${record.variancePct.toFixed(1)}%</p></div>
+        </div>
+
+        <section class="mt-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <h4 class="text-sm font-semibold">Policy validation</h4>
+          ${record.policyFlags.length
+            ? `<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-300">${record.policyFlags.map(f => `<li>${f}</li>`).join('')}</ul>`
+            : '<p class="mt-2 text-sm text-emerald-300">Policy checks green for current stage.</p>'}
+        </section>
+
+        <section class="mt-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <h4 class="text-sm font-semibold">Approval actions</h4>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button id="advanceBtn" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40" ${canAdvance ? '' : 'disabled'}>Advance stage</button>
+            <button id="returnBtn" class="rounded-lg border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-200 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-40" ${canReturn ? '' : 'disabled'}>Return for rework</button>
+            <button id="rejectBtn" class="rounded-lg border border-rose-500 px-3 py-1.5 text-sm font-medium text-rose-200 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40" ${canReject ? '' : 'disabled'}>Reject case</button>
+          </div>
+          <p id="actionMsg" class="mt-2 text-sm text-slate-400" aria-live="polite">${canAdvance || canReturn || canReject ? 'Actions available for this role.' : 'Read-only role.'}</p>
+        </section>
+
+        <section class="mt-3 rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+          <h4 class="text-sm font-semibold">Timeline / audit trail</h4>
+          <ol class="mt-2 space-y-2 text-sm">
+            ${record.timeline.map(item => `
+              <li class="rounded-md border border-slate-800 px-3 py-2">
+                <p><span class="font-medium text-slate-200">${item.action}</span> · <span class="text-slate-400">${item.who}</span></p>
+                <p class="text-xs text-slate-400">${item.t} UTC</p>
+                <p class="text-xs text-slate-300">${item.note}</p>
+              </li>`).join('')}
+          </ol>
+        </section>
+      `;
+
+      const advanceBtn = document.getElementById('advanceBtn');
+      const returnBtn = document.getElementById('returnBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
+      const actionMsg = document.getElementById('actionMsg');
+
+      advanceBtn?.addEventListener('click', () => {
+        if (!canAdvance) return;
+        const next = nextStage(record.status);
+        if (next === record.status) {
+          actionMsg.textContent = 'Case already at terminal stage.';
+          return;
+        }
+        updateStatus(record, next, 'Advanced via approval controls.');
+        actionMsg.textContent = `${record.id} moved to ${next}.`;
+        render();
+      });
+
+      returnBtn?.addEventListener('click', () => {
+        if (!canReturn) return;
+        updateStatus(record, 'Investigate', 'Returned for revised mitigation plan.');
+        actionMsg.textContent = `${record.id} returned to Investigate.`;
+        render();
+      });
+
+      rejectBtn?.addEventListener('click', () => {
+        if (!canReject) return;
+        updateStatus(record, 'Rejected', 'Rejected due to insufficient mitigation evidence.');
+        actionMsg.textContent = `${record.id} rejected.`;
+        render();
+      });
+    }
+
+    function csvExport(rows) {
+      const headers = ['id', 'department', 'period', 'status', 'owner', 'budget', 'actual', 'variance', 'variancePct', 'dueDate'];
+      const lines = rows.map(r => headers.map(h => `"${String(r[h] ?? '').replaceAll('"', '""')}"`).join(','));
+      const csv = [headers.join(','), ...lines].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `budget-variance-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function validateForm() {
+      const budget = Number(formFields.budget.value);
+      const actual = Number(formFields.actual.value);
+      if (formFields.dept.value.trim().length < 3) return 'Department must be at least 3 characters.';
+      if (!/^Q[1-4]\s20\d{2}$/.test(formFields.period.value.trim().toUpperCase())) return 'Period must look like Q2 2026.';
+      if (budget < 10000 || actual < 10000) return 'Budget and actual must be at least €10,000.';
+      if (actual <= budget) return 'Actual must be above budget to create a variance case.';
+      if (formFields.owner.value.trim().length < 3) return 'Owner must be at least 3 characters.';
+      if (!formFields.due.value) return 'Mitigation due date is required.';
+      if (formFields.reason.value.trim().length < 18) return 'Reason must be at least 18 characters.';
+      return '';
+    }
+
+    function createFromForm() {
+      const budget = Number(formFields.budget.value);
+      const actual = Number(formFields.actual.value);
+      const variance = actual - budget;
+      const variancePct = (variance / budget) * 100;
+      const maxId = Math.max(...records.map(r => Number(r.id.split('-')[1])));
+      const id = `BVA-${maxId + 1}`;
+      const policyFlags = [];
+      if (variancePct > 10) policyFlags.push('Variance > 10% requires CFO approval');
+      if (variance > 100000) policyFlags.push('Variance > €100k triggers executive watchlist');
+
+      return {
+        id,
+        department: formFields.dept.value.trim(),
+        period: formFields.period.value.trim().toUpperCase(),
+        budget,
+        actual,
+        variance,
+        variancePct,
+        status: 'Investigate',
+        owner: formFields.owner.value.trim(),
+        dueDate: formFields.due.value,
+        updatedAt: new Date().toISOString(),
+        reason: formFields.reason.value.trim(),
+        policyFlags,
+        timeline: [{ t: nowStamp(), who: state.role, action: 'Case created', note: 'Submitted from variance intake form.' }]
+      };
+    }
+
+    function render() {
+      renderDeptFilter();
+      const filtered = getFiltered();
+      const selected = selectedRecord(filtered);
+      renderKpis(filtered);
+      renderList(filtered);
+      renderDetail(selected);
+      els.boardMsg.textContent = `${filtered.length} visible case${filtered.length === 1 ? '' : 's'} · role permissions active for ${state.role}.`;
+    }
+
+    els.searchInput.addEventListener('input', e => {
+      state.search = e.target.value;
+      render();
+    });
+
+    els.deptFilter.addEventListener('change', e => {
+      state.department = e.target.value;
+      render();
+    });
+
+    els.statusFilter.addEventListener('change', e => {
+      state.status = e.target.value;
+      render();
+    });
+
+    els.roleView.addEventListener('change', e => {
+      state.role = e.target.value;
+      render();
+    });
+
+    els.sortBy.addEventListener('change', e => {
+      state.sortBy = e.target.value;
+      render();
+    });
+
+    els.csvBtn.addEventListener('click', () => csvExport(getFiltered()));
+
+    els.createForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const error = validateForm();
+      if (error) {
+        els.formMsg.textContent = error;
+        els.formMsg.className = 'text-sm text-rose-300';
+        return;
+      }
+      const rec = createFromForm();
+      records.unshift(rec);
+      state.selectedId = rec.id;
+      els.createForm.reset();
+      els.formMsg.textContent = `${rec.id} created and queued for investigation.`;
+      els.formMsg.className = 'text-sm text-emerald-300';
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

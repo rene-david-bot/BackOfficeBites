@@ -2650,5 +2650,29 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-05-17",
+    "day": 117,
+    "slug": "2026-05-17-budget-variance-escalation-timeline",
+    "name": "Budget Variance Escalation Timeline",
+    "description": "Finance timeline workspace for budget overruns with policy-gated approvals, role-based actions, audit trail, and CSV export.",
+    "category": "Finance",
+    "pattern": "Timeline",
+    "tags": [
+      "budget vs actuals",
+      "finance",
+      "timeline",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
