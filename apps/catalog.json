@@ -2674,5 +2674,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-18",
+    "day": 118,
+    "slug": "2026-05-18-license-seat-reclaim-kanban",
+    "name": "License Seat Reclaim Kanban",
+    "description": "IT Ops kanban board for reclaiming unused SaaS seats with policy-gated approvals, role-based actions, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Kanban",
+    "tags": [
+      "license manager",
+      "saas cost optimization",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
