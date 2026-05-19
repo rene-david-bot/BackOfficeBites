@@ -2698,5 +2698,31 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-19",
+    "day": 119,
+    "slug": "2026-05-19-reorder-point-alert-command-center",
+    "name": "Reorder Point Alert Command Center",
+    "description": "Supply Chain dashboard for triaging reorder risk with policy-gated approvals, audit trail actions, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "inventory",
+      "reorder points",
+      "supply chain",
+      "dashboard",
+      "charts",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
