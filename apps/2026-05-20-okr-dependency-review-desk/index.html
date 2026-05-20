@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OKR Dependency Review Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0b1220',
+            panel: '#111a2b',
+            panelSoft: '#172238',
+            accent: '#f59e0b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 lg:px-6">
+    <a href="../../index.html" class="text-amber-300 hover:text-amber-200 text-sm font-semibold">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl lg:text-3xl font-bold mt-2">OKR Dependency Review Desk</h1>
+    <p class="text-slate-300 mt-2">Planning control room for dependency-aware OKR change approvals, policy checks, and audit-ready handoffs.</p>
+
+    <div class="mt-6 grid gap-4 lg:grid-cols-12">
+      <section class="lg:col-span-7 bg-panel rounded-xl border border-slate-800 p-4">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="flex-1 min-w-[180px]">
+            <label for="search" class="block text-xs text-slate-400 mb-1">Search objective or owner</label>
+            <input id="search" type="text" class="w-full bg-panelSoft border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Type to filter..." />
+          </div>
+          <div>
+            <label for="teamFilter" class="block text-xs text-slate-400 mb-1">Team</label>
+            <select id="teamFilter" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div>
+            <label for="statusFilter" class="block text-xs text-slate-400 mb-1">Status</label>
+            <select id="statusFilter" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+              <option value="">All</option>
+              <option>On Track</option>
+              <option>At Risk</option>
+              <option>Off Track</option>
+              <option>Draft</option>
+            </select>
+          </div>
+          <div>
+            <label for="role" class="block text-xs text-slate-400 mb-1">Role view</label>
+            <select id="role" class="bg-panelSoft border border-slate-700 rounded-lg px-3 py-2">
+              <option>Planner</option>
+              <option>Exec Sponsor</option>
+              <option>PMO Reviewer</option>
+            </select>
+          </div>
+          <button id="exportCsv" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-4 py-2 rounded-lg">Export CSV</button>
+        </div>
+
+        <div class="mt-4 overflow-auto rounded-lg border border-slate-800">
+          <table class="min-w-full text-sm">
+            <thead class="bg-panelSoft text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2"><button class="sort" data-key="objective">Objective</button></th>
+                <th class="text-left px-3 py-2"><button class="sort" data-key="team">Team</button></th>
+                <th class="text-left px-3 py-2"><button class="sort" data-key="status">Status</button></th>
+                <th class="text-left px-3 py-2"><button class="sort" data-key="risk">Risk</button></th>
+                <th class="text-right px-3 py-2"><button class="sort" data-key="blockedBy">Deps</button></th>
+              </tr>
+            </thead>
+            <tbody id="rows" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="lg:col-span-5 bg-panel rounded-xl border border-slate-800 p-4">
+        <h2 class="font-semibold text-lg">Objective details</h2>
+        <div id="detail" class="mt-3 text-sm text-slate-300"></div>
+
+        <form id="changeForm" class="mt-4 space-y-3 bg-panelSoft border border-slate-700 rounded-lg p-3">
+          <h3 class="font-semibold text-slate-100">Submit change request</h3>
+          <div>
+            <label for="targetStatus" class="block text-xs text-slate-400 mb-1">Target status</label>
+            <select id="targetStatus" class="w-full bg-panel border border-slate-700 rounded-lg px-3 py-2">
+              <option>On Track</option>
+              <option>At Risk</option>
+              <option>Off Track</option>
+            </select>
+          </div>
+          <div>
+            <label for="dueDate" class="block text-xs text-slate-400 mb-1">Recovery due date</label>
+            <input id="dueDate" type="date" class="w-full bg-panel border border-slate-700 rounded-lg px-3 py-2" />
+          </div>
+          <div>
+            <label for="reason" class="block text-xs text-slate-400 mb-1">Reason (min 15 chars)</label>
+            <textarea id="reason" rows="3" class="w-full bg-panel border border-slate-700 rounded-lg px-3 py-2" placeholder="Explain dependency impact and mitigation plan..."></textarea>
+          </div>
+          <label class="flex items-center gap-2 text-slate-300">
+            <input id="financeSignoff" type="checkbox" class="rounded border-slate-600 bg-panel" />
+            Finance sign-off attached
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold px-3 py-2 rounded-lg">Save request</button>
+            <button type="button" id="approve" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-3 py-2 rounded-lg">Approve</button>
+            <button type="button" id="rework" class="bg-orange-500 hover:bg-orange-400 text-slate-950 font-semibold px-3 py-2 rounded-lg">Request rework</button>
+            <button type="button" id="block" class="bg-rose-500 hover:bg-rose-400 text-slate-950 font-semibold px-3 py-2 rounded-lg">Block</button>
+          </div>
+          <p id="formMsg" class="text-xs"></p>
+        </form>
+
+        <div class="mt-4">
+          <h3 class="font-semibold">Audit trail</h3>
+          <ul id="audit" class="mt-2 space-y-2 text-xs max-h-52 overflow-auto"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const data = [
+      {
+        id: 'OKR-401',
+        objective: 'Reduce quote turnaround from 72h to 24h',
+        team: 'Sales Ops',
+        owner: 'Nina Vogel',
+        quarter: 'Q3',
+        status: 'At Risk',
+        risk: 'High',
+        blockedBy: 3,
+        budgetImpact: 45000,
+        financeApproved: false,
+        keyResults: ['Automate pricing approvals to 80%', 'Cut handoff time to <6h', 'Lift quote win-rate +9%'],
+        dependencies: ['CRM workflow redesign', 'Finance SLA update', 'Legal fallback clause update'],
+        lastUpdated: '2026-05-19'
+      },
+      {
+        id: 'OKR-389',
+        objective: 'Reach 98% inventory location accuracy',
+        team: 'Supply Planning',
+        owner: 'Farid Klein',
+        quarter: 'Q3',
+        status: 'On Track',
+        risk: 'Medium',
+        blockedBy: 1,
+        budgetImpact: 18000,
+        financeApproved: true,
+        keyResults: ['Cycle count variance <2%', 'Barcode exception queue below 20/day', 'Dock delay below 15 min avg'],
+        dependencies: ['Mobile scanner rollout'],
+        lastUpdated: '2026-05-18'
+      },
+      {
+        id: 'OKR-377',
+        objective: 'Cut onboarding lead time from 14 to 7 days',
+        team: 'People Ops',
+        owner: 'Lena Richter',
+        quarter: 'Q3',
+        status: 'At Risk',
+        risk: 'Medium',
+        blockedBy: 2,
+        budgetImpact: 12000,
+        financeApproved: true,
+        keyResults: ['Pre-day-1 account readiness 95%', 'Policy completion by day 2', 'Mentor assignment in 24h'],
+        dependencies: ['IT account automation', 'Manager checklist compliance'],
+        lastUpdated: '2026-05-19'
+      },
+      {
+        id: 'OKR-352',
+        objective: 'Lower monthly cloud overspend by 20%',
+        team: 'Platform',
+        owner: 'Jonas Hart',
+        quarter: 'Q3',
+        status: 'Off Track',
+        risk: 'High',
+        blockedBy: 4,
+        budgetImpact: 68000,
+        financeApproved: false,
+        keyResults: ['Idle resource auto-stop in 90% accounts', 'Weekly unit cost dashboard live', 'Savings backlog burn-down <30 days'],
+        dependencies: ['Tagging policy enforcement', 'FinOps ownership model', 'Anomaly alert tuning', 'Reserved instance plan update'],
+        lastUpdated: '2026-05-18'
+      },
+      {
+        id: 'OKR-415',
+        objective: 'Improve NPS from 38 to 50 in enterprise segment',
+        team: 'Customer Success',
+        owner: 'Maya Stein',
+        quarter: 'Q3',
+        status: 'Draft',
+        risk: 'Low',
+        blockedBy: 0,
+        budgetImpact: 9000,
+        financeApproved: true,
+        keyResults: ['Health score rollout complete', 'Recovery playbook adopted in all regions', 'QBR completion 100%'],
+        dependencies: ['Support playbook localization'],
+        lastUpdated: '2026-05-17'
+      }
+    ];
+
+    const audit = [
+      { ts: '2026-05-20 07:34', msg: 'PMO Reviewer flagged OKR-401 for dependency overrun.' },
+      { ts: '2026-05-20 07:21', msg: 'Exec Sponsor approved mitigation budget for OKR-389.' },
+      { ts: '2026-05-20 07:05', msg: 'Planner updated KR baseline for OKR-377.' }
+    ];
+
+    const state = {
+      selectedId: data[0].id,
+      search: '',
+      team: '',
+      status: '',
+      role: 'Planner',
+      sortKey: 'objective',
+      sortDir: 1
+    };
+
+    const rowsEl = document.getElementById('rows');
+    const detailEl = document.getElementById('detail');
+    const auditEl = document.getElementById('audit');
+    const formMsg = document.getElementById('formMsg');
+    const teamFilter = document.getElementById('teamFilter');
+
+    function initTeams() {
+      [...new Set(data.map(d => d.team))].sort().forEach(team => {
+        const option = document.createElement('option');
+        option.value = team;
+        option.textContent = team;
+        teamFilter.appendChild(option);
+      });
+    }
+
+    function filteredData() {
+      return data
+        .filter(item => {
+          const q = state.search.toLowerCase();
+          const qMatch = !q || item.objective.toLowerCase().includes(q) || item.owner.toLowerCase().includes(q);
+          const teamMatch = !state.team || item.team === state.team;
+          const statusMatch = !state.status || item.status === state.status;
+          return qMatch && teamMatch && statusMatch;
+        })
+        .sort((a, b) => {
+          const av = a[state.sortKey];
+          const bv = b[state.sortKey];
+          if (typeof av === 'number') return (av - bv) * state.sortDir;
+          return String(av).localeCompare(String(bv)) * state.sortDir;
+        });
+    }
+
+    function badgeColor(status) {
+      return {
+        'On Track': 'bg-emerald-500/20 text-emerald-300',
+        'At Risk': 'bg-amber-500/20 text-amber-300',
+        'Off Track': 'bg-rose-500/20 text-rose-300',
+        'Draft': 'bg-slate-500/20 text-slate-300'
+      }[status] || 'bg-slate-500/20 text-slate-300';
+    }
+
+    function renderRows() {
+      const rows = filteredData();
+      rowsEl.innerHTML = rows.map(item => `
+        <tr data-id="${item.id}" tabindex="0" class="cursor-pointer hover:bg-slate-800/60 focus:bg-slate-800/60 ${item.id === state.selectedId ? 'bg-slate-800/70' : ''}">
+          <td class="px-3 py-2">
+            <div class="font-medium">${item.objective}</div>
+            <div class="text-xs text-slate-400">${item.owner} • ${item.id}</div>
+          </td>
+          <td class="px-3 py-2">${item.team}</td>
+          <td class="px-3 py-2"><span class="px-2 py-1 text-xs rounded-full ${badgeColor(item.status)}">${item.status}</span></td>
+          <td class="px-3 py-2">${item.risk}</td>
+          <td class="px-3 py-2 text-right">${item.blockedBy}</td>
+        </tr>
+      `).join('');
+
+      if (!rows.find(r => r.id === state.selectedId) && rows[0]) state.selectedId = rows[0].id;
+    }
+
+    function getSelected() {
+      return data.find(item => item.id === state.selectedId) || data[0];
+    }
+
+    function renderDetail() {
+      const item = getSelected();
+      if (!item) return;
+
+      detailEl.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <p class="text-xs text-slate-400">${item.id} • ${item.quarter}</p>
+              <p class="font-semibold text-slate-100">${item.objective}</p>
+            </div>
+            <span class="px-2 py-1 text-xs rounded-full ${badgeColor(item.status)}">${item.status}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-panelSoft rounded p-2 border border-slate-700"><span class="text-slate-400">Owner</span><br>${item.owner}</div>
+            <div class="bg-panelSoft rounded p-2 border border-slate-700"><span class="text-slate-400">Risk</span><br>${item.risk}</div>
+            <div class="bg-panelSoft rounded p-2 border border-slate-700"><span class="text-slate-400">Blocked deps</span><br>${item.blockedBy}</div>
+            <div class="bg-panelSoft rounded p-2 border border-slate-700"><span class="text-slate-400">Budget impact</span><br>€${item.budgetImpact.toLocaleString()}</div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Key results</p>
+            <ul class="space-y-1 list-disc list-inside">${item.keyResults.map(kr => `<li>${kr}</li>`).join('')}</ul>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Dependencies</p>
+            <div class="flex flex-wrap gap-1">${item.dependencies.map(dep => `<span class="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs">${dep}</span>`).join('')}</div>
+          </div>
+          <p class="text-xs text-slate-400">Last updated: ${item.lastUpdated}</p>
+        </div>
+      `;
+    }
+
+    function renderAudit() {
+      auditEl.innerHTML = audit.map(entry => `
+        <li class="bg-panelSoft border border-slate-700 rounded p-2">
+          <p class="text-slate-200">${entry.msg}</p>
+          <p class="text-slate-400 mt-1">${entry.ts}</p>
+        </li>
+      `).join('');
+    }
+
+    function addAudit(message) {
+      const ts = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      audit.unshift({ ts, msg: message });
+      renderAudit();
+    }
+
+    function setMessage(text, ok = false) {
+      formMsg.textContent = text;
+      formMsg.className = ok ? 'text-xs text-emerald-300' : 'text-xs text-rose-300';
+    }
+
+    function policyCheck(item, action) {
+      if (state.role === 'PMO Reviewer' && action === 'approve') return 'PMO Reviewer cannot approve final status.';
+      if (action === 'approve' && item.risk === 'High' && !item.financeApproved) return 'High-risk objectives require finance sign-off before approval.';
+      if (action === 'approve' && item.blockedBy >= 3) return 'Objectives with 3+ blockers must be reworked before approval.';
+      return '';
+    }
+
+    function applyAction(action) {
+      const item = getSelected();
+      const issue = policyCheck(item, action);
+      if (issue) return setMessage(issue);
+
+      if (action === 'approve') item.status = 'On Track';
+      if (action === 'rework') item.status = 'At Risk';
+      if (action === 'block') item.status = 'Off Track';
+      item.lastUpdated = new Date().toISOString().slice(0, 10);
+
+      addAudit(`${state.role} set ${item.id} to ${item.status}.`);
+      setMessage(`Action saved: ${item.id} is now ${item.status}.`, true);
+      renderRows();
+      renderDetail();
+    }
+
+    function exportCsv() {
+      const rows = filteredData();
+      const header = ['id', 'objective', 'team', 'owner', 'status', 'risk', 'blockedBy', 'budgetImpact'];
+      const csv = [header.join(','), ...rows.map(r => header.map(key => `"${String(r[key]).replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'okr-dependency-review.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      addAudit(`CSV export generated (${rows.length} rows) by ${state.role}.`);
+    }
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      state.search = e.target.value;
+      renderRows();
+      renderDetail();
+    });
+
+    teamFilter.addEventListener('change', (e) => {
+      state.team = e.target.value;
+      renderRows();
+      renderDetail();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+      state.status = e.target.value;
+      renderRows();
+      renderDetail();
+    });
+
+    document.getElementById('role').addEventListener('change', (e) => {
+      state.role = e.target.value;
+      addAudit(`Role view switched to ${state.role}.`);
+    });
+
+    document.querySelectorAll('.sort').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (state.sortKey === key) state.sortDir *= -1;
+        else {
+          state.sortKey = key;
+          state.sortDir = 1;
+        }
+        renderRows();
+      });
+    });
+
+    rowsEl.addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-id]');
+      if (!row) return;
+      state.selectedId = row.dataset.id;
+      renderRows();
+      renderDetail();
+      setMessage('');
+    });
+
+    rowsEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target.closest('tr[data-id]');
+      if (!row) return;
+      state.selectedId = row.dataset.id;
+      renderRows();
+      renderDetail();
+      setMessage('');
+    });
+
+    document.getElementById('changeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const item = getSelected();
+      const targetStatus = document.getElementById('targetStatus').value;
+      const dueDate = document.getElementById('dueDate').value;
+      const reason = document.getElementById('reason').value.trim();
+      const financeSignoff = document.getElementById('financeSignoff').checked;
+
+      if (!dueDate) return setMessage('Recovery due date is required.');
+      if (reason.length < 15) return setMessage('Reason must be at least 15 characters.');
+
+      item.status = targetStatus;
+      item.financeApproved = financeSignoff || item.financeApproved;
+      item.lastUpdated = new Date().toISOString().slice(0, 10);
+      addAudit(`${state.role} submitted change for ${item.id}: ${targetStatus}. Reason: ${reason}`);
+      setMessage(`Change request saved for ${item.id}.`, true);
+      renderRows();
+      renderDetail();
+      e.target.reset();
+    });
+
+    document.getElementById('approve').addEventListener('click', () => applyAction('approve'));
+    document.getElementById('rework').addEventListener('click', () => applyAction('rework'));
+    document.getElementById('block').addEventListener('click', () => applyAction('block'));
+    document.getElementById('exportCsv').addEventListener('click', exportCsv);
+
+    initTeams();
+    renderRows();
+    renderDetail();
+    renderAudit();
+  </script>
+</body>
+</html>

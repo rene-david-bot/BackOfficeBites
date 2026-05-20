@@ -2724,5 +2724,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-20",
+    "day": 120,
+    "slug": "2026-05-20-okr-dependency-review-desk",
+    "name": "OKR Dependency Review Desk",
+    "description": "Planning master-detail desk for dependency-aware OKR changes with policy-gated approvals, audit trail, and CSV export.",
+    "category": "Planning",
+    "pattern": "Master-Detail",
+    "tags": [
+      "planning",
+      "okrs",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
