@@ -2748,5 +2748,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-21",
+    "day": 121,
+    "slug": "2026-05-21-quote-builder-approval-wizard",
+    "name": "Quote Builder Approval Wizard",
+    "description": "Sales wizard for building enterprise quotes with policy checks, staged approvals, audit trail, and CSV export.",
+    "category": "Sales",
+    "pattern": "Wizard",
+    "tags": [
+      "quote builder",
+      "sales",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
