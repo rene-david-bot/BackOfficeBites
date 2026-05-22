@@ -2772,5 +2772,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-22",
+    "day": 122,
+    "slug": "2026-05-22-travel-reimbursement-exception-chatdesk",
+    "name": "Travel Reimbursement Exception Chatdesk",
+    "description": "Finance chat-first desk for policy exception triage with staged approvals, audit trail, and CSV export.",
+    "category": "Finance",
+    "pattern": "Chat UI",
+    "tags": [
+      "travel reimbursement",
+      "finance",
+      "chat ui",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

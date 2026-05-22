@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Travel Reimbursement Exception Chatdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              ink: '#0b1220',
+              panel: '#131c2e',
+              panelAlt: '#1a263d',
+              accent: '#34d399',
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen">
+    <div class="max-w-7xl mx-auto p-4 lg:p-6 space-y-4">
+      <p class="text-sm text-slate-400">
+        <a href="../../index.html" class="text-emerald-300 hover:text-emerald-200 underline">BackOfficeBites 🍔</a>
+      </p>
+
+      <header class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-2xl lg:text-3xl font-bold">Travel Reimbursement Exception Chatdesk</h1>
+          <p class="text-slate-300 mt-1">Finance chat-first desk for policy exceptions, staged approvals, and audit-ready payout decisions.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+          <label class="text-xs text-slate-300">
+            Role
+            <select id="roleSelect" class="mt-1 w-full bg-panel border border-slate-700 rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+              <option>Employee</option>
+              <option>Manager</option>
+              <option>Finance Controller</option>
+            </select>
+          </label>
+          <label class="text-xs text-slate-300 sm:col-span-2">
+            Search
+            <input id="searchInput" type="text" placeholder="Request, employee, destination" class="mt-1 w-full bg-panel border border-slate-700 rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+          </label>
+        </div>
+      </header>
+
+      <section class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <article class="bg-panel border border-slate-700 rounded p-3">
+          <p class="text-xs text-slate-400">Open Exceptions</p>
+          <p id="kpiOpen" class="text-xl font-semibold">0</p>
+        </article>
+        <article class="bg-panel border border-slate-700 rounded p-3">
+          <p class="text-xs text-slate-400">Awaiting Manager</p>
+          <p id="kpiManager" class="text-xl font-semibold">0</p>
+        </article>
+        <article class="bg-panel border border-slate-700 rounded p-3">
+          <p class="text-xs text-slate-400">Awaiting Finance</p>
+          <p id="kpiFinance" class="text-xl font-semibold">0</p>
+        </article>
+        <article class="bg-panel border border-slate-700 rounded p-3">
+          <p class="text-xs text-slate-400">At Risk (>48h)</p>
+          <p id="kpiRisk" class="text-xl font-semibold text-amber-300">0</p>
+        </article>
+      </section>
+
+      <main class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <section class="xl:col-span-4 bg-panel border border-slate-700 rounded-lg p-3 space-y-3">
+          <div class="flex flex-wrap gap-2 items-end">
+            <label class="text-xs text-slate-300 flex-1 min-w-32">
+              Status
+              <select id="statusFilter" class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2 text-sm">
+                <option value="all">All</option>
+                <option>Draft</option>
+                <option>Submitted</option>
+                <option>Manager Review</option>
+                <option>Finance Review</option>
+                <option>Approved</option>
+                <option>Rejected</option>
+                <option>Paid</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-300 flex-1 min-w-32">
+              Sort By
+              <select id="sortBy" class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2 text-sm">
+                <option value="updated">Last Updated</option>
+                <option value="amount">Amount</option>
+                <option value="risk">Risk</option>
+              </select>
+            </label>
+            <button id="exportBtn" class="text-sm bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded px-3 py-2">Export CSV</button>
+          </div>
+
+          <div id="requestList" class="space-y-2 max-h-[34rem] overflow-auto pr-1" tabindex="0" aria-label="Reimbursement request list"></div>
+        </section>
+
+        <section class="xl:col-span-5 bg-panel border border-slate-700 rounded-lg p-4 space-y-3">
+          <div id="detailEmpty" class="text-slate-400 text-sm">Select a request to review chat, policy checks, and workflow actions.</div>
+          <div id="detailPane" class="hidden space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="detailTitle" class="text-lg font-semibold"></h2>
+                <p id="detailMeta" class="text-xs text-slate-400 mt-1"></p>
+              </div>
+              <span id="detailBadge" class="text-xs px-2 py-1 rounded-full border"></span>
+            </div>
+
+            <div id="policyBox" class="rounded border p-3 text-sm"></div>
+
+            <div class="bg-panelAlt border border-slate-700 rounded p-3">
+              <p class="text-xs text-slate-400 mb-2">Chat Thread</p>
+              <div id="chatThread" class="space-y-2 max-h-64 overflow-auto pr-1" aria-live="polite"></div>
+              <form id="chatForm" class="mt-3 flex gap-2">
+                <label class="sr-only" for="chatInput">Add comment</label>
+                <input id="chatInput" type="text" required placeholder="Add comment for the audit trail" class="flex-1 bg-panel border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                <button class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded px-3 py-2 text-sm font-semibold">Send</button>
+              </form>
+            </div>
+
+            <div class="bg-panelAlt border border-slate-700 rounded p-3">
+              <p class="text-xs text-slate-400 mb-2">Workflow Actions</p>
+              <div id="actionRow" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="xl:col-span-3 bg-panel border border-slate-700 rounded-lg p-4 space-y-4">
+          <div>
+            <h3 class="font-semibold">Create Request</h3>
+            <p class="text-xs text-slate-400">Log out-of-policy travel claims for quick triage.</p>
+          </div>
+
+          <form id="createForm" class="space-y-2 text-sm">
+            <label class="block text-xs text-slate-300">Employee
+              <input name="employee" required class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2" />
+            </label>
+            <label class="block text-xs text-slate-300">Destination
+              <input name="destination" required class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2" />
+            </label>
+            <label class="block text-xs text-slate-300">Category
+              <select name="category" class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2">
+                <option>Flight</option>
+                <option>Hotel</option>
+                <option>Meal</option>
+                <option>Taxi</option>
+              </select>
+            </label>
+            <label class="block text-xs text-slate-300">Amount (€)
+              <input name="amount" type="number" min="1" step="0.01" required class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2" />
+            </label>
+            <label class="block text-xs text-slate-300">Business Justification
+              <textarea name="justification" required rows="3" class="mt-1 w-full bg-panelAlt border border-slate-700 rounded px-2 py-2"></textarea>
+            </label>
+            <label class="flex gap-2 items-center text-xs text-slate-300">
+              <input name="receipt" type="checkbox" class="rounded" /> Receipt attached
+            </label>
+            <button class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded px-3 py-2">Create Exception</button>
+            <p id="formFeedback" class="text-xs"></p>
+          </form>
+
+          <div>
+            <h3 class="font-semibold">Audit Trail</h3>
+            <div id="auditList" class="mt-2 space-y-2 max-h-56 overflow-auto text-xs"></div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      const state = {
+        role: 'Employee',
+        selectedId: null,
+        requests: [
+          {
+            id: 'TR-4821',
+            employee: 'Mina Keller',
+            destination: 'Zurich',
+            category: 'Hotel',
+            amount: 465,
+            status: 'Manager Review',
+            updatedHours: 6,
+            receipt: true,
+            justification: 'Conference hotel sold out below policy cap during event week.',
+            policyLimit: 300,
+            messages: [
+              { by: 'Mina Keller', role: 'Employee', at: '2026-05-21 08:42', text: 'Submitting hotel exception with invoice attached.' },
+              { by: 'Luca Stein', role: 'Manager', at: '2026-05-21 10:11', text: 'Business critical, requesting fast-track approval.' }
+            ]
+          },
+          {
+            id: 'TR-4822',
+            employee: 'David Lorenz',
+            destination: 'Prague',
+            category: 'Meal',
+            amount: 128,
+            status: 'Finance Review',
+            updatedHours: 29,
+            receipt: true,
+            justification: 'Client dinner exceeded cap due to 7 attendees and contractual kickoff.',
+            policyLimit: 70,
+            messages: [
+              { by: 'David Lorenz', role: 'Employee', at: '2026-05-20 13:03', text: 'Attached itemized receipt and attendee list.' },
+              { by: 'Luca Stein', role: 'Manager', at: '2026-05-20 13:35', text: 'Approved from delivery budget.' }
+            ]
+          },
+          {
+            id: 'TR-4823',
+            employee: 'Sara Vogel',
+            destination: 'Berlin',
+            category: 'Taxi',
+            amount: 94,
+            status: 'Submitted',
+            updatedHours: 2,
+            receipt: false,
+            justification: 'Late arrival after train cancellation, no public transit available.',
+            policyLimit: 40,
+            messages: [
+              { by: 'Sara Vogel', role: 'Employee', at: '2026-05-22 06:09', text: 'Driver provided handwritten receipt, uploading later today.' }
+            ]
+          },
+          {
+            id: 'TR-4819',
+            employee: 'Noah Brandt',
+            destination: 'Munich',
+            category: 'Flight',
+            amount: 620,
+            status: 'Rejected',
+            updatedHours: 53,
+            receipt: true,
+            justification: 'Rebooking after missing train connection before customer workshop.',
+            policyLimit: 450,
+            messages: [
+              { by: 'Finance Controller', role: 'Finance Controller', at: '2026-05-19 17:20', text: 'No pre-approval documented. Please submit supporting incident evidence.' }
+            ]
+          }
+        ],
+        audit: [
+          { at: '08:02', event: 'TR-4823 submitted by Sara Vogel (missing receipt).' },
+          { at: '07:31', event: 'Policy matrix refreshed for FY26 Q2.' },
+          { at: '06:58', event: 'TR-4822 breached 24h SLA in Finance Review.' }
+        ]
+      };
+
+      const statusStyles = {
+        Draft: 'border-slate-500 text-slate-300',
+        Submitted: 'border-sky-400 text-sky-300',
+        'Manager Review': 'border-violet-400 text-violet-300',
+        'Finance Review': 'border-amber-400 text-amber-300',
+        Approved: 'border-emerald-400 text-emerald-300',
+        Rejected: 'border-rose-400 text-rose-300',
+        Paid: 'border-cyan-400 text-cyan-300'
+      };
+
+      const roleAllowed = {
+        Employee: ['Draft', 'Submitted'],
+        Manager: ['Submitted', 'Manager Review'],
+        'Finance Controller': ['Finance Review', 'Approved', 'Rejected']
+      };
+
+      const el = {
+        roleSelect: document.getElementById('roleSelect'),
+        searchInput: document.getElementById('searchInput'),
+        statusFilter: document.getElementById('statusFilter'),
+        sortBy: document.getElementById('sortBy'),
+        exportBtn: document.getElementById('exportBtn'),
+        requestList: document.getElementById('requestList'),
+        detailEmpty: document.getElementById('detailEmpty'),
+        detailPane: document.getElementById('detailPane'),
+        detailTitle: document.getElementById('detailTitle'),
+        detailMeta: document.getElementById('detailMeta'),
+        detailBadge: document.getElementById('detailBadge'),
+        policyBox: document.getElementById('policyBox'),
+        chatThread: document.getElementById('chatThread'),
+        chatForm: document.getElementById('chatForm'),
+        chatInput: document.getElementById('chatInput'),
+        actionRow: document.getElementById('actionRow'),
+        createForm: document.getElementById('createForm'),
+        formFeedback: document.getElementById('formFeedback'),
+        auditList: document.getElementById('auditList'),
+        kpiOpen: document.getElementById('kpiOpen'),
+        kpiManager: document.getElementById('kpiManager'),
+        kpiFinance: document.getElementById('kpiFinance'),
+        kpiRisk: document.getElementById('kpiRisk')
+      };
+
+      function riskLevel(item) {
+        if (item.updatedHours > 48) return 'High';
+        if (item.updatedHours > 24) return 'Medium';
+        return 'Low';
+      }
+
+      function filteredRequests() {
+        const text = el.searchInput.value.trim().toLowerCase();
+        const status = el.statusFilter.value;
+        const allowed = roleAllowed[state.role] || [];
+
+        const rows = state.requests.filter((item) => {
+          const inRoleView = state.role === 'Employee' ? item.employee.toLowerCase().includes('') : true;
+          const inAllowedLane = state.role === 'Employee' ? true : allowed.includes(item.status) || item.status === 'Rejected';
+          const inStatus = status === 'all' || item.status === status;
+          const inSearch = !text || [item.id, item.employee, item.destination, item.category].join(' ').toLowerCase().includes(text);
+          return inRoleView && inAllowedLane && inStatus && inSearch;
+        });
+
+        if (el.sortBy.value === 'amount') {
+          rows.sort((a, b) => b.amount - a.amount);
+        } else if (el.sortBy.value === 'risk') {
+          const rank = { High: 3, Medium: 2, Low: 1 };
+          rows.sort((a, b) => rank[riskLevel(b)] - rank[riskLevel(a)]);
+        } else {
+          rows.sort((a, b) => b.updatedHours - a.updatedHours);
+        }
+        return rows;
+      }
+
+      function renderKPIs() {
+        const open = state.requests.filter((r) => !['Approved', 'Rejected', 'Paid'].includes(r.status)).length;
+        const mgr = state.requests.filter((r) => r.status === 'Manager Review' || r.status === 'Submitted').length;
+        const fin = state.requests.filter((r) => r.status === 'Finance Review').length;
+        const risk = state.requests.filter((r) => r.updatedHours > 48).length;
+
+        el.kpiOpen.textContent = open;
+        el.kpiManager.textContent = mgr;
+        el.kpiFinance.textContent = fin;
+        el.kpiRisk.textContent = risk;
+      }
+
+      function renderRequests() {
+        const list = filteredRequests();
+        if (!list.length) {
+          el.requestList.innerHTML = '<p class="text-sm text-slate-400">No requests match the current filters.</p>';
+          if (state.selectedId && !state.requests.some((r) => r.id === state.selectedId)) {
+            state.selectedId = null;
+          }
+          renderDetail();
+          return;
+        }
+
+        if (!state.selectedId || !list.some((r) => r.id === state.selectedId)) {
+          state.selectedId = list[0].id;
+        }
+
+        el.requestList.innerHTML = list.map((item) => {
+          const selected = item.id === state.selectedId;
+          return `
+            <button data-id="${item.id}" class="w-full text-left rounded border ${selected ? 'border-emerald-400 bg-slate-800' : 'border-slate-700 bg-panelAlt hover:border-slate-500'} p-3 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+              <div class="flex justify-between items-center gap-2">
+                <p class="font-semibold">${item.id}</p>
+                <span class="text-[11px] px-2 py-0.5 rounded-full border ${statusStyles[item.status] || 'border-slate-500'}">${item.status}</span>
+              </div>
+              <p class="text-sm mt-1">${item.employee} · ${item.destination}</p>
+              <p class="text-xs text-slate-400 mt-1">€${item.amount.toFixed(2)} · ${item.category} · Risk: ${riskLevel(item)}</p>
+            </button>
+          `;
+        }).join('');
+
+        el.requestList.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.selectedId = btn.dataset.id;
+            renderRequests();
+          });
+        });
+
+        renderDetail();
+      }
+
+      function policyMessage(item) {
+        const over = item.amount - item.policyLimit;
+        const hasReceipt = item.receipt;
+        if (over <= 0 && hasReceipt) {
+          return { ok: true, text: `Within policy limit (€${item.policyLimit}) and receipt is present.` };
+        }
+        const notes = [];
+        if (over > 0) notes.push(`Exceeds policy cap by €${over.toFixed(2)} (limit €${item.policyLimit}).`);
+        if (!hasReceipt) notes.push('Missing receipt evidence.');
+        return { ok: false, text: notes.join(' ') };
+      }
+
+      function actionButtons(item) {
+        const role = state.role;
+        const actions = [];
+
+        if (role === 'Employee' && item.status === 'Draft') {
+          actions.push(['Submit', 'Submitted']);
+        }
+        if (role === 'Manager' && ['Submitted', 'Manager Review'].includes(item.status)) {
+          actions.push(['Escalate to Finance', 'Finance Review']);
+          actions.push(['Reject', 'Rejected']);
+        }
+        if (role === 'Finance Controller' && item.status === 'Finance Review') {
+          actions.push(['Approve', 'Approved']);
+          actions.push(['Reject', 'Rejected']);
+        }
+        if (role === 'Finance Controller' && item.status === 'Approved') {
+          actions.push(['Mark Paid', 'Paid']);
+        }
+
+        return actions;
+      }
+
+      function updateStatus(item, toStatus) {
+        const from = item.status;
+        item.status = toStatus;
+        item.updatedHours = 0;
+        const actor = state.role;
+        item.messages.push({
+          by: actor,
+          role: actor,
+          at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          text: `Status changed from ${from} to ${toStatus}.`
+        });
+        state.audit.unshift({ at: new Date().toISOString().slice(11, 16), event: `${item.id} moved ${from} → ${toStatus} by ${actor}.` });
+        renderAll();
+      }
+
+      function renderDetail() {
+        const item = state.requests.find((r) => r.id === state.selectedId);
+        if (!item) {
+          el.detailEmpty.classList.remove('hidden');
+          el.detailPane.classList.add('hidden');
+          return;
+        }
+
+        el.detailEmpty.classList.add('hidden');
+        el.detailPane.classList.remove('hidden');
+
+        el.detailTitle.textContent = `${item.id} · ${item.employee}`;
+        el.detailMeta.textContent = `${item.destination} · ${item.category} · €${item.amount.toFixed(2)} · Updated ${item.updatedHours}h ago`;
+        el.detailBadge.textContent = item.status;
+        el.detailBadge.className = `text-xs px-2 py-1 rounded-full border ${statusStyles[item.status] || 'border-slate-500 text-slate-300'}`;
+
+        const policy = policyMessage(item);
+        el.policyBox.className = `rounded border p-3 text-sm ${policy.ok ? 'bg-emerald-950/30 border-emerald-700 text-emerald-200' : 'bg-amber-950/30 border-amber-700 text-amber-100'}`;
+        el.policyBox.textContent = policy.text;
+
+        el.chatThread.innerHTML = item.messages.map((msg) => `
+          <article class="rounded border border-slate-700 bg-panel p-2 text-sm">
+            <p class="text-xs text-slate-400">${msg.by} · ${msg.role} · ${msg.at}</p>
+            <p>${msg.text}</p>
+          </article>
+        `).join('');
+
+        const actions = actionButtons(item);
+        if (!actions.length) {
+          el.actionRow.innerHTML = '<p class="text-sm text-slate-400">No role-permitted actions in this state.</p>';
+        } else {
+          el.actionRow.innerHTML = actions.map(([label, target]) => `
+            <button data-target="${target}" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm">${label}</button>
+          `).join('');
+          el.actionRow.querySelectorAll('button[data-target]').forEach((btn) => {
+            btn.addEventListener('click', () => updateStatus(item, btn.dataset.target));
+          });
+        }
+      }
+
+      function renderAudit() {
+        el.auditList.innerHTML = state.audit.slice(0, 14).map((row) => `
+          <div class="bg-panelAlt border border-slate-700 rounded p-2">
+            <p class="text-slate-400">${row.at}</p>
+            <p>${row.event}</p>
+          </div>
+        `).join('');
+      }
+
+      function renderAll() {
+        renderKPIs();
+        renderRequests();
+        renderAudit();
+      }
+
+      el.roleSelect.addEventListener('change', () => {
+        state.role = el.roleSelect.value;
+        renderAll();
+      });
+
+      [el.searchInput, el.statusFilter, el.sortBy].forEach((node) => {
+        node.addEventListener('input', renderRequests);
+        node.addEventListener('change', renderRequests);
+      });
+
+      el.chatForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const item = state.requests.find((r) => r.id === state.selectedId);
+        if (!item) return;
+        const text = el.chatInput.value.trim();
+        if (!text) return;
+        item.messages.push({
+          by: state.role,
+          role: state.role,
+          at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          text
+        });
+        state.audit.unshift({ at: new Date().toISOString().slice(11, 16), event: `${item.id} comment added by ${state.role}.` });
+        el.chatInput.value = '';
+        renderAll();
+      });
+
+      el.createForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = new FormData(el.createForm);
+        const amount = Number(data.get('amount'));
+        const category = data.get('category');
+        const limits = { Flight: 450, Hotel: 300, Meal: 70, Taxi: 40 };
+        const policyLimit = limits[category] || 100;
+        const receipt = data.get('receipt') === 'on';
+
+        if (amount <= policyLimit && receipt) {
+          el.formFeedback.textContent = 'Not an exception: amount is in policy and receipt is attached.';
+          el.formFeedback.className = 'text-xs text-amber-300';
+          return;
+        }
+
+        const next = state.requests.length + 4824;
+        const item = {
+          id: `TR-${next}`,
+          employee: String(data.get('employee')).trim(),
+          destination: String(data.get('destination')).trim(),
+          category,
+          amount,
+          status: 'Submitted',
+          updatedHours: 0,
+          receipt,
+          justification: String(data.get('justification')).trim(),
+          policyLimit,
+          messages: [
+            {
+              by: String(data.get('employee')).trim(),
+              role: 'Employee',
+              at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+              text: String(data.get('justification')).trim()
+            }
+          ]
+        };
+
+        state.requests.unshift(item);
+        state.selectedId = item.id;
+        state.audit.unshift({ at: new Date().toISOString().slice(11, 16), event: `${item.id} created and submitted as policy exception.` });
+
+        el.createForm.reset();
+        el.formFeedback.textContent = `${item.id} created and routed to manager review.`;
+        el.formFeedback.className = 'text-xs text-emerald-300';
+        renderAll();
+      });
+
+      el.exportBtn.addEventListener('click', () => {
+        const rows = filteredRequests();
+        const header = ['id', 'employee', 'destination', 'category', 'amount', 'status', 'risk', 'receipt'];
+        const csv = [
+          header.join(','),
+          ...rows.map((r) => [r.id, r.employee, r.destination, r.category, r.amount.toFixed(2), r.status, riskLevel(r), r.receipt ? 'yes' : 'no']
+            .map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'travel-reimbursement-exceptions.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+        state.audit.unshift({ at: new Date().toISOString().slice(11, 16), event: `${rows.length} records exported to CSV by ${state.role}.` });
+        renderAudit();
+      });
+
+      renderAll();
+    </script>
+  </body>
+</html>
