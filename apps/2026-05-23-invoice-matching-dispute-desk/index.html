@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Matching Dispute Desk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0b1020',
+            panel: '#121a30',
+            panelSoft: '#18233f',
+            border: '#273556',
+            accent: '#f59e0b'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
+    <a href="../../index.html" class="text-amber-300 hover:text-amber-200 text-sm">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Invoice Matching Dispute Desk</h1>
+    <p class="text-slate-300 mt-2">Master-detail workspace for AP variance triage with role-based approvals, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5" id="kpis"></section>
+
+    <section class="bg-panel border border-border rounded-xl p-4 mt-4">
+      <div class="grid grid-cols-1 lg:grid-cols-6 gap-3 items-end">
+        <div class="lg:col-span-2">
+          <label for="search" class="block text-sm mb-1">Search vendor or invoice</label>
+          <input id="search" type="text" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="e.g. NordLog, INV-4419" />
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-sm mb-1">Status</label>
+          <select id="statusFilter" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option value="New">New</option>
+            <option value="In Review">In Review</option>
+            <option value="Escalated">Escalated</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending Credit Note">Pending Credit Note</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="block text-sm mb-1">Sort</label>
+          <select id="sortBy" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="risk">Risk first</option>
+            <option value="amountDesc">Variance amount ↓</option>
+            <option value="dueAsc">Due date ↑</option>
+            <option value="vendorAsc">Vendor A-Z</option>
+          </select>
+        </div>
+        <div>
+          <label for="role" class="block text-sm mb-1">Role view</label>
+          <select id="role" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option>AP Analyst</option>
+            <option>Controller</option>
+            <option>CFO</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="exportBtn" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg px-3 py-2">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-5 gap-4 mt-4">
+      <aside class="xl:col-span-2 bg-panel border border-border rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-border flex items-center justify-between">
+          <h2 class="font-semibold">Dispute Queue</h2>
+          <span id="queueCount" class="text-xs text-slate-300"></span>
+        </div>
+        <div id="queue" class="max-h-[620px] overflow-auto"></div>
+      </aside>
+
+      <section class="xl:col-span-3 bg-panel border border-border rounded-xl p-4">
+        <div id="detail"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const cases = [
+      {
+        id: 'IM-2401', vendor: 'NordLog GmbH', invoiceNo: 'INV-4419', poNo: 'PO-91041',
+        invoiceAmount: 18420, grAmount: 17260, variance: 1160, dueDate: '2026-05-25',
+        reason: 'Freight surcharge not in PO', status: 'Escalated', risk: 3,
+        owner: 'Maya', tags: ['policy flag', '3-way mismatch'],
+        audit: [
+          { ts: '2026-05-22 09:14', actor: 'AP Analyst', action: 'Marked In Review', note: 'Carrier surcharge line item missing in PO.' },
+          { ts: '2026-05-22 13:28', actor: 'Controller', action: 'Escalated', note: 'Variance above controller limit. Needs CFO view.' }
+        ]
+      },
+      {
+        id: 'IM-2402', vendor: 'HelioPrint AG', invoiceNo: 'INV-1182', poNo: 'PO-91102',
+        invoiceAmount: 6420, grAmount: 6520, variance: -100, dueDate: '2026-05-24',
+        reason: 'Rounding on unit conversion', status: 'In Review', risk: 1,
+        owner: 'Lukas', tags: ['rounding'],
+        audit: [
+          { ts: '2026-05-22 10:02', actor: 'AP Analyst', action: 'Opened Case', note: 'Invoice slightly below receipt amount.' }
+        ]
+      },
+      {
+        id: 'IM-2403', vendor: 'Kran & Sohn', invoiceNo: 'INV-7780', poNo: 'PO-91066',
+        invoiceAmount: 23300, grAmount: 23300, variance: 0, dueDate: '2026-05-27',
+        reason: 'Tax code mismatch', status: 'New', risk: 2,
+        owner: 'Nina', tags: ['tax code'],
+        audit: []
+      },
+      {
+        id: 'IM-2404', vendor: 'ByteForge Systems', invoiceNo: 'INV-3907', poNo: 'PO-90989',
+        invoiceAmount: 12480, grAmount: 11360, variance: 1120, dueDate: '2026-05-23',
+        reason: 'Unapproved implementation hours', status: 'In Review', risk: 3,
+        owner: 'Maya', tags: ['service overrun', 'policy flag'],
+        audit: [
+          { ts: '2026-05-21 16:19', actor: 'AP Analyst', action: 'Opened Case', note: 'Hours exceed statement of work.' }
+        ]
+      },
+      {
+        id: 'IM-2405', vendor: 'Aster Medical Supply', invoiceNo: 'INV-5521', poNo: 'PO-91128',
+        invoiceAmount: 9780, grAmount: 9780, variance: 0, dueDate: '2026-05-28',
+        reason: 'Late goods receipt posting', status: 'Approved', risk: 1,
+        owner: 'Lukas', tags: ['timing'],
+        audit: [
+          { ts: '2026-05-21 11:00', actor: 'Controller', action: 'Approved', note: 'Timing issue resolved, amounts match.' }
+        ]
+      },
+      {
+        id: 'IM-2406', vendor: 'Orion Facilities', invoiceNo: 'INV-6220', poNo: 'PO-91014',
+        invoiceAmount: 4890, grAmount: 3890, variance: 1000, dueDate: '2026-05-26',
+        reason: 'Weekend emergency call-out', status: 'New', risk: 2,
+        owner: 'Nina', tags: ['exception'],
+        audit: []
+      }
+    ];
+
+    let selectedId = cases[0].id;
+
+    const state = {
+      search: '',
+      statusFilter: 'all',
+      sortBy: 'risk',
+      role: 'AP Analyst'
+    };
+
+    const roleRules = {
+      'AP Analyst': ['request-credit-note', 'escalate'],
+      'Controller': ['approve', 'request-credit-note', 'escalate'],
+      'CFO': ['approve', 'reject', 'request-credit-note', 'escalate']
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      queue: document.getElementById('queue'),
+      queueCount: document.getElementById('queueCount'),
+      detail: document.getElementById('detail'),
+      search: document.getElementById('search'),
+      statusFilter: document.getElementById('statusFilter'),
+      sortBy: document.getElementById('sortBy'),
+      role: document.getElementById('role'),
+      exportBtn: document.getElementById('exportBtn')
+    };
+
+    function fmtCurrency(v) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+    }
+
+    function riskBadge(risk) {
+      if (risk >= 3) return 'bg-rose-500/15 text-rose-300 border-rose-400/30';
+      if (risk === 2) return 'bg-amber-500/15 text-amber-200 border-amber-300/30';
+      return 'bg-emerald-500/15 text-emerald-200 border-emerald-300/30';
+    }
+
+    function statusBadge(status) {
+      const map = {
+        'New': 'bg-sky-500/15 text-sky-200 border-sky-400/30',
+        'In Review': 'bg-indigo-500/15 text-indigo-200 border-indigo-300/30',
+        'Escalated': 'bg-amber-500/15 text-amber-200 border-amber-300/30',
+        'Approved': 'bg-emerald-500/15 text-emerald-200 border-emerald-300/30',
+        'Pending Credit Note': 'bg-violet-500/15 text-violet-200 border-violet-300/30',
+        'Rejected': 'bg-rose-500/15 text-rose-200 border-rose-300/30'
+      };
+      return map[status] || 'bg-slate-500/15 text-slate-200 border-slate-300/30';
+    }
+
+    function getFilteredCases() {
+      const q = state.search.trim().toLowerCase();
+      let rows = cases.filter(c => {
+        const matchesSearch = !q || c.vendor.toLowerCase().includes(q) || c.invoiceNo.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
+        const matchesStatus = state.statusFilter === 'all' || c.status === state.statusFilter;
+        return matchesSearch && matchesStatus;
+      });
+
+      rows.sort((a, b) => {
+        if (state.sortBy === 'amountDesc') return Math.abs(b.variance) - Math.abs(a.variance);
+        if (state.sortBy === 'dueAsc') return a.dueDate.localeCompare(b.dueDate);
+        if (state.sortBy === 'vendorAsc') return a.vendor.localeCompare(b.vendor);
+        return b.risk - a.risk || Math.abs(b.variance) - Math.abs(a.variance);
+      });
+
+      return rows;
+    }
+
+    function renderKpis() {
+      const openCases = cases.filter(c => !['Approved', 'Rejected'].includes(c.status));
+      const atRisk = openCases.reduce((sum, c) => sum + Math.abs(c.variance), 0);
+      const escalated = cases.filter(c => c.status === 'Escalated').length;
+      const overdue = openCases.filter(c => c.dueDate <= '2026-05-23').length;
+
+      const cards = [
+        { label: 'Open Disputes', value: openCases.length, hint: 'Needs AP action' },
+        { label: 'Variance at Risk', value: fmtCurrency(atRisk), hint: 'Absolute variance sum' },
+        { label: 'Escalated / Overdue', value: `${escalated} / ${overdue}`, hint: 'Workflow pressure' }
+      ];
+
+      els.kpis.innerHTML = cards.map(c => `
+        <div class="bg-panel border border-border rounded-xl p-4">
+          <div class="text-xs text-slate-300">${c.label}</div>
+          <div class="text-2xl font-bold mt-1">${c.value}</div>
+          <div class="text-xs text-slate-400 mt-1">${c.hint}</div>
+        </div>
+      `).join('');
+    }
+
+    function ensureSelectedVisible(rows) {
+      if (!rows.length) {
+        selectedId = null;
+        return;
+      }
+      if (!rows.find(c => c.id === selectedId)) {
+        selectedId = rows[0].id;
+      }
+    }
+
+    function renderQueue() {
+      const rows = getFilteredCases();
+      ensureSelectedVisible(rows);
+      els.queueCount.textContent = `${rows.length} visible`;
+
+      if (!rows.length) {
+        els.queue.innerHTML = '<p class="p-4 text-sm text-slate-300">No disputes match this filter.</p>';
+        renderDetail();
+        return;
+      }
+
+      els.queue.innerHTML = rows.map(c => {
+        const active = c.id === selectedId;
+        return `
+          <button data-id="${c.id}" class="w-full text-left px-4 py-3 border-b border-border hover:bg-panelSoft focus:outline-none focus:ring-2 focus:ring-amber-400 ${active ? 'bg-panelSoft' : ''}">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium">${c.vendor}</p>
+              <span class="text-xs border rounded-full px-2 py-0.5 ${statusBadge(c.status)}">${c.status}</span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1">${c.id} · ${c.invoiceNo} · Due ${c.dueDate}</p>
+            <div class="flex items-center justify-between mt-2 text-sm">
+              <span class="text-slate-300">Variance ${fmtCurrency(c.variance)}</span>
+              <span class="text-xs border rounded-full px-2 py-0.5 ${riskBadge(c.risk)}">Risk ${c.risk}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      [...els.queue.querySelectorAll('button[data-id]')].forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedId = btn.dataset.id;
+          renderQueue();
+        });
+      });
+
+      renderDetail();
+    }
+
+    function allowedActionsForCase(item) {
+      const allowed = roleRules[state.role] || [];
+      if (state.role === 'Controller' && Math.abs(item.variance) > 1000) {
+        return allowed.filter(a => a !== 'approve');
+      }
+      return allowed;
+    }
+
+    function actionLabel(action) {
+      return {
+        'approve': 'Approve Variance',
+        'reject': 'Reject Invoice',
+        'request-credit-note': 'Request Credit Note',
+        'escalate': 'Escalate for Review'
+      }[action] || action;
+    }
+
+    function renderDetail() {
+      const item = cases.find(c => c.id === selectedId);
+      if (!item) {
+        els.detail.innerHTML = '<p class="text-slate-300">Select a case to review details.</p>';
+        return;
+      }
+
+      const actions = allowedActionsForCase(item);
+      const auditRows = item.audit.length
+        ? item.audit.map(a => `<li class="border-l-2 border-border pl-3"><p class="text-xs text-slate-400">${a.ts} · ${a.actor}</p><p class="text-sm">${a.action}</p><p class="text-xs text-slate-300">${a.note}</p></li>`).join('')
+        : '<li class="text-sm text-slate-300">No audit entries yet.</li>';
+
+      els.detail.innerHTML = `
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-semibold">${item.vendor}</h2>
+            <p class="text-sm text-slate-300 mt-1">${item.id} · ${item.invoiceNo} · ${item.poNo}</p>
+          </div>
+          <div class="flex gap-2">
+            <span class="text-xs border rounded-full px-2 py-1 ${statusBadge(item.status)}">${item.status}</span>
+            <span class="text-xs border rounded-full px-2 py-1 ${riskBadge(item.risk)}">Risk ${item.risk}</span>
+          </div>
+        </div>
+
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
+          <div class="bg-panelSoft border border-border rounded-lg p-3"><dt class="text-slate-400">Invoice</dt><dd class="font-medium mt-1">${fmtCurrency(item.invoiceAmount)}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-3"><dt class="text-slate-400">Goods Receipt</dt><dd class="font-medium mt-1">${fmtCurrency(item.grAmount)}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-3"><dt class="text-slate-400">Variance</dt><dd class="font-medium mt-1">${fmtCurrency(item.variance)}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-3"><dt class="text-slate-400">Due Date</dt><dd class="font-medium mt-1">${item.dueDate}</dd></div>
+        </dl>
+
+        <div class="mt-4 bg-panelSoft border border-border rounded-lg p-3">
+          <p class="text-sm text-slate-400">Mismatch reason</p>
+          <p class="mt-1">${item.reason}</p>
+          <div class="flex flex-wrap gap-2 mt-2">${item.tags.map(t => `<span class="text-xs px-2 py-1 rounded-full bg-slate-800 border border-border">${t}</span>`).join('')}</div>
+        </div>
+
+        <form id="actionForm" class="mt-4 bg-panelSoft border border-border rounded-lg p-4" novalidate>
+          <h3 class="font-semibold">Workflow Action (${state.role})</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label for="action" class="block text-sm mb-1">Action</label>
+              <select id="action" class="w-full bg-bg border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                ${actions.map(a => `<option value="${a}">${actionLabel(a)}</option>`).join('')}
+              </select>
+              ${actions.length ? '' : '<p class="text-xs text-rose-300 mt-1">No permitted actions for this role.</p>'}
+            </div>
+            <div id="escalateWrap" class="hidden">
+              <label for="escalateTo" class="block text-sm mb-1">Escalate to</label>
+              <select id="escalateTo" class="w-full bg-bg border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select approver</option>
+                <option value="Controller">Controller</option>
+                <option value="CFO">CFO</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label for="note" class="block text-sm mb-1">Decision note</label>
+            <textarea id="note" rows="3" class="w-full bg-bg border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Explain your decision (min 10 chars)"></textarea>
+          </div>
+          <p id="formError" class="text-sm text-rose-300 mt-2 hidden"></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg px-4 py-2" ${actions.length ? '' : 'disabled'}>Apply Action</button>
+            <p class="text-xs text-slate-400 self-center">Policy: Controller cannot approve variance above €1,000.</p>
+          </div>
+        </form>
+
+        <section class="mt-4">
+          <h3 class="font-semibold mb-2">Audit Trail</h3>
+          <ul class="space-y-2">${auditRows}</ul>
+        </section>
+      `;
+
+      const form = document.getElementById('actionForm');
+      const actionEl = document.getElementById('action');
+      const noteEl = document.getElementById('note');
+      const errorEl = document.getElementById('formError');
+      const escalateWrap = document.getElementById('escalateWrap');
+      const escalateToEl = document.getElementById('escalateTo');
+
+      function syncEscalateField() {
+        if (!actionEl) return;
+        const isEscalate = actionEl.value === 'escalate';
+        escalateWrap.classList.toggle('hidden', !isEscalate);
+      }
+
+      if (actionEl) {
+        actionEl.addEventListener('change', syncEscalateField);
+        syncEscalateField();
+      }
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (!actionEl) return;
+
+          const action = actionEl.value;
+          const note = noteEl.value.trim();
+          const escalateTo = escalateToEl ? escalateToEl.value : '';
+          errorEl.classList.add('hidden');
+
+          if (note.length < 10) {
+            errorEl.textContent = 'Decision note must be at least 10 characters.';
+            errorEl.classList.remove('hidden');
+            return;
+          }
+
+          if (action === 'escalate' && !escalateTo) {
+            errorEl.textContent = 'Pick an escalation owner before submitting.';
+            errorEl.classList.remove('hidden');
+            return;
+          }
+
+          const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+          const actionMap = {
+            approve: 'Approved',
+            reject: 'Rejected',
+            'request-credit-note': 'Pending Credit Note',
+            escalate: 'Escalated'
+          };
+
+          item.status = actionMap[action] || item.status;
+          if (action === 'escalate' && escalateTo) item.owner = escalateTo;
+
+          item.audit.unshift({
+            ts: now,
+            actor: state.role,
+            action: actionLabel(action),
+            note: action === 'escalate' ? `${note} (Escalated to ${escalateTo})` : note
+          });
+
+          renderKpis();
+          renderQueue();
+        });
+      }
+    }
+
+    function exportCsv() {
+      const rows = getFilteredCases();
+      const headers = ['id', 'vendor', 'invoiceNo', 'poNo', 'invoiceAmount', 'grAmount', 'variance', 'status', 'owner', 'dueDate'];
+      const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${String(r[h]).replaceAll('"', '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'invoice-matching-disputes.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function bindControls() {
+      els.search.addEventListener('input', (e) => {
+        state.search = e.target.value;
+        renderQueue();
+      });
+      els.statusFilter.addEventListener('change', (e) => {
+        state.statusFilter = e.target.value;
+        renderQueue();
+      });
+      els.sortBy.addEventListener('change', (e) => {
+        state.sortBy = e.target.value;
+        renderQueue();
+      });
+      els.role.addEventListener('change', (e) => {
+        state.role = e.target.value;
+        renderQueue();
+      });
+      els.exportBtn.addEventListener('click', exportCsv);
+    }
+
+    bindControls();
+    renderKpis();
+    renderQueue();
+  </script>
+</body>
+</html>

@@ -2796,5 +2796,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-23",
+    "day": 123,
+    "slug": "2026-05-23-invoice-matching-dispute-desk",
+    "name": "Invoice Matching Dispute Desk",
+    "description": "Finance master-detail workspace for three-way match variance triage with role-based approvals, audit trail, policy validation, and CSV export.",
+    "category": "Finance",
+    "pattern": "Master-Detail",
+    "tags": [
+      "invoice matching",
+      "accounts payable",
+      "finance",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
