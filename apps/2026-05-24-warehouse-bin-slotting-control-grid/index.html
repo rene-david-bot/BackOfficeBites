@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse Bin Slotting Control Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0b1220',
+            panel: '#111b2e',
+            panelSoft: '#182744',
+            border: '#2a3a5f',
+            accent: '#f59e0b'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-bg text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
+    <a href="../../index.html" class="text-amber-300 hover:text-amber-200 text-sm">BackOfficeBites 🍔</a>
+    <h1 class="text-2xl md:text-3xl font-bold mt-2">Warehouse Bin Slotting Control Grid</h1>
+    <p class="text-slate-300 mt-2">Supply-chain data grid for bin assignment exceptions with safety policy validation, role-based approvals, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-5" id="kpis"></section>
+
+    <section class="bg-panel border border-border rounded-xl p-4 mt-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
+        <div class="xl:col-span-2">
+          <label for="search" class="block text-sm mb-1">Search SKU, item, or bin</label>
+          <input id="search" type="text" placeholder="e.g. SKU-4412, HZ-07" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        </div>
+        <div>
+          <label for="zoneFilter" class="block text-sm mb-1">Zone</label>
+          <select id="zoneFilter" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C (Cold)</option>
+            <option value="HZ">HazMat</option>
+          </select>
+        </div>
+        <div>
+          <label for="statusFilter" class="block text-sm mb-1">Status</label>
+          <select id="statusFilter" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option>Draft</option>
+            <option>Ready Review</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>Moved</option>
+          </select>
+        </div>
+        <div>
+          <label for="hazardFilter" class="block text-sm mb-1">Hazard</label>
+          <select id="hazardFilter" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="all">All</option>
+            <option value="None">None</option>
+            <option value="Flammable">Flammable</option>
+            <option value="Corrosive">Corrosive</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" class="block text-sm mb-1">Sort</label>
+          <select id="sortBy" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="priority">Priority</option>
+            <option value="dueAsc">Due date ↑</option>
+            <option value="skuAsc">SKU A-Z</option>
+            <option value="riskDesc">Risk ↓</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="exportBtn" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg px-3 py-2">Export CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
+      <section class="xl:col-span-2 bg-panel border border-border rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+          <h2 class="font-semibold">Slotting Requests</h2>
+          <div class="flex items-center gap-2">
+            <label for="role" class="text-sm text-slate-300">Role</label>
+            <select id="role" class="bg-panelSoft border border-border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <option>Warehouse Planner</option>
+              <option>Safety Officer</option>
+              <option>Ops Manager</option>
+            </select>
+            <span id="visibleCount" class="text-xs text-slate-300"></span>
+          </div>
+        </div>
+
+        <div class="overflow-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-panelSoft text-slate-300 sticky top-0">
+              <tr>
+                <th class="text-left px-3 py-2">SKU</th>
+                <th class="text-left px-3 py-2">Item</th>
+                <th class="text-left px-3 py-2">Current → Proposed</th>
+                <th class="text-left px-3 py-2">Hazard</th>
+                <th class="text-left px-3 py-2">Status</th>
+                <th class="text-left px-3 py-2">Due</th>
+                <th class="text-left px-3 py-2">Risk</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="bg-panel border border-border rounded-xl p-4" id="detail"></aside>
+    </section>
+  </main>
+
+  <script>
+    const requests = [
+      {
+        id: 'WB-781',
+        sku: 'SKU-4412',
+        item: 'Solvent Drum 20L',
+        zone: 'HZ',
+        currentBin: 'B-14-L',
+        proposedBin: 'HZ-07-L',
+        hazardClass: 'Flammable',
+        tempBand: 'Ambient',
+        pickVelocity: 'B',
+        status: 'Draft',
+        priority: 1,
+        risk: 93,
+        dueDate: '2026-05-24',
+        requester: 'M. Richter',
+        note: 'Near loading dock for shorter emergency response path.',
+        audit: [
+          { ts: '2026-05-23 07:40', actor: 'Warehouse Planner', action: 'Opened', note: 'Initial relocation request.' }
+        ]
+      },
+      {
+        id: 'WB-782',
+        sku: 'SKU-9921',
+        item: 'Insulin Cooling Packs',
+        zone: 'C',
+        currentBin: 'C-03-U',
+        proposedBin: 'C-05-L',
+        hazardClass: 'None',
+        tempBand: 'Cold',
+        pickVelocity: 'A',
+        status: 'Ready Review',
+        priority: 1,
+        risk: 88,
+        dueDate: '2026-05-25',
+        requester: 'L. Meyer',
+        note: 'Move to lower level to reduce handling time.',
+        audit: [
+          { ts: '2026-05-23 09:15', actor: 'Warehouse Planner', action: 'Submitted', note: 'Cold-chain checks passed.' }
+        ]
+      },
+      {
+        id: 'WB-783',
+        sku: 'SKU-7720',
+        item: 'Lithium UPS Cells',
+        zone: 'HZ',
+        currentBin: 'HZ-02-U',
+        proposedBin: 'HZ-03-U',
+        hazardClass: 'Corrosive',
+        tempBand: 'Ambient',
+        pickVelocity: 'C',
+        status: 'Approved',
+        priority: 2,
+        risk: 70,
+        dueDate: '2026-05-27',
+        requester: 'R. Hahn',
+        note: 'Closer to charging service bench.',
+        audit: [
+          { ts: '2026-05-23 08:02', actor: 'Safety Officer', action: 'Approved', note: 'Hazmat aisle and signage verified.' }
+        ]
+      },
+      {
+        id: 'WB-784',
+        sku: 'SKU-1184',
+        item: 'Fastener Kit M6',
+        zone: 'A',
+        currentBin: 'A-01-L',
+        proposedBin: 'A-09-U',
+        hazardClass: 'None',
+        tempBand: 'Ambient',
+        pickVelocity: 'A',
+        status: 'Ready Review',
+        priority: 1,
+        risk: 75,
+        dueDate: '2026-05-24',
+        requester: 'J. Klein',
+        note: 'Overflow from aisle block due to promo wave.',
+        audit: [
+          { ts: '2026-05-23 10:44', actor: 'Warehouse Planner', action: 'Submitted', note: 'Capacity pressure in A-01.' }
+        ]
+      },
+      {
+        id: 'WB-785',
+        sku: 'SKU-6042',
+        item: 'Printer Labels 4x6',
+        zone: 'B',
+        currentBin: 'B-06-L',
+        proposedBin: 'B-10-L',
+        hazardClass: 'None',
+        tempBand: 'Ambient',
+        pickVelocity: 'B',
+        status: 'Moved',
+        priority: 3,
+        risk: 30,
+        dueDate: '2026-05-23',
+        requester: 'S. Vogt',
+        note: 'Completed after nightly cycle-count.',
+        audit: [
+          { ts: '2026-05-23 05:20', actor: 'Ops Manager', action: 'Marked Moved', note: 'Physical move complete and scanned.' }
+        ]
+      },
+      {
+        id: 'WB-786',
+        sku: 'SKU-5007',
+        item: 'Cleaning Acid 5L',
+        zone: 'HZ',
+        currentBin: 'HZ-01-L',
+        proposedBin: 'B-12-L',
+        hazardClass: 'Corrosive',
+        tempBand: 'Ambient',
+        pickVelocity: 'C',
+        status: 'Draft',
+        priority: 2,
+        risk: 95,
+        dueDate: '2026-05-26',
+        requester: 'F. Neumann',
+        note: 'Requested by temporary contractor.',
+        audit: [
+          { ts: '2026-05-23 11:31', actor: 'Warehouse Planner', action: 'Opened', note: 'Needs safety validation.' }
+        ]
+      }
+    ];
+
+    const roleActions = {
+      'Warehouse Planner': ['validate', 'submit'],
+      'Safety Officer': ['validate', 'approve', 'reject'],
+      'Ops Manager': ['validate', 'approve', 'reject', 'mark-moved']
+    };
+
+    const state = {
+      search: '',
+      zone: 'all',
+      status: 'all',
+      hazard: 'all',
+      sortBy: 'priority',
+      role: 'Warehouse Planner',
+      selectedId: requests[0].id
+    };
+
+    const els = {
+      kpis: document.getElementById('kpis'),
+      search: document.getElementById('search'),
+      zone: document.getElementById('zoneFilter'),
+      status: document.getElementById('statusFilter'),
+      hazard: document.getElementById('hazardFilter'),
+      sortBy: document.getElementById('sortBy'),
+      role: document.getElementById('role'),
+      exportBtn: document.getElementById('exportBtn'),
+      visibleCount: document.getElementById('visibleCount'),
+      gridBody: document.getElementById('gridBody'),
+      detail: document.getElementById('detail')
+    };
+
+    function statusBadge(status) {
+      return {
+        'Draft': 'bg-slate-500/20 text-slate-200 border-slate-300/30',
+        'Ready Review': 'bg-sky-500/20 text-sky-200 border-sky-300/30',
+        'Approved': 'bg-emerald-500/20 text-emerald-200 border-emerald-300/30',
+        'Rejected': 'bg-rose-500/20 text-rose-200 border-rose-300/30',
+        'Moved': 'bg-violet-500/20 text-violet-200 border-violet-300/30'
+      }[status] || 'bg-slate-500/20 text-slate-200 border-slate-300/30';
+    }
+
+    function riskBadge(risk) {
+      if (risk >= 90) return 'bg-rose-500/20 text-rose-200 border-rose-300/30';
+      if (risk >= 75) return 'bg-amber-500/20 text-amber-200 border-amber-300/30';
+      return 'bg-emerald-500/20 text-emerald-200 border-emerald-300/30';
+    }
+
+    function getPolicyViolations(item, action) {
+      const errors = [];
+      if (item.hazardClass !== 'None' && !item.proposedBin.startsWith('HZ-')) {
+        errors.push('Hazardous items must be assigned to HazMat bins (HZ-*).');
+      }
+      if (item.tempBand === 'Cold' && !item.proposedBin.startsWith('C-')) {
+        errors.push('Cold-chain SKUs must remain in cold-zone bins (C-*).');
+      }
+      if ((action === 'approve' || action === 'submit') && item.pickVelocity === 'A' && item.proposedBin.endsWith('-U') && state.role !== 'Ops Manager') {
+        errors.push('A-velocity items in upper bins require Ops Manager approval.');
+      }
+      return errors;
+    }
+
+    function canApplyAction(item, action) {
+      const transitions = {
+        'submit': ['Draft'],
+        'approve': ['Ready Review'],
+        'reject': ['Ready Review'],
+        'mark-moved': ['Approved'],
+        'validate': ['Draft', 'Ready Review', 'Approved']
+      };
+      const allowedStatuses = transitions[action] || [];
+      if (!allowedStatuses.includes(item.status)) return false;
+      if (action === 'approve' && state.role === 'Safety Officer' && item.hazardClass === 'None') return false;
+      return true;
+    }
+
+    function filteredRequests() {
+      const q = state.search.trim().toLowerCase();
+      const rows = requests.filter(r => {
+        const matchesSearch = !q || [r.sku, r.item, r.currentBin, r.proposedBin].join(' ').toLowerCase().includes(q);
+        const matchesZone = state.zone === 'all' || r.zone === state.zone;
+        const matchesStatus = state.status === 'all' || r.status === state.status;
+        const matchesHazard = state.hazard === 'all' || r.hazardClass === state.hazard;
+        return matchesSearch && matchesZone && matchesStatus && matchesHazard;
+      });
+
+      rows.sort((a, b) => {
+        if (state.sortBy === 'dueAsc') return a.dueDate.localeCompare(b.dueDate);
+        if (state.sortBy === 'skuAsc') return a.sku.localeCompare(b.sku);
+        if (state.sortBy === 'riskDesc') return b.risk - a.risk;
+        return a.priority - b.priority || b.risk - a.risk;
+      });
+
+      return rows;
+    }
+
+    function ensureSelected(rows) {
+      if (!rows.length) {
+        state.selectedId = null;
+        return;
+      }
+      if (!rows.find(r => r.id === state.selectedId)) {
+        state.selectedId = rows[0].id;
+      }
+    }
+
+    function renderKpis() {
+      const open = requests.filter(r => !['Moved', 'Rejected'].includes(r.status));
+      const blocked = requests.filter(r => getPolicyViolations(r, 'submit').length > 0).length;
+      const moved = requests.filter(r => r.status === 'Moved').length;
+      const urgent = open.filter(r => r.dueDate <= '2026-05-26').length;
+
+      const cards = [
+        { label: 'Open Slotting Requests', value: open.length, hint: 'Needs action this week' },
+        { label: 'Policy Blocks', value: blocked, hint: 'Violates slotting guardrails' },
+        { label: 'Moved This Week', value: moved, hint: 'Physically completed moves' },
+        { label: 'Urgent Due ≤ 2 days', value: urgent, hint: 'Execution pressure' }
+      ];
+
+      els.kpis.innerHTML = cards.map(card => `
+        <div class="bg-panel border border-border rounded-xl p-4">
+          <div class="text-xs text-slate-300">${card.label}</div>
+          <div class="text-2xl font-bold mt-1">${card.value}</div>
+          <div class="text-xs text-slate-400 mt-1">${card.hint}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid() {
+      const rows = filteredRequests();
+      ensureSelected(rows);
+      els.visibleCount.textContent = `${rows.length} visible`;
+
+      if (!rows.length) {
+        els.gridBody.innerHTML = '<tr><td colspan="7" class="px-3 py-6 text-center text-slate-300">No requests match the filters.</td></tr>';
+        renderDetail();
+        return;
+      }
+
+      els.gridBody.innerHTML = rows.map(r => {
+        const selected = r.id === state.selectedId ? 'bg-panelSoft' : '';
+        return `
+          <tr>
+            <td colspan="7" class="p-0">
+              <button data-id="${r.id}" class="w-full text-left border-b border-border hover:bg-panelSoft focus:outline-none focus:ring-2 focus:ring-amber-400 ${selected}">
+                <div class="grid grid-cols-7 gap-2 px-3 py-2 items-center">
+                  <span class="font-medium">${r.sku}</span>
+                  <span class="text-slate-200">${r.item}</span>
+                  <span class="text-slate-300">${r.currentBin} → ${r.proposedBin}</span>
+                  <span>${r.hazardClass}</span>
+                  <span><span class="text-xs border rounded-full px-2 py-0.5 ${statusBadge(r.status)}">${r.status}</span></span>
+                  <span>${r.dueDate}</span>
+                  <span><span class="text-xs border rounded-full px-2 py-0.5 ${riskBadge(r.risk)}">${r.risk}</span></span>
+                </div>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      [...els.gridBody.querySelectorAll('button[data-id]')].forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          renderGrid();
+        });
+      });
+
+      renderDetail();
+    }
+
+    function actionLabel(action) {
+      return {
+        'validate': 'Validate Policy',
+        'submit': 'Submit for Review',
+        'approve': 'Approve Move',
+        'reject': 'Reject Move',
+        'mark-moved': 'Mark as Moved'
+      }[action] || action;
+    }
+
+    function nowStamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function applyAction(item, action, note) {
+      if (!canApplyAction(item, action)) {
+        return { ok: false, error: `Action not allowed from status ${item.status} for role ${state.role}.` };
+      }
+
+      const violations = getPolicyViolations(item, action);
+      if (violations.length) {
+        return { ok: false, error: violations.join(' ') };
+      }
+
+      if ((action === 'reject' || action === 'submit') && note.trim().length < 8) {
+        return { ok: false, error: 'Please add a note with at least 8 characters.' };
+      }
+
+      const actor = state.role;
+      if (action === 'submit') item.status = 'Ready Review';
+      if (action === 'approve') item.status = 'Approved';
+      if (action === 'reject') item.status = 'Rejected';
+      if (action === 'mark-moved') item.status = 'Moved';
+
+      const auditNote = note.trim() || (action === 'validate' ? 'Policy check completed.' : 'No extra note provided.');
+      item.audit.unshift({ ts: nowStamp(), actor, action: actionLabel(action), note: auditNote });
+
+      return { ok: true };
+    }
+
+    function renderDetail() {
+      const item = requests.find(r => r.id === state.selectedId);
+      if (!item) {
+        els.detail.innerHTML = '<p class="text-slate-300">Select a row to inspect details.</p>';
+        return;
+      }
+
+      const actions = roleActions[state.role] || [];
+      const violations = getPolicyViolations(item, 'submit');
+
+      els.detail.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-semibold">${item.item}</h2>
+            <p class="text-xs text-slate-300 mt-1">${item.id} · ${item.sku} · ${item.requester}</p>
+          </div>
+          <span class="text-xs border rounded-full px-2 py-1 ${statusBadge(item.status)}">${item.status}</span>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-2 mt-3 text-sm">
+          <div class="bg-panelSoft border border-border rounded-lg p-2"><dt class="text-slate-400">Zone</dt><dd class="mt-1">${item.zone}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-2"><dt class="text-slate-400">Risk</dt><dd class="mt-1">${item.risk}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-2"><dt class="text-slate-400">Temp Band</dt><dd class="mt-1">${item.tempBand}</dd></div>
+          <div class="bg-panelSoft border border-border rounded-lg p-2"><dt class="text-slate-400">Velocity</dt><dd class="mt-1">${item.pickVelocity}</dd></div>
+        </dl>
+
+        <form id="detailForm" class="mt-3 space-y-2" novalidate>
+          <div>
+            <label for="proposedBin" class="block text-sm mb-1">Proposed Bin</label>
+            <input id="proposedBin" value="${item.proposedBin}" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <div>
+            <label for="detailNote" class="block text-sm mb-1">Action Note</label>
+            <textarea id="detailNote" rows="2" class="w-full bg-panelSoft border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Required for submit/reject"></textarea>
+          </div>
+
+          <div class="text-xs ${violations.length ? 'text-rose-300' : 'text-emerald-300'}">
+            ${violations.length ? `Policy check: ${violations.join(' ')}` : 'Policy check: No active slotting violations.'}
+          </div>
+
+          <p id="actionError" class="text-sm text-rose-300 hidden"></p>
+
+          <div class="grid grid-cols-2 gap-2">
+            ${actions.map(action => `
+              <button type="button" data-action="${action}" class="actionBtn bg-amber-500/90 hover:bg-amber-400 text-slate-900 font-semibold rounded-lg px-2 py-2 text-sm ${canApplyAction(item, action) ? '' : 'opacity-40 cursor-not-allowed'}">${actionLabel(action)}</button>
+            `).join('')}
+          </div>
+        </form>
+
+        <section class="mt-4 border-t border-border pt-3">
+          <h3 class="font-semibold text-sm mb-2">Audit Trail</h3>
+          <ul class="space-y-2 max-h-52 overflow-auto pr-1">
+            ${(item.audit.length ? item.audit : [{ ts: '-', actor: '-', action: 'No history', note: '' }]).map(a => `
+              <li class="border-l-2 border-border pl-2">
+                <p class="text-xs text-slate-400">${a.ts} · ${a.actor}</p>
+                <p class="text-sm">${a.action}</p>
+                <p class="text-xs text-slate-300">${a.note}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      `;
+
+      const proposedBinEl = document.getElementById('proposedBin');
+      const noteEl = document.getElementById('detailNote');
+      const actionErrorEl = document.getElementById('actionError');
+
+      proposedBinEl.addEventListener('change', () => {
+        item.proposedBin = proposedBinEl.value.trim().toUpperCase();
+        renderKpis();
+        renderGrid();
+      });
+
+      [...els.detail.querySelectorAll('.actionBtn')].forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          if (!canApplyAction(item, action)) return;
+          actionErrorEl.classList.add('hidden');
+
+          item.proposedBin = proposedBinEl.value.trim().toUpperCase();
+          const result = applyAction(item, action, noteEl.value);
+
+          if (!result.ok) {
+            actionErrorEl.textContent = result.error;
+            actionErrorEl.classList.remove('hidden');
+            return;
+          }
+
+          renderKpis();
+          renderGrid();
+        });
+      });
+    }
+
+    function exportCsv() {
+      const rows = filteredRequests();
+      const headers = ['id', 'sku', 'item', 'zone', 'currentBin', 'proposedBin', 'hazardClass', 'tempBand', 'pickVelocity', 'status', 'risk', 'dueDate', 'requester'];
+      const csv = [headers.join(','), ...rows.map(row => headers.map(h => `"${String(row[h]).replaceAll('"', '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'warehouse-bin-slotting-grid.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function bindControls() {
+      els.search.addEventListener('input', e => {
+        state.search = e.target.value;
+        renderGrid();
+      });
+      els.zone.addEventListener('change', e => {
+        state.zone = e.target.value;
+        renderGrid();
+      });
+      els.status.addEventListener('change', e => {
+        state.status = e.target.value;
+        renderGrid();
+      });
+      els.hazard.addEventListener('change', e => {
+        state.hazard = e.target.value;
+        renderGrid();
+      });
+      els.sortBy.addEventListener('change', e => {
+        state.sortBy = e.target.value;
+        renderGrid();
+      });
+      els.role.addEventListener('change', e => {
+        state.role = e.target.value;
+        renderGrid();
+      });
+      els.exportBtn.addEventListener('click', exportCsv);
+    }
+
+    bindControls();
+    renderKpis();
+    renderGrid();
+  </script>
+</body>
+</html>

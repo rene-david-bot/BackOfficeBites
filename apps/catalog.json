@@ -2821,5 +2821,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-24",
+    "day": 124,
+    "slug": "2026-05-24-warehouse-bin-slotting-control-grid",
+    "name": "Warehouse Bin Slotting Control Grid",
+    "description": "Supply-chain data grid for bin assignment exceptions with safety policy validation, role-based approvals, audit trail, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Data Grid",
+    "tags": [
+      "warehouse bins",
+      "slotting",
+      "supply chain",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
