@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Warehouse Bin Slotting Control Grid** — Supply-chain data grid for bin assignment exceptions with safety policy validation, role-based approvals, audit trail, and CSV export.
+**AP Hold Release Kanban** — Finance kanban board for blocked invoice resolution with role-based approvals, policy gates, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

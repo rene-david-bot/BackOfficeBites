@@ -2846,5 +2846,30 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-25",
+    "day": 125,
+    "slug": "2026-05-25-ap-hold-release-kanban",
+    "name": "AP Hold Release Kanban",
+    "description": "Finance kanban board for blocked invoice resolution with role-based approvals, policy gates, audit trail, and CSV export.",
+    "category": "Finance",
+    "pattern": "Kanban",
+    "tags": [
+      "accounts payable",
+      "finance",
+      "kanban",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine",
+      "drag-and-drop"
+    ],
+    "thumb": ""
   }
 ]
