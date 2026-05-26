@@ -2871,5 +2871,29 @@
       "drag-and-drop"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-26",
+    "day": 126,
+    "slug": "2026-05-26-credit-note-approval-dragboard",
+    "name": "Credit Note Approval Dragboard",
+    "description": "Finance drag-and-drop board for credit note approvals with role-based stage controls, policy validation, audit trail, and CSV export.",
+    "category": "Finance",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "credit notes",
+      "finance ops",
+      "drag-and-drop",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
