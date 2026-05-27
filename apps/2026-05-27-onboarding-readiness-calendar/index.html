@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Onboarding Readiness Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Onboarding Readiness Calendar</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">HR operations calendar to keep new-hire starts on track with role-based status transitions, policy validation, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Role view">
+          <option>HR Ops</option>
+          <option>IT Admin</option>
+          <option>Hiring Manager</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Location</span>
+        <select id="location" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Location filter">
+          <option value="all">All locations</option>
+          <option>Dresden</option>
+          <option>Berlin</option>
+          <option>Munich</option>
+          <option>Remote</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" placeholder="employee, dept, manager" aria-label="Search" />
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Sort Queue</span>
+        <select id="sort" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Sort queue">
+          <option value="date-asc">Start date (soonest)</option>
+          <option value="risk-desc">Risk (high first)</option>
+          <option value="name-asc">Employee (A-Z)</option>
+        </select>
+      </label>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-2 flex flex-col gap-2">
+        <span class="text-xs text-slate-400 uppercase">Actions</span>
+        <div class="flex flex-wrap gap-2">
+          <button id="prevMonth" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600">Previous Month</button>
+          <button id="nextMonth" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600">Next Month</button>
+          <button id="add" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold">Add New Hire</button>
+          <button id="exportCsv" class="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold">Export CSV</button>
+        </div>
+        <p id="stats" class="text-xs text-slate-400"></p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mt-6">
+      <div class="xl:col-span-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div class="flex items-center justify-between">
+          <h2 id="monthLabel" class="text-xl font-semibold"></h2>
+          <p class="text-xs text-slate-400">Click a hire chip to edit readiness details</p>
+        </div>
+        <div class="grid grid-cols-7 gap-2 text-xs text-slate-400 uppercase mt-3">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div id="calendar" class="grid grid-cols-7 gap-2 mt-2"></div>
+      </div>
+
+      <aside class="xl:col-span-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="empty" class="text-slate-400">Select a new hire to review onboarding readiness and policy checks.</div>
+
+        <div id="detail" class="hidden space-y-4">
+          <div>
+            <h2 id="hireTitle" class="text-xl font-semibold"></h2>
+            <p id="hireMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Current Status</p>
+              <p id="statusText" class="mt-1 font-semibold"></p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+              <p class="text-xs text-slate-400 uppercase">Risk</p>
+              <p id="riskText" class="mt-1 font-semibold"></p>
+            </div>
+          </div>
+
+          <form id="policyForm" class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-3">
+            <h3 class="font-semibold">Readiness Validation</h3>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Status</span>
+              <select id="statusInput" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Status"></select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Start Date</span>
+              <input id="startDate" type="date" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Start date" required />
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="docsReady" type="checkbox" class="mt-1" />
+              <span>Legal and HR documents are complete.</span>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="equipmentReady" type="checkbox" class="mt-1" />
+              <span>Laptop and account setup are complete.</span>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="orientationReady" type="checkbox" class="mt-1" />
+              <span>Orientation session is booked.</span>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="buddyAssigned" type="checkbox" class="mt-1" />
+              <span>Buddy assignment is confirmed.</span>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Manager Note</span>
+              <textarea id="note" minlength="10" class="mt-1 w-full min-h-20 bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Manager note"></textarea>
+            </label>
+
+            <p id="validationMsg" class="text-xs"></p>
+
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="saveBtn" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">Save</button>
+              <button type="button" id="movePrev" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600">Move Left</button>
+              <button type="button" id="moveNext" class="px-3 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 text-slate-950 font-semibold">Move Right</button>
+            </div>
+          </form>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="rounded-2xl border border-slate-800 bg-slate-900 p-4 mt-4">
+      <h2 class="text-lg font-semibold">Upcoming Start Queue</h2>
+      <div class="overflow-x-auto mt-3">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 border-b border-slate-800">
+              <th class="py-2 pr-3">ID</th>
+              <th class="py-2 pr-3">Employee</th>
+              <th class="py-2 pr-3">Department</th>
+              <th class="py-2 pr-3">Start Date</th>
+              <th class="py-2 pr-3">Location</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2">Risk</th>
+            </tr>
+          </thead>
+          <tbody id="queueBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const STAGES = ['Planned', 'Docs Pending', 'Equipment Pending', 'Ready', 'Escalated'];
+    const STAGE_STYLES = {
+      'Planned': 'border-sky-500 text-sky-300',
+      'Docs Pending': 'border-amber-500 text-amber-300',
+      'Equipment Pending': 'border-indigo-500 text-indigo-300',
+      'Ready': 'border-emerald-500 text-emerald-300',
+      'Escalated': 'border-rose-500 text-rose-300'
+    };
+    const RISK_VALUE = { Low: 1, Medium: 2, High: 3 };
+
+    const hires = [
+      { id: 'HR-9401', employee: 'Mila Neumann', department: 'Customer Success', manager: 'Jonas Berger', location: 'Dresden', startDate: '2026-05-28', status: 'Docs Pending', risk: 'Medium', docsReady: false, equipmentReady: true, orientationReady: true, buddyAssigned: true, note: 'ID card upload still missing.', audit: ['2026-05-27 06:45 Documents requested by HR Ops'] },
+      { id: 'HR-9402', employee: 'Emre Kaya', department: 'Finance Ops', manager: 'Sarah Wolf', location: 'Berlin', startDate: '2026-05-29', status: 'Equipment Pending', risk: 'High', docsReady: true, equipmentReady: false, orientationReady: true, buddyAssigned: false, note: 'Laptop shipment delayed at depot.', audit: ['2026-05-27 05:30 Escalation flag raised by IT Admin'] },
+      { id: 'HR-9403', employee: 'Lea Heinrich', department: 'Sales', manager: 'Tom Adler', location: 'Remote', startDate: '2026-06-02', status: 'Planned', risk: 'Low', docsReady: true, equipmentReady: false, orientationReady: false, buddyAssigned: false, note: 'Welcome package queued.', audit: ['2026-05-26 16:15 Planned by HR Ops'] },
+      { id: 'HR-9404', employee: 'Nico Schwarz', department: 'Legal', manager: 'Maja Lindner', location: 'Munich', startDate: '2026-06-03', status: 'Ready', risk: 'Low', docsReady: true, equipmentReady: true, orientationReady: true, buddyAssigned: true, note: 'All checks complete.', audit: ['2026-05-26 14:12 Marked ready by Hiring Manager'] },
+      { id: 'HR-9405', employee: 'Anja Krause', department: 'Product Ops', manager: 'Lisa Weber', location: 'Dresden', startDate: '2026-06-05', status: 'Planned', risk: 'Medium', docsReady: false, equipmentReady: false, orientationReady: false, buddyAssigned: true, note: 'Background check in progress.', audit: ['2026-05-27 07:10 Added to June intake cohort'] }
+    ];
+
+    const state = {
+      selectedId: null,
+      month: new Date('2026-05-01T00:00:00')
+    };
+
+    const el = id => document.getElementById(id);
+
+    function addAudit(item, text) {
+      const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      item.audit.unshift(`${stamp} ${text}`);
+      item.audit = item.audit.slice(0, 12);
+    }
+
+    function allowedTransitions(from, to) {
+      const role = el('role').value;
+      const transitions = {
+        'HR Ops': {
+          'Planned': ['Docs Pending', 'Escalated'],
+          'Docs Pending': ['Ready', 'Escalated'],
+          'Escalated': ['Docs Pending', 'Equipment Pending']
+        },
+        'IT Admin': {
+          'Planned': ['Equipment Pending'],
+          'Equipment Pending': ['Ready', 'Escalated'],
+          'Escalated': ['Equipment Pending']
+        },
+        'Hiring Manager': {
+          'Planned': ['Escalated'],
+          'Docs Pending': ['Escalated'],
+          'Equipment Pending': ['Escalated'],
+          'Ready': ['Escalated'],
+          'Escalated': ['Ready']
+        }
+      };
+      return from === to || (transitions[role]?.[from] || []).includes(to);
+    }
+
+    function validatePolicy(item) {
+      const start = new Date(item.startDate + 'T00:00:00');
+      const today = new Date('2026-05-27T00:00:00');
+      const diffDays = Math.round((start - today) / 86400000);
+
+      if (!item.note || item.note.trim().length < 10) return 'Manager note must be at least 10 characters.';
+      if (diffDays <= 2 && (!item.docsReady || !item.equipmentReady)) {
+        return 'Starts within 48 hours require documents and equipment completed.';
+      }
+      if (item.status === 'Ready' && (!item.docsReady || !item.equipmentReady || !item.orientationReady || !item.buddyAssigned)) {
+        return 'Ready status requires docs, equipment, orientation, and buddy assignment.';
+      }
+      if (item.status === 'Escalated' && item.note.trim().length < 15) {
+        return 'Escalations require a note with at least 15 characters.';
+      }
+      return '';
+    }
+
+    function filteredRows() {
+      const query = el('search').value.trim().toLowerCase();
+      const location = el('location').value;
+      const sort = el('sort').value;
+
+      const list = hires
+        .filter(h => location === 'all' || h.location === location)
+        .filter(h => !query || `${h.id} ${h.employee} ${h.department} ${h.manager}`.toLowerCase().includes(query));
+
+      const sorters = {
+        'date-asc': (a, b) => a.startDate.localeCompare(b.startDate),
+        'risk-desc': (a, b) => RISK_VALUE[b.risk] - RISK_VALUE[a.risk],
+        'name-asc': (a, b) => a.employee.localeCompare(b.employee)
+      };
+
+      return list.sort(sorters[sort]);
+    }
+
+    function monthName(date) {
+      return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function renderCalendar() {
+      el('monthLabel').textContent = monthName(state.month);
+      const container = el('calendar');
+      container.innerHTML = '';
+
+      const year = state.month.getFullYear();
+      const month = state.month.getMonth();
+      const first = new Date(year, month, 1);
+      const firstDay = (first.getDay() + 6) % 7;
+      const start = new Date(first);
+      start.setDate(start.getDate() - firstDay);
+
+      const visible = filteredRows();
+      const byDate = new Map();
+      for (const row of visible) {
+        const arr = byDate.get(row.startDate) || [];
+        arr.push(row);
+        byDate.set(row.startDate, arr);
+      }
+
+      for (let i = 0; i < 42; i++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + i);
+        const iso = day.toISOString().slice(0, 10);
+        const inMonth = day.getMonth() === month;
+
+        const cell = document.createElement('div');
+        cell.className = `min-h-28 rounded-lg border p-2 ${inMonth ? 'border-slate-800 bg-slate-950' : 'border-slate-900 bg-slate-900/60 text-slate-500'}`;
+
+        const dayNumber = document.createElement('p');
+        dayNumber.className = 'text-xs';
+        dayNumber.textContent = String(day.getDate());
+        cell.appendChild(dayNumber);
+
+        const items = (byDate.get(iso) || []).slice(0, 3);
+        for (const row of items) {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          const isSelected = state.selectedId === row.id;
+          chip.className = `w-full mt-1 text-left rounded-md border px-2 py-1 text-xs hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 ${STAGE_STYLES[row.status]} ${isSelected ? 'bg-slate-800' : ''}`;
+          chip.textContent = `${row.employee} • ${row.status}`;
+          chip.addEventListener('click', () => {
+            state.selectedId = row.id;
+            render();
+          });
+          cell.appendChild(chip);
+        }
+
+        const hiddenCount = (byDate.get(iso) || []).length - items.length;
+        if (hiddenCount > 0) {
+          const more = document.createElement('p');
+          more.className = 'text-[10px] text-slate-400 mt-1';
+          more.textContent = `+${hiddenCount} more`;
+          cell.appendChild(more);
+        }
+
+        container.appendChild(cell);
+      }
+    }
+
+    function renderQueue() {
+      const body = el('queueBody');
+      body.innerHTML = '';
+
+      for (const row of filteredRows()) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-800/80 hover:bg-slate-800/50';
+        tr.innerHTML = `
+          <td class="py-2 pr-3">${row.id}</td>
+          <td class="py-2 pr-3"><button class="text-amber-300 hover:text-amber-200 underline-offset-2 hover:underline" data-id="${row.id}">${row.employee}</button></td>
+          <td class="py-2 pr-3">${row.department}</td>
+          <td class="py-2 pr-3">${row.startDate}</td>
+          <td class="py-2 pr-3">${row.location}</td>
+          <td class="py-2 pr-3">${row.status}</td>
+          <td class="py-2">${row.risk}</td>
+        `;
+        body.appendChild(tr);
+      }
+
+      body.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const row = hires.find(r => r.id === state.selectedId);
+      const empty = el('empty');
+      const detail = el('detail');
+
+      if (!row) {
+        empty.classList.remove('hidden');
+        detail.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      detail.classList.remove('hidden');
+
+      el('hireTitle').textContent = `${row.employee} (${row.id})`;
+      el('hireMeta').textContent = `${row.department} • ${row.manager} • ${row.location}`;
+      el('statusText').textContent = row.status;
+      el('riskText').textContent = row.risk;
+
+      const statusInput = el('statusInput');
+      statusInput.innerHTML = STAGES.map(s => `<option ${s === row.status ? 'selected' : ''}>${s}</option>`).join('');
+      el('startDate').value = row.startDate;
+      el('docsReady').checked = row.docsReady;
+      el('equipmentReady').checked = row.equipmentReady;
+      el('orientationReady').checked = row.orientationReady;
+      el('buddyAssigned').checked = row.buddyAssigned;
+      el('note').value = row.note;
+
+      const audit = el('auditTrail');
+      audit.innerHTML = row.audit.map(a => `<li class="border-l-2 border-slate-700 pl-3">${a}</li>`).join('');
+      el('validationMsg').textContent = '';
+      el('validationMsg').className = 'text-xs';
+    }
+
+    function updateStats() {
+      const visible = filteredRows();
+      const ready = visible.filter(r => r.status === 'Ready').length;
+      const escalated = visible.filter(r => r.status === 'Escalated').length;
+      el('stats').textContent = `${visible.length} visible hires • ${ready} ready • ${escalated} escalated`;
+    }
+
+    function saveSelected(targetStatus = null) {
+      const row = hires.find(r => r.id === state.selectedId);
+      if (!row) return;
+
+      const previousStatus = row.status;
+      const nextStatus = targetStatus || el('statusInput').value;
+
+      row.startDate = el('startDate').value;
+      row.docsReady = el('docsReady').checked;
+      row.equipmentReady = el('equipmentReady').checked;
+      row.orientationReady = el('orientationReady').checked;
+      row.buddyAssigned = el('buddyAssigned').checked;
+      row.note = el('note').value.trim();
+
+      if (!allowedTransitions(previousStatus, nextStatus)) {
+        el('validationMsg').textContent = `Role ${el('role').value} cannot move ${previousStatus} → ${nextStatus}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        row.status = previousStatus;
+        return;
+      }
+
+      row.status = nextStatus;
+      const error = validatePolicy(row);
+      if (error) {
+        row.status = previousStatus;
+        el('validationMsg').textContent = error;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+
+      if (previousStatus !== row.status) {
+        addAudit(row, `Status changed ${previousStatus} → ${row.status} by ${el('role').value}`);
+      }
+      addAudit(row, `Readiness details saved by ${el('role').value}`);
+
+      row.risk = row.status === 'Escalated' || (!row.docsReady || !row.equipmentReady) ? 'High' : (row.orientationReady && row.buddyAssigned ? 'Low' : 'Medium');
+
+      el('validationMsg').textContent = 'Saved. Policy checks passed.';
+      el('validationMsg').className = 'text-xs text-emerald-300';
+      render();
+    }
+
+    function moveStage(direction) {
+      const row = hires.find(r => r.id === state.selectedId);
+      if (!row) return;
+      const idx = STAGES.indexOf(row.status);
+      const next = STAGES[idx + direction];
+      if (!next) return;
+      saveSelected(next);
+    }
+
+    function exportCsv() {
+      const rows = filteredRows();
+      const header = ['id', 'employee', 'department', 'manager', 'location', 'startDate', 'status', 'risk'];
+      const csv = [header.join(',')]
+        .concat(rows.map(r => header.map(k => `"${String(r[k]).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'onboarding-readiness-calendar.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function addHire() {
+      const id = `HR-${9400 + hires.length + 1}`;
+      const row = {
+        id,
+        employee: 'New Hire Intake',
+        department: 'Operations',
+        manager: 'Unassigned',
+        location: 'Berlin',
+        startDate: '2026-06-08',
+        status: 'Planned',
+        risk: 'Medium',
+        docsReady: false,
+        equipmentReady: false,
+        orientationReady: false,
+        buddyAssigned: false,
+        note: 'Initial intake created.',
+        audit: ['2026-05-27 08:00 Intake card created by HR Ops']
+      };
+      hires.push(row);
+      state.selectedId = row.id;
+      render();
+    }
+
+    function render() {
+      renderCalendar();
+      renderQueue();
+      renderDetail();
+      updateStats();
+    }
+
+    el('role').addEventListener('change', render);
+    el('location').addEventListener('change', render);
+    el('search').addEventListener('input', render);
+    el('sort').addEventListener('change', render);
+
+    el('saveBtn').addEventListener('click', () => saveSelected());
+    el('movePrev').addEventListener('click', () => moveStage(-1));
+    el('moveNext').addEventListener('click', () => moveStage(1));
+
+    el('prevMonth').addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+      render();
+    });
+
+    el('nextMonth').addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+      render();
+    });
+
+    el('add').addEventListener('click', addHire);
+    el('exportCsv').addEventListener('click', exportCsv);
+
+    state.selectedId = hires[0].id;
+    render();
+  </script>
+</body>
+</html>

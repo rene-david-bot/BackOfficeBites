@@ -2895,5 +2895,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-27",
+    "day": 127,
+    "slug": "2026-05-27-onboarding-readiness-calendar",
+    "name": "Onboarding Readiness Calendar",
+    "description": "HR calendar workspace for onboarding starts with role-based status transitions, policy validation, audit trail, and CSV export.",
+    "category": "HR",
+    "pattern": "Calendar",
+    "tags": [
+      "onboarding",
+      "hr ops",
+      "calendar",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
