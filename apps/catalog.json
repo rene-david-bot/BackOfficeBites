@@ -2919,5 +2919,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-28",
+    "day": 128,
+    "slug": "2026-05-28-risk-register-mitigation-grid",
+    "name": "Risk Register Mitigation Grid",
+    "description": "Planning data grid to triage enterprise delivery risks with policy validation, role-based approvals, audit trail, and CSV export.",
+    "category": "Planning",
+    "pattern": "Data Grid",
+    "tags": [
+      "risk register",
+      "planning",
+      "data grid",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]

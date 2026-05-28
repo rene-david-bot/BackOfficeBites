@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Risk Register Mitigation Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Risk Register Mitigation Grid</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">Planning data grid to triage enterprise delivery risks with policy validation, role-based approvals, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Role view">
+          <option>PMO Analyst</option>
+          <option>Risk Owner</option>
+          <option>Portfolio Lead</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Program</span>
+        <select id="program" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Program filter">
+          <option value="all">All programs</option>
+          <option>ERP Rollout</option>
+          <option>Procurement AI</option>
+          <option>Finance Core</option>
+          <option>Supply Twin</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Severity</span>
+        <select id="severity" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Severity filter">
+          <option value="all">All severities</option>
+          <option>Critical</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">State</span>
+        <select id="stateFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="State filter">
+          <option value="all">All states</option>
+          <option>Identified</option>
+          <option>Assessing</option>
+          <option>Mitigation In Progress</option>
+          <option>Pending Approval</option>
+          <option>Closed</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" placeholder="risk, owner, domain" aria-label="Search" />
+      </label>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-3 xl:col-span-1 flex flex-col gap-2">
+        <span class="text-xs text-slate-400 uppercase">Sort</span>
+        <select id="sort" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Sort">
+          <option value="severity-desc">Severity (highest)</option>
+          <option value="due-asc">Due date (soonest)</option>
+          <option value="owner-asc">Owner (A-Z)</option>
+          <option value="exposure-desc">Exposure (highest)</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mt-4">
+      <div class="xl:col-span-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold">Risk Queue</h2>
+          <div class="flex flex-wrap gap-2">
+            <button id="addRisk" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold">Add Risk</button>
+            <button id="exportCsv" class="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold">Export CSV</button>
+          </div>
+        </div>
+        <p id="stats" class="text-xs text-slate-400 mt-2"></p>
+
+        <div class="overflow-x-auto mt-3">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-400 border-b border-slate-800">
+                <th class="py-2 pr-3">Risk</th>
+                <th class="py-2 pr-3">Program</th>
+                <th class="py-2 pr-3">Owner</th>
+                <th class="py-2 pr-3">Severity</th>
+                <th class="py-2 pr-3">State</th>
+                <th class="py-2 pr-3">Exposure</th>
+                <th class="py-2">Due</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="xl:col-span-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="empty" class="text-slate-400">Select a risk to update mitigation and route approval.</div>
+
+        <div id="detail" class="hidden space-y-4">
+          <div>
+            <h2 id="riskTitle" class="text-xl font-semibold"></h2>
+            <p id="riskMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <form id="riskForm" class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-3">
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">State</span>
+              <select id="stateInput" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Risk state"></select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Severity</span>
+              <select id="severityInput" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Severity"></select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Mitigation Due Date</span>
+              <input id="dueDate" type="date" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Mitigation due date" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Mitigation Plan</span>
+              <textarea id="mitigation" minlength="20" class="mt-1 w-full min-h-24 bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Mitigation plan"></textarea>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Residual Risk (1-5)</span>
+              <input id="residual" type="number" min="1" max="5" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Residual risk" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Mitigation Budget (€)</span>
+              <input id="budget" type="number" min="0" step="500" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Mitigation budget" />
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="securityReview" type="checkbox" class="mt-1" />
+              <span>Security review complete</span>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="legalReview" type="checkbox" class="mt-1" />
+              <span>Legal review complete</span>
+            </label>
+
+            <p id="validationMsg" class="text-xs"></p>
+
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="saveBtn" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">Save</button>
+              <button type="button" id="advanceBtn" class="px-3 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 text-slate-950 font-semibold">Advance Stage</button>
+            </div>
+          </form>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const TODAY = '2026-05-28';
+    const STATES = ['Identified', 'Assessing', 'Mitigation In Progress', 'Pending Approval', 'Closed'];
+    const SEVERITY_ORDER = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const data = [
+      { id: 'RR-3101', title: 'Master data migration delay in AP module', program: 'Finance Core', owner: 'Nora Klein', domain: 'Data', severity: 'Critical', state: 'Assessing', exposure: 92, dueDate: '2026-06-04', residual: 4, budget: 38000, securityReview: false, legalReview: false, mitigation: 'Parallel reconciliation pack drafted, dry-run blocked by vendor extract defects.', audit: ['2026-05-27 10:20 Risk opened by PMO Analyst'] },
+      { id: 'RR-3102', title: 'Supplier API latency impacts reorder automation', program: 'Supply Twin', owner: 'Kai Richter', domain: 'Integration', severity: 'High', state: 'Mitigation In Progress', exposure: 76, dueDate: '2026-06-06', residual: 3, budget: 24000, securityReview: true, legalReview: false, mitigation: 'Fallback polling enabled, async queue rollout in test region.', audit: ['2026-05-27 09:45 Mitigation sprint approved by Risk Owner'] },
+      { id: 'RR-3103', title: 'EU data residency clause unresolved for analytics vendor', program: 'Procurement AI', owner: 'Mila Vogel', domain: 'Compliance', severity: 'Critical', state: 'Pending Approval', exposure: 88, dueDate: '2026-06-01', residual: 3, budget: 30000, securityReview: true, legalReview: true, mitigation: 'Contract rider negotiated with zone pinning and key escrow controls.', audit: ['2026-05-27 08:30 Routed to Portfolio Lead for closure approval'] },
+      { id: 'RR-3104', title: 'Training adoption below threshold in shared services', program: 'ERP Rollout', owner: 'Ben Yildiz', domain: 'Change', severity: 'Medium', state: 'Mitigation In Progress', exposure: 58, dueDate: '2026-06-09', residual: 3, budget: 12000, securityReview: false, legalReview: false, mitigation: 'Manager office-hours cadence launched with targeted onboarding guides.', audit: ['2026-05-26 16:10 Owners assigned across BUs'] },
+      { id: 'RR-3105', title: 'Access recertification backlog for privileged roles', program: 'Finance Core', owner: 'Lea Neumann', domain: 'Security', severity: 'High', state: 'Identified', exposure: 71, dueDate: '2026-06-03', residual: 4, budget: 18000, securityReview: false, legalReview: false, mitigation: 'Bulk review pipeline drafted, pending IAM admin sign-off.', audit: ['2026-05-27 11:05 Imported from quarterly audit feed'] },
+      { id: 'RR-3106', title: 'Legacy barcode fleet not compatible with new WMS', program: 'Supply Twin', owner: 'Omar Haddad', domain: 'Hardware', severity: 'Medium', state: 'Assessing', exposure: 49, dueDate: '2026-06-11', residual: 2, budget: 9000, securityReview: false, legalReview: false, mitigation: 'Compatibility matrix in progress, phased replacement estimate prepared.', audit: ['2026-05-27 07:40 Added during stand-up'] }
+    ];
+
+    const state = { selectedId: null };
+    const el = id => document.getElementById(id);
+
+    function stamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function allowedTransition(from, to, role) {
+      const map = {
+        'PMO Analyst': {
+          'Identified': ['Assessing'],
+          'Assessing': ['Mitigation In Progress'],
+          'Mitigation In Progress': ['Pending Approval'],
+          'Pending Approval': ['Mitigation In Progress']
+        },
+        'Risk Owner': {
+          'Identified': ['Assessing', 'Mitigation In Progress'],
+          'Assessing': ['Mitigation In Progress'],
+          'Mitigation In Progress': ['Pending Approval', 'Assessing'],
+          'Pending Approval': ['Mitigation In Progress']
+        },
+        'Portfolio Lead': {
+          'Assessing': ['Mitigation In Progress'],
+          'Mitigation In Progress': ['Pending Approval'],
+          'Pending Approval': ['Closed', 'Mitigation In Progress'],
+          'Closed': ['Mitigation In Progress']
+        }
+      };
+
+      return from === to || (map[role]?.[from] || []).includes(to);
+    }
+
+    function validate(row, nextState, role) {
+      if (!row.mitigation || row.mitigation.trim().length < 20) return 'Mitigation plan must be at least 20 characters.';
+      if (!row.dueDate) return 'Mitigation due date is required.';
+      if (row.residual < 1 || row.residual > 5) return 'Residual risk must be between 1 and 5.';
+
+      const overdue = row.dueDate < TODAY && nextState !== 'Closed';
+      if (overdue) return 'Overdue risks cannot be saved outside Closed. Update due date first.';
+
+      if (nextState === 'Pending Approval' && row.mitigation.trim().length < 30) {
+        return 'Pending Approval requires a mitigation plan with at least 30 characters.';
+      }
+
+      if ((row.severity === 'High' || row.severity === 'Critical') && (nextState === 'Pending Approval' || nextState === 'Closed')) {
+        if (!row.securityReview || !row.legalReview) return 'High/Critical risks require security and legal review before approval.';
+      }
+
+      if (nextState === 'Closed') {
+        if (role !== 'Portfolio Lead') return 'Only Portfolio Lead can close risks.';
+        if (row.residual > 2) return 'Closed risks require residual risk 2 or lower.';
+        if (!row.securityReview || !row.legalReview) return 'Closed risks require security and legal review.';
+      }
+
+      if (row.budget > 30000 && role === 'PMO Analyst') {
+        return 'PMO Analyst cannot approve changes above €30,000 budget.';
+      }
+
+      return '';
+    }
+
+    function filteredRows() {
+      const role = el('role').value;
+      const program = el('program').value;
+      const severity = el('severity').value;
+      const stateFilter = el('stateFilter').value;
+      const query = el('search').value.trim().toLowerCase();
+      const sort = el('sort').value;
+
+      const rows = data
+        .filter(r => program === 'all' || r.program === program)
+        .filter(r => severity === 'all' || r.severity === severity)
+        .filter(r => stateFilter === 'all' || r.state === stateFilter)
+        .filter(r => !query || `${r.id} ${r.title} ${r.owner} ${r.domain}`.toLowerCase().includes(query));
+
+      const sorters = {
+        'severity-desc': (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity],
+        'due-asc': (a, b) => a.dueDate.localeCompare(b.dueDate),
+        'owner-asc': (a, b) => a.owner.localeCompare(b.owner),
+        'exposure-desc': (a, b) => b.exposure - a.exposure
+      };
+
+      return rows.sort(sorters[sort]).map(r => ({ ...r, canClose: role === 'Portfolio Lead' }));
+    }
+
+    function renderGrid() {
+      const body = el('gridBody');
+      body.innerHTML = '';
+
+      for (const row of filteredRows()) {
+        const severityColor = {
+          Low: 'text-emerald-300',
+          Medium: 'text-amber-300',
+          High: 'text-orange-300',
+          Critical: 'text-rose-300'
+        }[row.severity];
+
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-800/80 hover:bg-slate-800/50';
+        tr.innerHTML = `
+          <td class="py-2 pr-3"><button data-id="${row.id}" class="text-amber-300 hover:text-amber-200 underline-offset-2 hover:underline">${row.id}</button></td>
+          <td class="py-2 pr-3">${row.program}</td>
+          <td class="py-2 pr-3">${row.owner}</td>
+          <td class="py-2 pr-3 ${severityColor}">${row.severity}</td>
+          <td class="py-2 pr-3">${row.state}</td>
+          <td class="py-2 pr-3">${row.exposure}</td>
+          <td class="py-2">${row.dueDate}</td>
+        `;
+        body.appendChild(tr);
+      }
+
+      body.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedId = btn.dataset.id;
+          render();
+        });
+      });
+    }
+
+    function renderStats() {
+      const rows = filteredRows();
+      const critical = rows.filter(r => r.severity === 'Critical').length;
+      const pending = rows.filter(r => r.state === 'Pending Approval').length;
+      const overdue = rows.filter(r => r.state !== 'Closed' && r.dueDate < TODAY).length;
+      el('stats').textContent = `${rows.length} visible risks • ${critical} critical • ${pending} pending approval • ${overdue} overdue`;
+    }
+
+    function renderDetail() {
+      const row = data.find(r => r.id === state.selectedId);
+      const empty = el('empty');
+      const detail = el('detail');
+
+      if (!row) {
+        empty.classList.remove('hidden');
+        detail.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      detail.classList.remove('hidden');
+
+      el('riskTitle').textContent = `${row.title}`;
+      el('riskMeta').textContent = `${row.id} • ${row.program} • ${row.owner}`;
+
+      el('stateInput').innerHTML = STATES.map(s => `<option ${s === row.state ? 'selected' : ''}>${s}</option>`).join('');
+      el('severityInput').innerHTML = Object.keys(SEVERITY_ORDER).map(s => `<option ${s === row.severity ? 'selected' : ''}>${s}</option>`).join('');
+      el('dueDate').value = row.dueDate;
+      el('mitigation').value = row.mitigation;
+      el('residual').value = row.residual;
+      el('budget').value = row.budget;
+      el('securityReview').checked = row.securityReview;
+      el('legalReview').checked = row.legalReview;
+      el('validationMsg').textContent = '';
+      el('validationMsg').className = 'text-xs';
+
+      el('auditTrail').innerHTML = row.audit.map(item => `<li class="border-l-2 border-slate-700 pl-3">${item}</li>`).join('');
+    }
+
+    function upsertCurrent(nextState = null) {
+      const role = el('role').value;
+      const row = data.find(r => r.id === state.selectedId);
+      if (!row) return;
+
+      const beforeState = row.state;
+      const targetState = nextState || el('stateInput').value;
+
+      row.severity = el('severityInput').value;
+      row.dueDate = el('dueDate').value;
+      row.mitigation = el('mitigation').value.trim();
+      row.residual = Number(el('residual').value);
+      row.budget = Number(el('budget').value);
+      row.securityReview = el('securityReview').checked;
+      row.legalReview = el('legalReview').checked;
+
+      if (!allowedTransition(beforeState, targetState, role)) {
+        el('validationMsg').textContent = `Role ${role} cannot move ${beforeState} → ${targetState}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const error = validate(row, targetState, role);
+      if (error) {
+        el('validationMsg').textContent = error;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+
+      row.state = targetState;
+      row.exposure = Math.max(10, Math.min(99, Math.round(SEVERITY_ORDER[row.severity] * 18 + row.residual * 7 + (row.state === 'Closed' ? -18 : 0))));
+
+      if (beforeState !== row.state) {
+        row.audit.unshift(`${stamp()} State changed ${beforeState} → ${row.state} by ${role}`);
+      }
+      row.audit.unshift(`${stamp()} Mitigation details saved by ${role}`);
+      row.audit = row.audit.slice(0, 14);
+
+      el('validationMsg').textContent = 'Saved. Policy checks passed.';
+      el('validationMsg').className = 'text-xs text-emerald-300';
+      render();
+    }
+
+    function advanceStage() {
+      const row = data.find(r => r.id === state.selectedId);
+      if (!row) return;
+      const index = STATES.indexOf(row.state);
+      const next = STATES[index + 1];
+      if (!next) return;
+      upsertCurrent(next);
+    }
+
+    function addRisk() {
+      const id = `RR-${3100 + data.length + 1}`;
+      const row = {
+        id,
+        title: 'New delivery dependency risk',
+        program: 'ERP Rollout',
+        owner: 'Unassigned',
+        domain: 'Execution',
+        severity: 'Medium',
+        state: 'Identified',
+        exposure: 45,
+        dueDate: '2026-06-12',
+        residual: 3,
+        budget: 8000,
+        securityReview: false,
+        legalReview: false,
+        mitigation: 'Initial mitigation draft captured for triage and owner assignment.',
+        audit: [`${stamp()} Risk record created by ${el('role').value}`]
+      };
+      data.push(row);
+      state.selectedId = row.id;
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredRows();
+      const fields = ['id', 'title', 'program', 'owner', 'severity', 'state', 'exposure', 'dueDate', 'residual', 'budget'];
+      const csv = [fields.join(',')]
+        .concat(rows.map(r => fields.map(k => `"${String(r[k]).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'risk-register-mitigation-grid.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      renderGrid();
+      renderStats();
+      renderDetail();
+    }
+
+    ['role', 'program', 'severity', 'stateFilter', 'search', 'sort'].forEach(id => {
+      el(id).addEventListener(id === 'search' ? 'input' : 'change', render);
+    });
+
+    el('saveBtn').addEventListener('click', () => upsertCurrent());
+    el('advanceBtn').addEventListener('click', advanceStage);
+    el('addRisk').addEventListener('click', addRisk);
+    el('exportCsv').addEventListener('click', exportCsv);
+
+    state.selectedId = data[0].id;
+    render();
+  </script>
+</body>
+</html>
