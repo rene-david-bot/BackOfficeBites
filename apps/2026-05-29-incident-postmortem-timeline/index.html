@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Incident Postmortem Timeline Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 md:px-8">
+    <a href="../../index.html" class="text-amber-300 text-sm hover:text-amber-200">BackOfficeBites 🍔</a>
+    <h1 class="text-3xl md:text-4xl font-bold mt-2">Incident Postmortem Timeline Hub</h1>
+    <p class="text-slate-300 mt-2 max-w-3xl">IT Ops timeline workspace for incident reports with policy-gated postmortem approvals, role-based transitions, audit trail, and CSV export.</p>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 mt-6">
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Role View</span>
+        <select id="role" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Role view">
+          <option>Incident Commander</option>
+          <option>SRE Manager</option>
+          <option>Ops Director</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Service</span>
+        <select id="service" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Service filter">
+          <option value="all">All services</option>
+          <option>Checkout API</option>
+          <option>IAM Gateway</option>
+          <option>Data Lake ETL</option>
+          <option>Customer Portal</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Severity</span>
+        <select id="severity" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Severity filter">
+          <option value="all">All severities</option>
+          <option>Critical</option>
+          <option>High</option>
+          <option>Medium</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">State</span>
+        <select id="stateFilter" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="State filter">
+          <option value="all">All states</option>
+          <option>Reported</option>
+          <option>Contained</option>
+          <option>Root Cause</option>
+          <option>Postmortem Draft</option>
+          <option>Pending Approval</option>
+          <option>Closed</option>
+        </select>
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Search</span>
+        <input id="search" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" placeholder="incident, owner, id" aria-label="Search incidents" />
+      </label>
+
+      <label class="rounded-xl border border-slate-800 bg-slate-900 p-3">
+        <span class="text-xs text-slate-400 uppercase">Sort</span>
+        <select id="sort" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-lg p-2" aria-label="Sort incidents">
+          <option value="reported-desc">Reported (latest)</option>
+          <option value="severity-desc">Severity (highest)</option>
+          <option value="review-asc">Next review (soonest)</option>
+          <option value="owner-asc">Owner (A-Z)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4 mt-4">
+      <div class="xl:col-span-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold">Incident Timeline</h2>
+          <div class="flex flex-wrap gap-2">
+            <button id="newIncident" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold">Log Incident</button>
+            <button id="exportCsv" class="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold">Export CSV</button>
+          </div>
+        </div>
+        <p id="stats" class="text-xs text-slate-400 mt-2"></p>
+
+        <div id="timeline" class="mt-4 space-y-4"></div>
+      </div>
+
+      <aside class="xl:col-span-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div id="empty" class="text-slate-400">Select an incident to update state and postmortem evidence.</div>
+
+        <div id="detail" class="hidden space-y-4">
+          <div>
+            <h2 id="incidentTitle" class="text-xl font-semibold"></h2>
+            <p id="incidentMeta" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+
+          <form id="incidentForm" class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-3">
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">State</span>
+              <select id="stateInput" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Incident state"></select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Severity</span>
+              <select id="severityInput" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Incident severity">
+                <option>Critical</option>
+                <option>High</option>
+                <option>Medium</option>
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Next Review</span>
+              <input id="nextReview" type="datetime-local" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Next review time" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Postmortem Summary</span>
+              <textarea id="summary" minlength="25" class="mt-1 w-full min-h-24 bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Postmortem summary"></textarea>
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Action Items</span>
+              <input id="actionItems" type="number" min="0" max="20" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Action item count" />
+            </label>
+
+            <label class="block">
+              <span class="text-xs text-slate-400 uppercase">Approval Notes</span>
+              <textarea id="approvalReason" minlength="20" class="mt-1 w-full min-h-20 bg-slate-900 border border-slate-700 rounded-lg p-2" aria-label="Approval notes"></textarea>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="rcValidated" type="checkbox" class="mt-1" />
+              <span>Root cause validated with evidence</span>
+            </label>
+
+            <label class="flex gap-2 text-sm items-start">
+              <input id="customerComms" type="checkbox" class="mt-1" />
+              <span>Customer communication sent</span>
+            </label>
+
+            <p id="validationMsg" class="text-xs"></p>
+
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="saveBtn" class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold">Save</button>
+              <button type="button" id="advanceBtn" class="px-3 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 text-slate-950 font-semibold">Advance Stage</button>
+            </div>
+          </form>
+
+          <div class="rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <h3 class="font-semibold">Audit Trail</h3>
+            <ul id="auditTrail" class="mt-2 space-y-2 text-sm"></ul>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const NOW = '2026-05-29T08:10';
+    const STATES = ['Reported', 'Contained', 'Root Cause', 'Postmortem Draft', 'Pending Approval', 'Closed'];
+    const SEVERITY_ORDER = { Medium: 1, High: 2, Critical: 3 };
+
+    const incidents = [
+      {
+        id: 'INC-9041',
+        title: 'Checkout timeout spike after payment gateway retry loop',
+        service: 'Checkout API',
+        owner: 'Mara Engel',
+        severity: 'Critical',
+        state: 'Pending Approval',
+        reportedAt: '2026-05-29T05:42',
+        nextReview: '2026-05-29T10:00',
+        actionItems: 5,
+        rcValidated: true,
+        customerComms: true,
+        summary: 'Root cause isolated to retry storm under degraded PSP latency. Circuit breaker and retry cap patched, canary confirmed stable.',
+        approvalReason: 'Executive review requested before closure due to customer-impacting checkout errors across three regions.',
+        audit: [
+          '2026-05-29 07:20 Postmortem moved to Pending Approval by SRE Manager',
+          '2026-05-29 06:05 Root cause evidence attached by Incident Commander'
+        ]
+      },
+      {
+        id: 'INC-9038',
+        title: 'IAM token refresh failures on mobile login',
+        service: 'IAM Gateway',
+        owner: 'Jonas Weber',
+        severity: 'High',
+        state: 'Root Cause',
+        reportedAt: '2026-05-29T03:11',
+        nextReview: '2026-05-29T09:15',
+        actionItems: 2,
+        rcValidated: false,
+        customerComms: false,
+        summary: 'Session refresh endpoint intermittently rejects valid refresh tokens. Correlation seen after key-rotation automation run.',
+        approvalReason: '',
+        audit: [
+          '2026-05-29 04:10 State changed Contained → Root Cause by Incident Commander'
+        ]
+      },
+      {
+        id: 'INC-9032',
+        title: 'Nightly ETL backlog breached compliance SLA',
+        service: 'Data Lake ETL',
+        owner: 'Niko Brandt',
+        severity: 'High',
+        state: 'Postmortem Draft',
+        reportedAt: '2026-05-28T23:30',
+        nextReview: '2026-05-29T11:30',
+        actionItems: 3,
+        rcValidated: true,
+        customerComms: false,
+        summary: 'Warehouse load queue starved by stale partition lock. Lock-timeout guard and queue monitor patch deployed.',
+        approvalReason: 'Waiting for director sign-off after control owner review.',
+        audit: [
+          '2026-05-29 01:55 Draft postmortem prepared by SRE Manager'
+        ]
+      },
+      {
+        id: 'INC-9027',
+        title: 'Portal onboarding page served stale config bundle',
+        service: 'Customer Portal',
+        owner: 'Lea Koban',
+        severity: 'Medium',
+        state: 'Contained',
+        reportedAt: '2026-05-28T20:18',
+        nextReview: '2026-05-29T09:45',
+        actionItems: 1,
+        rcValidated: false,
+        customerComms: false,
+        summary: 'CDN edge cache returned stale rollout config for 17 minutes before forced purge completed.',
+        approvalReason: '',
+        audit: [
+          '2026-05-28 20:40 Incident contained by Incident Commander'
+        ]
+      }
+    ];
+
+    const state = { selectedId: null };
+    const el = id => document.getElementById(id);
+
+    function stamp() {
+      return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function allowedTransition(from, to, role) {
+      const map = {
+        'Incident Commander': {
+          'Reported': ['Contained'],
+          'Contained': ['Root Cause'],
+          'Root Cause': ['Postmortem Draft']
+        },
+        'SRE Manager': {
+          'Contained': ['Root Cause'],
+          'Root Cause': ['Postmortem Draft'],
+          'Postmortem Draft': ['Pending Approval'],
+          'Pending Approval': ['Postmortem Draft']
+        },
+        'Ops Director': {
+          'Postmortem Draft': ['Pending Approval'],
+          'Pending Approval': ['Closed', 'Postmortem Draft'],
+          'Closed': ['Postmortem Draft']
+        }
+      };
+
+      return from === to || (map[role]?.[from] || []).includes(to);
+    }
+
+    function validate(row, nextState, role) {
+      if (!row.summary || row.summary.trim().length < 25) return 'Postmortem summary must be at least 25 characters.';
+      if (!row.nextReview) return 'Next review timestamp is required.';
+      if (row.actionItems < 0 || row.actionItems > 20) return 'Action items must be between 0 and 20.';
+
+      if (row.nextReview < NOW && nextState !== 'Closed') {
+        return 'Next review cannot be in the past unless incident is Closed.';
+      }
+
+      if (nextState === 'Pending Approval') {
+        if (!row.rcValidated) return 'Pending Approval requires root cause evidence validation.';
+        if (row.actionItems < 3) return 'Pending Approval requires at least 3 tracked action items.';
+      }
+
+      if (nextState === 'Closed') {
+        if (role !== 'Ops Director') return 'Only Ops Director can close incidents.';
+        if (row.severity === 'Critical' && !row.customerComms) return 'Critical incidents require customer communication before closure.';
+        if (!row.approvalReason || row.approvalReason.trim().length < 20) return 'Closure requires approval notes of at least 20 characters.';
+      }
+
+      return '';
+    }
+
+    function filteredRows() {
+      const service = el('service').value;
+      const severity = el('severity').value;
+      const stateFilter = el('stateFilter').value;
+      const query = el('search').value.trim().toLowerCase();
+      const sort = el('sort').value;
+
+      const rows = incidents
+        .filter(r => service === 'all' || r.service === service)
+        .filter(r => severity === 'all' || r.severity === severity)
+        .filter(r => stateFilter === 'all' || r.state === stateFilter)
+        .filter(r => !query || `${r.id} ${r.title} ${r.owner} ${r.service}`.toLowerCase().includes(query));
+
+      const sorters = {
+        'reported-desc': (a, b) => b.reportedAt.localeCompare(a.reportedAt),
+        'severity-desc': (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity],
+        'review-asc': (a, b) => a.nextReview.localeCompare(b.nextReview),
+        'owner-asc': (a, b) => a.owner.localeCompare(b.owner)
+      };
+
+      return rows.sort(sorters[sort]);
+    }
+
+    function stateChip(s) {
+      const map = {
+        Reported: 'bg-slate-700 text-slate-200',
+        Contained: 'bg-sky-900/70 text-sky-200',
+        'Root Cause': 'bg-violet-900/70 text-violet-200',
+        'Postmortem Draft': 'bg-amber-900/70 text-amber-200',
+        'Pending Approval': 'bg-orange-900/70 text-orange-200',
+        Closed: 'bg-emerald-900/70 text-emerald-200'
+      };
+      return map[s] || 'bg-slate-700 text-slate-200';
+    }
+
+    function severityChip(s) {
+      const map = {
+        Critical: 'text-rose-300',
+        High: 'text-orange-300',
+        Medium: 'text-amber-300'
+      };
+      return map[s] || 'text-slate-200';
+    }
+
+    function renderTimeline() {
+      const rows = filteredRows();
+      const timeline = el('timeline');
+      timeline.innerHTML = '';
+
+      rows.forEach(row => {
+        const selected = row.id === state.selectedId;
+        const item = document.createElement('article');
+        item.className = `relative rounded-xl border p-3 pl-6 cursor-pointer ${selected ? 'border-amber-400 bg-slate-800/80' : 'border-slate-800 bg-slate-950 hover:bg-slate-900'}`;
+        item.innerHTML = `
+          <span class="absolute left-2 top-5 h-2.5 w-2.5 rounded-full ${row.severity === 'Critical' ? 'bg-rose-400' : row.severity === 'High' ? 'bg-orange-400' : 'bg-amber-400'}"></span>
+          <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <span>${row.reportedAt.replace('T', ' ')}</span>
+            <span class="px-2 py-0.5 rounded ${stateChip(row.state)}">${row.state}</span>
+            <span class="${severityChip(row.severity)} font-semibold">${row.severity}</span>
+          </div>
+          <h3 class="mt-2 font-semibold text-slate-100">${row.id} · ${row.title}</h3>
+          <p class="text-sm text-slate-400 mt-1">${row.service} · ${row.owner} · Next review ${row.nextReview.replace('T', ' ')}</p>
+        `;
+        item.tabIndex = 0;
+        item.setAttribute('role', 'button');
+        item.setAttribute('aria-label', `Open ${row.id}`);
+        item.addEventListener('click', () => {
+          state.selectedId = row.id;
+          render();
+        });
+        item.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = row.id;
+            render();
+          }
+        });
+        timeline.appendChild(item);
+      });
+    }
+
+    function renderStats() {
+      const rows = filteredRows();
+      const critical = rows.filter(r => r.severity === 'Critical').length;
+      const pending = rows.filter(r => r.state === 'Pending Approval').length;
+      const closed = rows.filter(r => r.state === 'Closed').length;
+      el('stats').textContent = `${rows.length} incidents · ${critical} critical · ${pending} pending approval · ${closed} closed`;
+    }
+
+    function renderDetail() {
+      const row = incidents.find(r => r.id === state.selectedId);
+      const empty = el('empty');
+      const detail = el('detail');
+
+      if (!row) {
+        empty.classList.remove('hidden');
+        detail.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      detail.classList.remove('hidden');
+
+      el('incidentTitle').textContent = row.title;
+      el('incidentMeta').textContent = `${row.id} • ${row.service} • ${row.owner}`;
+      el('stateInput').innerHTML = STATES.map(s => `<option ${s === row.state ? 'selected' : ''}>${s}</option>`).join('');
+      el('severityInput').value = row.severity;
+      el('nextReview').value = row.nextReview;
+      el('summary').value = row.summary;
+      el('actionItems').value = row.actionItems;
+      el('approvalReason').value = row.approvalReason;
+      el('rcValidated').checked = row.rcValidated;
+      el('customerComms').checked = row.customerComms;
+      el('validationMsg').textContent = '';
+      el('validationMsg').className = 'text-xs';
+
+      el('auditTrail').innerHTML = row.audit.map(item => `<li class="border-l-2 border-slate-700 pl-3">${item}</li>`).join('');
+    }
+
+    function saveIncident(nextState = null) {
+      const role = el('role').value;
+      const row = incidents.find(r => r.id === state.selectedId);
+      if (!row) return;
+
+      const beforeState = row.state;
+      const targetState = nextState || el('stateInput').value;
+
+      row.severity = el('severityInput').value;
+      row.nextReview = el('nextReview').value;
+      row.summary = el('summary').value.trim();
+      row.actionItems = Number(el('actionItems').value);
+      row.approvalReason = el('approvalReason').value.trim();
+      row.rcValidated = el('rcValidated').checked;
+      row.customerComms = el('customerComms').checked;
+
+      if (!allowedTransition(beforeState, targetState, role)) {
+        el('validationMsg').textContent = `Role ${role} cannot move ${beforeState} → ${targetState}.`;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+
+      const error = validate(row, targetState, role);
+      if (error) {
+        el('validationMsg').textContent = error;
+        el('validationMsg').className = 'text-xs text-rose-300';
+        return;
+      }
+
+      row.state = targetState;
+      if (beforeState !== row.state) {
+        row.audit.unshift(`${stamp()} State changed ${beforeState} → ${row.state} by ${role}`);
+      }
+      row.audit.unshift(`${stamp()} Postmortem fields saved by ${role}`);
+      row.audit = row.audit.slice(0, 16);
+
+      el('validationMsg').textContent = 'Saved. Policy checks passed.';
+      el('validationMsg').className = 'text-xs text-emerald-300';
+      render();
+    }
+
+    function advanceState() {
+      const row = incidents.find(r => r.id === state.selectedId);
+      if (!row) return;
+      const next = STATES[STATES.indexOf(row.state) + 1];
+      if (next) saveIncident(next);
+    }
+
+    function addIncident() {
+      const n = incidents.length + 9042;
+      const row = {
+        id: `INC-${n}`,
+        title: 'New platform incident intake',
+        service: 'Customer Portal',
+        owner: 'Unassigned',
+        severity: 'Medium',
+        state: 'Reported',
+        reportedAt: '2026-05-29T08:10',
+        nextReview: '2026-05-29T10:10',
+        actionItems: 0,
+        rcValidated: false,
+        customerComms: false,
+        summary: 'Initial report captured, containment plan pending owner assignment and service diagnostics.',
+        approvalReason: '',
+        audit: [`${stamp()} Incident created by ${el('role').value}`]
+      };
+
+      incidents.unshift(row);
+      state.selectedId = row.id;
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredRows();
+      const fields = ['id', 'title', 'service', 'owner', 'severity', 'state', 'reportedAt', 'nextReview', 'actionItems'];
+      const csv = [fields.join(',')]
+        .concat(rows.map(r => fields.map(k => `"${String(r[k]).replaceAll('"', '""')}"`).join(',')))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'incident-postmortem-timeline.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      renderStats();
+      renderTimeline();
+      renderDetail();
+    }
+
+    ['role', 'service', 'severity', 'stateFilter', 'sort'].forEach(id => el(id).addEventListener('change', render));
+    el('search').addEventListener('input', render);
+    el('saveBtn').addEventListener('click', () => saveIncident());
+    el('advanceBtn').addEventListener('click', advanceState);
+    el('newIncident').addEventListener('click', addIncident);
+    el('exportCsv').addEventListener('click', exportCsv);
+
+    state.selectedId = incidents[0].id;
+    render();
+  </script>
+</body>
+</html>

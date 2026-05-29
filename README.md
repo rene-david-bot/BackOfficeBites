@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Risk Register Mitigation Grid** — Planning data grid to triage enterprise delivery risks with policy validation, role-based approvals, audit trail, and CSV export.
+**Incident Postmortem Timeline Hub** — IT Ops timeline workspace for incident reports with policy-gated postmortem approvals, role-based transitions, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):
