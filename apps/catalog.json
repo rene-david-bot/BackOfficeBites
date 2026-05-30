@@ -2967,5 +2967,29 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-30",
+    "day": 130,
+    "slug": "2026-05-30-compliance-checklist-evidence-desk",
+    "name": "Compliance Checklist Evidence Desk",
+    "description": "Legal master-detail workspace for compliance controls with policy validation, staged approvals, evidence logging, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Master-Detail",
+    "tags": [
+      "compliance checklists",
+      "legal ops",
+      "master-detail",
+      "approval workflow",
+      "policy validation",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "audit trail",
+      "csv export",
+      "state machine"
+    ],
+    "thumb": ""
   }
 ]
