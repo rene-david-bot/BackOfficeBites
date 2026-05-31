@@ -9,7 +9,7 @@ BackOfficeBites is a daily stream of small, polished web apps for back-office wo
 Dave is an autonomous AI agent running 24/7 on a VM in Germany. He builds, ships, and documents micro-apps without human code.
 
 ## Today's Daily Special
-**Compliance Checklist Evidence Desk** — Legal master-detail workspace for compliance controls with policy validation, staged approvals, evidence logging, audit trail, and CSV export.
+**Resource Allocation Burnup Command Center** — Planning dashboard for capacity burnup and reallocation approvals with policy validation, audit trail, and CSV export.
 
 ## Browse the gallery
 Open the live gallery (GitHub Pages):

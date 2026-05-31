@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resource Allocation Burnup Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <a href="../../index.html" class="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2">BackOfficeBites 🍔</a>
+
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Resource Allocation Burnup Command Center</h1>
+        <p class="text-slate-400">Planning dashboard for capacity burnup, approval workflow, and auditable reallocation decisions.</p>
+      </div>
+      <div class="flex items-end gap-2">
+        <label class="text-xs text-slate-300">Role
+          <select id="roleSelect" class="block mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option>Analyst</option>
+            <option>Approver</option>
+            <option>Admin</option>
+          </select>
+        </label>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-3" id="kpiGrid"></section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <div class="xl:col-span-4 space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <h2 class="font-semibold mb-2">Team utilization</h2>
+          <div id="utilChart" class="space-y-2"></div>
+        </div>
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <h2 class="font-semibold mb-2">Approval funnel</h2>
+          <div id="funnelChart" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="xl:col-span-8 bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <label class="text-xs text-slate-300 md:col-span-2">Search
+            <input id="searchInput" type="search" placeholder="Requester, team, reason" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" />
+          </label>
+          <label class="text-xs text-slate-300">Status
+            <select id="statusFilter" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+              <option value="">All</option>
+              <option>Draft</option>
+              <option>Pending Approval</option>
+              <option>Approved</option>
+              <option>Rejected</option>
+              <option>Implemented</option>
+            </select>
+          </label>
+          <label class="text-xs text-slate-300">Sort
+            <select id="sortBy" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+              <option value="dateDesc">Newest first</option>
+              <option value="hoursDesc">Hours (high to low)</option>
+              <option value="priorityDesc">Priority (high first)</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="listCount" class="text-xs text-slate-400"></p>
+
+        <div class="overflow-x-auto border border-slate-800 rounded-lg">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-950/80 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-2">ID</th>
+                <th class="text-left px-3 py-2">Requester</th>
+                <th class="text-left px-3 py-2">Team</th>
+                <th class="text-left px-3 py-2">Hours</th>
+                <th class="text-left px-3 py-2">Priority</th>
+                <th class="text-left px-3 py-2">Status</th>
+                <th class="text-left px-3 py-2">Date</th>
+              </tr>
+            </thead>
+            <tbody id="requestRows" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-4 pt-1">
+          <section class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <h3 class="font-medium mb-2">Create reallocation request</h3>
+            <form id="requestForm" class="space-y-2" novalidate>
+              <label class="text-xs text-slate-300 block">Requester
+                <input id="reqRequester" required minlength="3" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="e.g. Mia K." />
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="text-xs text-slate-300 block">Team
+                  <select id="reqTeam" required class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm">
+                    <option value="">Choose…</option>
+                    <option>Platform</option>
+                    <option>Data</option>
+                    <option>QA</option>
+                    <option>Security</option>
+                    <option>UX</option>
+                  </select>
+                </label>
+                <label class="text-xs text-slate-300 block">Priority
+                  <select id="reqPriority" required class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm">
+                    <option>Low</option>
+                    <option selected>Medium</option>
+                    <option>High</option>
+                    <option>Critical</option>
+                  </select>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="text-xs text-slate-300 block">Hours moved
+                  <input id="reqHours" required type="number" min="1" max="60" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="12" />
+                </label>
+                <label class="text-xs text-slate-300 block">Target sprint
+                  <input id="reqSprint" required class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="2026-W24" />
+                </label>
+              </div>
+              <label class="text-xs text-slate-300 block">Business reason
+                <textarea id="reqReason" required minlength="15" rows="2" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Why this reallocation is needed"></textarea>
+              </label>
+              <p id="formError" class="text-xs text-rose-400 hidden"></p>
+              <button class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-2 text-sm font-medium">Add Draft Request</button>
+            </form>
+          </section>
+
+          <section class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-3">
+            <div>
+              <h3 class="font-medium">Request detail</h3>
+              <p id="detailHint" class="text-xs text-slate-400">Select a row to inspect and progress workflow.</p>
+            </div>
+            <div id="detailPane" class="hidden space-y-3">
+              <div>
+                <h4 id="detailTitle" class="font-semibold"></h4>
+                <p id="detailMeta" class="text-xs text-slate-400"></p>
+              </div>
+              <div id="policyBox" class="rounded border p-2 text-xs"></div>
+              <div class="flex flex-wrap gap-2">
+                <button id="submitBtn" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-xs">Submit</button>
+                <button id="approveBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-xs">Approve</button>
+                <button id="rejectBtn" class="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500 text-xs">Reject</button>
+                <button id="implementBtn" class="px-3 py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs">Mark Implemented</button>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-1">Audit trail</p>
+                <ul id="auditList" class="space-y-1 text-xs max-h-32 overflow-auto pr-1"></ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const nowDate = "2026-05-31";
+    const priorityWeight = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      role: "Analyst",
+      selectedId: null,
+      teams: [
+        { team: "Platform", capacity: 120, allocated: 112 },
+        { team: "Data", capacity: 96, allocated: 88 },
+        { team: "QA", capacity: 72, allocated: 79 },
+        { team: "Security", capacity: 64, allocated: 61 },
+        { team: "UX", capacity: 56, allocated: 49 }
+      ],
+      requests: [
+        {
+          id: 4102,
+          requester: "Mia K.",
+          team: "Platform",
+          hours: 18,
+          priority: "High",
+          sprint: "2026-W23",
+          reason: "Shift backend capacity to customer launch blockers for SLA protection.",
+          status: "Pending Approval",
+          createdAt: "2026-05-29",
+          audit: [
+            { at: "2026-05-29 09:08", actor: "Mia K.", action: "Created draft" },
+            { at: "2026-05-29 09:15", actor: "Mia K.", action: "Submitted for approval" }
+          ]
+        },
+        {
+          id: 4103,
+          requester: "Sven R.",
+          team: "QA",
+          hours: 10,
+          priority: "Critical",
+          sprint: "2026-W23",
+          reason: "Increase regression test effort after failed pre-prod release gate.",
+          status: "Approved",
+          createdAt: "2026-05-28",
+          audit: [
+            { at: "2026-05-28 14:10", actor: "Sven R.", action: "Created draft" },
+            { at: "2026-05-28 14:18", actor: "Sven R.", action: "Submitted for approval" },
+            { at: "2026-05-28 15:02", actor: "Elena P.", action: "Approved" }
+          ]
+        },
+        {
+          id: 4104,
+          requester: "Noah T.",
+          team: "Security",
+          hours: 8,
+          priority: "Medium",
+          sprint: "2026-W24",
+          reason: "Allocate analyst hours to quarterly privileged access review.",
+          status: "Draft",
+          createdAt: "2026-05-30",
+          audit: [
+            { at: "2026-05-30 11:35", actor: "Noah T.", action: "Created draft" }
+          ]
+        },
+        {
+          id: 4105,
+          requester: "Lea F.",
+          team: "Data",
+          hours: 14,
+          priority: "High",
+          sprint: "2026-W24",
+          reason: "Move ETL squad time to recover reporting latency for finance close.",
+          status: "Rejected",
+          createdAt: "2026-05-27",
+          audit: [
+            { at: "2026-05-27 08:11", actor: "Lea F.", action: "Created draft" },
+            { at: "2026-05-27 08:16", actor: "Lea F.", action: "Submitted for approval" },
+            { at: "2026-05-27 09:01", actor: "Elena P.", action: "Rejected (insufficient impact evidence)" }
+          ]
+        },
+        {
+          id: 4106,
+          requester: "Jana D.",
+          team: "UX",
+          hours: 6,
+          priority: "Low",
+          sprint: "2026-W24",
+          reason: "Reserve design review time for accessibility remediation backlog.",
+          status: "Implemented",
+          createdAt: "2026-05-26",
+          audit: [
+            { at: "2026-05-26 10:40", actor: "Jana D.", action: "Created draft" },
+            { at: "2026-05-26 10:49", actor: "Jana D.", action: "Submitted for approval" },
+            { at: "2026-05-26 11:12", actor: "Elena P.", action: "Approved" },
+            { at: "2026-05-26 17:03", actor: "Ops Sync", action: "Marked implemented" }
+          ]
+        }
+      ]
+    };
+
+    const el = {
+      roleSelect: document.getElementById("roleSelect"),
+      exportBtn: document.getElementById("exportBtn"),
+      kpiGrid: document.getElementById("kpiGrid"),
+      utilChart: document.getElementById("utilChart"),
+      funnelChart: document.getElementById("funnelChart"),
+      searchInput: document.getElementById("searchInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      sortBy: document.getElementById("sortBy"),
+      listCount: document.getElementById("listCount"),
+      requestRows: document.getElementById("requestRows"),
+      requestForm: document.getElementById("requestForm"),
+      reqRequester: document.getElementById("reqRequester"),
+      reqTeam: document.getElementById("reqTeam"),
+      reqPriority: document.getElementById("reqPriority"),
+      reqHours: document.getElementById("reqHours"),
+      reqSprint: document.getElementById("reqSprint"),
+      reqReason: document.getElementById("reqReason"),
+      formError: document.getElementById("formError"),
+      detailHint: document.getElementById("detailHint"),
+      detailPane: document.getElementById("detailPane"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailMeta: document.getElementById("detailMeta"),
+      policyBox: document.getElementById("policyBox"),
+      submitBtn: document.getElementById("submitBtn"),
+      approveBtn: document.getElementById("approveBtn"),
+      rejectBtn: document.getElementById("rejectBtn"),
+      implementBtn: document.getElementById("implementBtn"),
+      auditList: document.getElementById("auditList")
+    };
+
+    function selectedRequest() {
+      return state.requests.find(r => r.id === state.selectedId);
+    }
+
+    function nowStamp() {
+      const d = new Date();
+      return d.toISOString().slice(0, 16).replace("T", " ");
+    }
+
+    function can(role, action) {
+      const matrix = {
+        Analyst: ["submit"],
+        Approver: ["approve", "reject"],
+        Admin: ["submit", "approve", "reject", "implement"]
+      };
+      return matrix[role]?.includes(action);
+    }
+
+    function policyCheck(req) {
+      const issues = [];
+      if (req.hours > 40) issues.push("Policy breach: moved hours must not exceed 40.");
+      if (req.reason.trim().length < 15) issues.push("Policy breach: business reason must have at least 15 characters.");
+      if (!/^2026-W\d{2}$/.test(req.sprint)) issues.push("Policy breach: sprint format must match YYYY-WNN.");
+      if (req.status === "Implemented") issues.push("Implemented items are locked.");
+      return { pass: issues.length === 0, issues };
+    }
+
+    function logAction(req, action, actor = state.role) {
+      req.audit.unshift({ at: nowStamp(), actor, action });
+    }
+
+    function filteredRequests() {
+      const q = el.searchInput.value.trim().toLowerCase();
+      const status = el.statusFilter.value;
+      const sortBy = el.sortBy.value;
+
+      let out = state.requests.filter(r => {
+        const searchable = `${r.requester} ${r.team} ${r.reason}`.toLowerCase();
+        const qOk = !q || searchable.includes(q);
+        const sOk = !status || r.status === status;
+        return qOk && sOk;
+      });
+
+      out.sort((a, b) => {
+        if (sortBy === "hoursDesc") return b.hours - a.hours;
+        if (sortBy === "priorityDesc") return priorityWeight[b.priority] - priorityWeight[a.priority];
+        return b.createdAt.localeCompare(a.createdAt);
+      });
+
+      return out;
+    }
+
+    function renderKpis() {
+      const totalCapacity = state.teams.reduce((s, t) => s + t.capacity, 0);
+      const totalAllocated = state.teams.reduce((s, t) => s + t.allocated, 0);
+      const overbookedTeams = state.teams.filter(t => t.allocated > t.capacity).length;
+      const pendingCount = state.requests.filter(r => r.status === "Pending Approval").length;
+
+      const cards = [
+        { label: "Total capacity", value: `${totalCapacity}h`, note: "Current sprint" },
+        { label: "Allocated", value: `${totalAllocated}h`, note: `${Math.round((totalAllocated / totalCapacity) * 100)}% utilized` },
+        { label: "Overbooked teams", value: overbookedTeams, note: "Needs balancing" },
+        { label: "Pending approvals", value: pendingCount, note: "Awaiting decision" }
+      ];
+
+      el.kpiGrid.innerHTML = cards.map(card => `
+        <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${card.label}</p>
+          <p class="text-2xl font-semibold mt-1">${card.value}</p>
+          <p class="text-xs text-slate-500 mt-1">${card.note}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderCharts() {
+      el.utilChart.innerHTML = state.teams.map(t => {
+        const pct = Math.round((t.allocated / t.capacity) * 100);
+        const barClass = pct > 100 ? "bg-rose-500" : pct > 90 ? "bg-amber-500" : "bg-emerald-500";
+        return `
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <span>${t.team}</span><span>${t.allocated}/${t.capacity}h (${pct}%)</span>
+            </div>
+            <div class="h-2 bg-slate-800 rounded">
+              <div class="h-2 ${barClass} rounded" style="width:${Math.min(pct, 100)}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const statuses = ["Draft", "Pending Approval", "Approved", "Rejected", "Implemented"];
+      const color = {
+        "Draft": "bg-slate-500",
+        "Pending Approval": "bg-blue-500",
+        "Approved": "bg-emerald-500",
+        "Rejected": "bg-rose-500",
+        "Implemented": "bg-violet-500"
+      };
+
+      el.funnelChart.innerHTML = statuses.map(s => {
+        const count = state.requests.filter(r => r.status === s).length;
+        const width = Math.max(8, count * 20);
+        return `
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-300 w-28">${s}</span>
+            <div class="h-2 ${color[s]} rounded" style="width:${width}%"></div>
+            <span class="text-xs text-slate-400">${count}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function statusBadge(status) {
+      const cls = {
+        "Draft": "bg-slate-700 text-slate-200",
+        "Pending Approval": "bg-blue-600/30 text-blue-300",
+        "Approved": "bg-emerald-600/30 text-emerald-300",
+        "Rejected": "bg-rose-600/30 text-rose-300",
+        "Implemented": "bg-violet-600/30 text-violet-300"
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs ${cls[status] || "bg-slate-700 text-slate-200"}">${status}</span>`;
+    }
+
+    function renderTable() {
+      const rows = filteredRequests();
+      el.listCount.textContent = `${rows.length} request(s) visible`;
+
+      if (!rows.length) {
+        el.requestRows.innerHTML = `<tr><td colspan="7" class="px-3 py-6 text-center text-slate-400">No requests match current filters.</td></tr>`;
+        return;
+      }
+
+      el.requestRows.innerHTML = rows.map(r => `
+        <tr tabindex="0" role="button" aria-label="Open request ${r.id}" data-id="${r.id}" class="hover:bg-slate-800/50 focus:outline-none focus:ring-1 focus:ring-emerald-500 ${state.selectedId === r.id ? "bg-slate-800/70" : ""}">
+          <td class="px-3 py-2">${r.id}</td>
+          <td class="px-3 py-2">${r.requester}</td>
+          <td class="px-3 py-2">${r.team}</td>
+          <td class="px-3 py-2">${r.hours}h</td>
+          <td class="px-3 py-2">${r.priority}</td>
+          <td class="px-3 py-2">${statusBadge(r.status)}</td>
+          <td class="px-3 py-2">${r.createdAt}</td>
+        </tr>
+      `).join("");
+
+      [...el.requestRows.querySelectorAll("tr[data-id]")].forEach(row => {
+        row.addEventListener("click", () => {
+          state.selectedId = Number(row.dataset.id);
+          render();
+        });
+        row.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            state.selectedId = Number(row.dataset.id);
+            render();
+          }
+        });
+      });
+    }
+
+    function updateButtons(req) {
+      const policy = policyCheck(req);
+      const disabled = req.status === "Implemented";
+
+      el.submitBtn.disabled = disabled || req.status !== "Draft" || !can(state.role, "submit");
+      el.approveBtn.disabled = disabled || req.status !== "Pending Approval" || !can(state.role, "approve") || !policy.pass;
+      el.rejectBtn.disabled = disabled || req.status !== "Pending Approval" || !can(state.role, "reject");
+      el.implementBtn.disabled = disabled || req.status !== "Approved" || !can(state.role, "implement");
+
+      [el.submitBtn, el.approveBtn, el.rejectBtn, el.implementBtn].forEach(btn => {
+        btn.classList.toggle("opacity-40", btn.disabled);
+        btn.classList.toggle("cursor-not-allowed", btn.disabled);
+      });
+    }
+
+    function renderDetail() {
+      const req = selectedRequest();
+      if (!req) {
+        el.detailPane.classList.add("hidden");
+        el.detailHint.classList.remove("hidden");
+        return;
+      }
+
+      el.detailHint.classList.add("hidden");
+      el.detailPane.classList.remove("hidden");
+
+      const policy = policyCheck(req);
+      el.detailTitle.textContent = `#${req.id} • ${req.team} • ${req.hours}h`;
+      el.detailMeta.textContent = `${req.requester} • ${req.priority} priority • sprint ${req.sprint}`;
+      el.policyBox.className = `rounded border p-2 text-xs ${policy.pass ? "border-emerald-700 bg-emerald-950/30 text-emerald-300" : "border-rose-700 bg-rose-950/30 text-rose-300"}`;
+      el.policyBox.innerHTML = policy.pass
+        ? "Policy checks passed. Request can progress to the next state."
+        : `<p class="font-medium mb-1">Policy checks failed:</p><ul class="list-disc pl-4">${policy.issues.map(i => `<li>${i}</li>`).join("")}</ul>`;
+
+      el.auditList.innerHTML = req.audit.map(a => `<li class="text-slate-300"><span class="text-slate-500">${a.at}</span> · <strong>${a.actor}</strong> · ${a.action}</li>`).join("");
+      updateButtons(req);
+    }
+
+    function render() {
+      renderKpis();
+      renderCharts();
+      renderTable();
+      renderDetail();
+    }
+
+    function transition(status) {
+      const req = selectedRequest();
+      if (!req) return;
+
+      if (status === "Pending Approval" && req.status === "Draft" && can(state.role, "submit")) {
+        req.status = status;
+        logAction(req, "Submitted for approval");
+      } else if (status === "Approved" && req.status === "Pending Approval" && can(state.role, "approve")) {
+        if (!policyCheck(req).pass) return;
+        req.status = status;
+        logAction(req, "Approved");
+      } else if (status === "Rejected" && req.status === "Pending Approval" && can(state.role, "reject")) {
+        req.status = status;
+        logAction(req, "Rejected");
+      } else if (status === "Implemented" && req.status === "Approved" && can(state.role, "implement")) {
+        req.status = status;
+        logAction(req, "Marked implemented", "Ops Sync");
+      }
+
+      render();
+    }
+
+    function addRequest(e) {
+      e.preventDefault();
+      const requester = el.reqRequester.value.trim();
+      const team = el.reqTeam.value;
+      const priority = el.reqPriority.value;
+      const hours = Number(el.reqHours.value);
+      const sprint = el.reqSprint.value.trim();
+      const reason = el.reqReason.value.trim();
+
+      if (!requester || requester.length < 3 || !team || !hours || hours < 1 || hours > 60 || !sprint || reason.length < 15) {
+        el.formError.textContent = "Fill all fields correctly. Hours must be 1-60 and reason at least 15 characters.";
+        el.formError.classList.remove("hidden");
+        return;
+      }
+
+      el.formError.classList.add("hidden");
+      const nextId = Math.max(...state.requests.map(r => r.id)) + 1;
+      const req = {
+        id: nextId,
+        requester,
+        team,
+        hours,
+        priority,
+        sprint,
+        reason,
+        status: "Draft",
+        createdAt: nowDate,
+        audit: [{ at: nowStamp(), actor: requester, action: "Created draft" }]
+      };
+
+      state.requests.unshift(req);
+      state.selectedId = req.id;
+      el.requestForm.reset();
+      el.reqPriority.value = "Medium";
+      render();
+    }
+
+    function exportCsv() {
+      const rows = filteredRequests();
+      const header = ["id","requester","team","hours","priority","status","sprint","createdAt"];
+      const data = rows.map(r => [r.id, r.requester, r.team, r.hours, r.priority, r.status, r.sprint, r.createdAt]);
+      const csv = [header, ...data].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "resource-allocation-requests.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    el.roleSelect.addEventListener("change", () => {
+      state.role = el.roleSelect.value;
+      render();
+    });
+
+    [el.searchInput, el.statusFilter, el.sortBy].forEach(i => i.addEventListener("input", render));
+    el.requestForm.addEventListener("submit", addRequest);
+    el.submitBtn.addEventListener("click", () => transition("Pending Approval"));
+    el.approveBtn.addEventListener("click", () => transition("Approved"));
+    el.rejectBtn.addEventListener("click", () => transition("Rejected"));
+    el.implementBtn.addEventListener("click", () => transition("Implemented"));
+    el.exportBtn.addEventListener("click", exportCsv);
+
+    render();
+  </script>
+</body>
+</html>

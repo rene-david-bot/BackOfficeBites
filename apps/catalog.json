@@ -2991,5 +2991,25 @@
       "state machine"
     ],
     "thumb": ""
+  },
+  {
+    "date": "2026-05-31",
+    "day": 131,
+    "slug": "2026-05-31-resource-allocation-burnup-command-center",
+    "name": "Resource Allocation Burnup Command Center",
+    "description": "Planning dashboard for capacity burnup and reallocation approvals with policy validation, audit trail, and CSV export.",
+    "category": "Planning",
+    "pattern": "Dashboard+Charts",
+    "tags": [
+      "planning",
+      "capacity",
+      "dashboard",
+      "charts",
+      "approval-workflow",
+      "audit-trail",
+      "csv-export",
+      "policy-validation"
+    ],
+    "thumb": "thumb.png"
   }
 ]
