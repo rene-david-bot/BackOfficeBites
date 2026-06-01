@@ -3011,5 +3011,28 @@
       "policy-validation"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-06-01",
+    "day": 132,
+    "slug": "2026-06-01-clause-deviation-review-dragboard",
+    "name": "Clause Deviation Review Dragboard",
+    "description": "Legal drag-and-drop board for contract clause deviations with policy validation, approvals, audit trail, and CSV export.",
+    "category": "Legal",
+    "pattern": "Drag-and-Drop",
+    "tags": [
+      "legal",
+      "contracts",
+      "clause deviation",
+      "drag-and-drop",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]

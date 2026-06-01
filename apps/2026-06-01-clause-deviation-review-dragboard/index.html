@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clause Deviation Review Dragboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <a href="../../index.html" class="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2">BackOfficeBites 🍔</a>
+
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Clause Deviation Review Dragboard</h1>
+        <p class="text-slate-400">Legal workflow board for contract clause deviations with policy checks, approvals, and a full audit trail.</p>
+      </div>
+      <div class="flex items-end gap-2">
+        <label class="text-xs text-slate-300">Role
+          <select id="roleSelect" class="block mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option>Legal Ops Analyst</option>
+            <option>Counsel</option>
+            <option>Risk Committee</option>
+          </select>
+        </label>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="kpiGrid"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+        <label class="text-xs text-slate-300 md:col-span-2">Search
+          <input id="searchInput" type="search" placeholder="Contract, vendor, owner, clause" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" />
+        </label>
+        <label class="text-xs text-slate-300">Region
+          <select id="regionFilter" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option value="">All regions</option>
+            <option>EU</option>
+            <option>US</option>
+            <option>APAC</option>
+          </select>
+        </label>
+        <label class="text-xs text-slate-300">Sort
+          <select id="sortBy" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option value="submittedDesc">Newest first</option>
+            <option value="valueDesc">Deal value (high to low)</option>
+            <option value="riskDesc">Risk (high first)</option>
+          </select>
+        </label>
+      </div>
+      <p id="boardCount" class="text-xs text-slate-400"></p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-3" id="board"></div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+        <h2 class="font-semibold mb-2">Log new deviation</h2>
+        <form id="deviationForm" class="space-y-2" novalidate>
+          <label class="text-xs text-slate-300 block">Contract
+            <input id="fContract" required minlength="4" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Master SaaS Agreement - Contoso" />
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="text-xs text-slate-300 block">Vendor
+              <input id="fVendor" required minlength="2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Contoso Ltd" />
+            </label>
+            <label class="text-xs text-slate-300 block">Owner
+              <input id="fOwner" required minlength="2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Julia M." />
+            </label>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="text-xs text-slate-300 block">Region
+              <select id="fRegion" required class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+                <option value="">Choose…</option>
+                <option>EU</option>
+                <option>US</option>
+                <option>APAC</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-300 block">Risk
+              <select id="fRisk" required class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+                <option>Low</option>
+                <option selected>Medium</option>
+                <option>High</option>
+                <option>Critical</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-300 block">Deal value (€)
+              <input id="fValue" required type="number" min="5000" step="1000" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="120000" />
+            </label>
+          </div>
+          <label class="text-xs text-slate-300 block">Clause family
+            <select id="fClause" required class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+              <option value="">Choose…</option>
+              <option>Liability Cap</option>
+              <option>Data Residency</option>
+              <option>Termination for Convenience</option>
+              <option>SLA Credit</option>
+              <option>IP Indemnity</option>
+            </select>
+          </label>
+          <label class="text-xs text-slate-300 block">Deviation reason
+            <textarea id="fReason" required minlength="20" rows="3" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="State the commercial reason and mitigation"></textarea>
+          </label>
+          <p id="formError" class="hidden text-xs text-rose-400"></p>
+          <button class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-2 text-sm font-medium">Create Intake Item</button>
+        </form>
+      </section>
+
+      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+        <div>
+          <h2 class="font-semibold">Item detail</h2>
+          <p id="detailHint" class="text-xs text-slate-400">Select a card to inspect policy gates and move state.</p>
+        </div>
+        <div id="detailPane" class="hidden space-y-3">
+          <div>
+            <h3 id="detailTitle" class="font-semibold"></h3>
+            <p id="detailMeta" class="text-xs text-slate-400"></p>
+          </div>
+          <div id="policyBox" class="rounded border p-2 text-xs"></div>
+          <div class="flex flex-wrap gap-2">
+            <button id="toLegalBtn" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-xs">Submit to Legal</button>
+            <button id="toCommitteeBtn" class="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500 text-xs">Escalate Committee</button>
+            <button id="approveBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-xs">Approve</button>
+            <button id="rejectBtn" class="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500 text-xs">Reject</button>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Audit trail</p>
+            <ul id="auditList" class="space-y-1 text-xs max-h-44 overflow-auto pr-1"></ul>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script>
+    const stageOrder = ["Intake", "Legal Review", "Risk Committee", "Approved", "Rejected"];
+    const riskWeight = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      role: "Legal Ops Analyst",
+      selectedId: null,
+      draggingId: null,
+      items: [
+        {
+          id: 5201,
+          contract: "MSA Renewal - Northwind Retail",
+          vendor: "Northwind GmbH",
+          owner: "Julia M.",
+          region: "EU",
+          risk: "High",
+          value: 340000,
+          clause: "Liability Cap",
+          reason: "Vendor requests cap at 6 months fees to secure Q3 renewal, with enhanced cyber rider as mitigation.",
+          stage: "Legal Review",
+          submittedAt: "2026-05-30",
+          audit: [
+            { at: "2026-05-30 08:42", actor: "Julia M.", action: "Created intake" },
+            { at: "2026-05-30 09:10", actor: "Julia M.", action: "Submitted to Legal Review" }
+          ]
+        },
+        {
+          id: 5202,
+          contract: "Data Processing Addendum - Helio Foods",
+          vendor: "Helio Foods AG",
+          owner: "Luca T.",
+          region: "EU",
+          risk: "Critical",
+          value: 590000,
+          clause: "Data Residency",
+          reason: "Vendor asks temporary US failover in disaster scenario with encryption and 72h notification clause.",
+          stage: "Risk Committee",
+          submittedAt: "2026-05-29",
+          audit: [
+            { at: "2026-05-29 11:18", actor: "Luca T.", action: "Created intake" },
+            { at: "2026-05-29 11:40", actor: "Marta S.", action: "Escalated to Risk Committee" }
+          ]
+        },
+        {
+          id: 5203,
+          contract: "Enterprise Support Terms - WaveGrid",
+          vendor: "WaveGrid Inc.",
+          owner: "Noah F.",
+          region: "US",
+          risk: "Medium",
+          value: 128000,
+          clause: "SLA Credit",
+          reason: "Reduced credit ceiling requested in exchange for 24/7 named engineer support and quarterly service review.",
+          stage: "Approved",
+          submittedAt: "2026-05-28",
+          audit: [
+            { at: "2026-05-28 07:55", actor: "Noah F.", action: "Created intake" },
+            { at: "2026-05-28 08:20", actor: "Iris K.", action: "Submitted to Legal Review" },
+            { at: "2026-05-28 09:05", actor: "Iris K.", action: "Approved" }
+          ]
+        },
+        {
+          id: 5204,
+          contract: "Pilot Addendum - Sakura Logistics",
+          vendor: "Sakura Logistics KK",
+          owner: "Anja R.",
+          region: "APAC",
+          risk: "High",
+          value: 86000,
+          clause: "Termination for Convenience",
+          reason: "Need 15-day opt-out during pilot due to uncertain regulatory rollout in target market.",
+          stage: "Intake",
+          submittedAt: "2026-05-31",
+          audit: [
+            { at: "2026-05-31 15:12", actor: "Anja R.", action: "Created intake" }
+          ]
+        },
+        {
+          id: 5205,
+          contract: "Partner Reseller Annex - Blue Cedar",
+          vendor: "Blue Cedar Ltd",
+          owner: "Milan D.",
+          region: "US",
+          risk: "Low",
+          value: 74000,
+          clause: "IP Indemnity",
+          reason: "Narrowed indemnity to direct claims only for first-year pilot while maintaining infringement defense.",
+          stage: "Rejected",
+          submittedAt: "2026-05-27",
+          audit: [
+            { at: "2026-05-27 10:03", actor: "Milan D.", action: "Created intake" },
+            { at: "2026-05-27 11:22", actor: "Kai P.", action: "Rejected" }
+          ]
+        }
+      ]
+    };
+
+    const el = {
+      roleSelect: document.getElementById("roleSelect"),
+      exportBtn: document.getElementById("exportBtn"),
+      kpiGrid: document.getElementById("kpiGrid"),
+      board: document.getElementById("board"),
+      boardCount: document.getElementById("boardCount"),
+      searchInput: document.getElementById("searchInput"),
+      regionFilter: document.getElementById("regionFilter"),
+      sortBy: document.getElementById("sortBy"),
+      form: document.getElementById("deviationForm"),
+      formError: document.getElementById("formError"),
+      detailHint: document.getElementById("detailHint"),
+      detailPane: document.getElementById("detailPane"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailMeta: document.getElementById("detailMeta"),
+      policyBox: document.getElementById("policyBox"),
+      auditList: document.getElementById("auditList"),
+      toLegalBtn: document.getElementById("toLegalBtn"),
+      toCommitteeBtn: document.getElementById("toCommitteeBtn"),
+      approveBtn: document.getElementById("approveBtn"),
+      rejectBtn: document.getElementById("rejectBtn"),
+      fContract: document.getElementById("fContract"),
+      fVendor: document.getElementById("fVendor"),
+      fOwner: document.getElementById("fOwner"),
+      fRegion: document.getElementById("fRegion"),
+      fRisk: document.getElementById("fRisk"),
+      fValue: document.getElementById("fValue"),
+      fClause: document.getElementById("fClause"),
+      fReason: document.getElementById("fReason")
+    };
+
+    function policyResult(item) {
+      const checks = [];
+      checks.push({ ok: item.reason.trim().length >= 20, text: "Reason includes at least 20 characters" });
+      checks.push({ ok: item.value >= 5000, text: "Deal value is at least €5,000" });
+      checks.push({ ok: !(item.risk === "Critical" && item.stage === "Approved"), text: "Critical items require committee before approval" });
+      checks.push({ ok: !(item.value >= 250000 && item.stage === "Approved" && !item.audit.some(a => a.action.includes("Risk Committee"))), text: "Items over €250k need committee touchpoint" });
+
+      const blocked = checks.some(c => !c.ok);
+      return { checks, blocked };
+    }
+
+    function visibleItems() {
+      const q = el.searchInput.value.trim().toLowerCase();
+      const region = el.regionFilter.value;
+      const sorted = state.items.filter(item => {
+        const hay = [item.contract, item.vendor, item.owner, item.clause, item.reason].join(" ").toLowerCase();
+        if (q && !hay.includes(q)) return false;
+        if (region && item.region !== region) return false;
+        return true;
+      });
+
+      const sortBy = el.sortBy.value;
+      sorted.sort((a, b) => {
+        if (sortBy === "valueDesc") return b.value - a.value;
+        if (sortBy === "riskDesc") return riskWeight[b.risk] - riskWeight[a.risk];
+        return b.submittedAt.localeCompare(a.submittedAt);
+      });
+      return sorted;
+    }
+
+    function stageCards(items, stage) {
+      return items.filter(item => item.stage === stage).map(item => {
+        const riskTone = item.risk === "Critical" ? "text-rose-300" : item.risk === "High" ? "text-amber-300" : "text-slate-300";
+        return `
+          <button data-id="${item.id}" draggable="true" class="card w-full text-left bg-slate-950 border border-slate-700 rounded-lg p-2 space-y-1 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-medium text-sm leading-tight">${item.contract}</p>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800">#${item.id}</span>
+            </div>
+            <p class="text-xs text-slate-400">${item.vendor} · ${item.region}</p>
+            <div class="flex items-center justify-between text-xs">
+              <span class="${riskTone}">${item.risk}</span>
+              <span class="text-slate-300">€${item.value.toLocaleString()}</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderBoard() {
+      const items = visibleItems();
+      el.boardCount.textContent = `${items.length} items shown · Drag cards between columns to update state`;
+
+      el.board.innerHTML = stageOrder.map(stage => {
+        const tone = stage === "Approved" ? "border-emerald-700/60" : stage === "Rejected" ? "border-rose-700/60" : "border-slate-700";
+        return `
+          <section data-stage="${stage}" class="lane bg-slate-950/80 border ${tone} rounded-xl p-2 min-h-64">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-medium text-sm">${stage}</h3>
+              <span class="text-[10px] text-slate-400">${items.filter(i => i.stage === stage).length}</span>
+            </div>
+            <div class="space-y-2">${stageCards(items, stage) || `<p class="text-xs text-slate-500">Drop here</p>`}</div>
+          </section>
+        `;
+      }).join("");
+
+      el.board.querySelectorAll(".card").forEach(card => {
+        const id = Number(card.dataset.id);
+        card.addEventListener("click", () => { state.selectedId = id; renderDetail(); });
+        card.addEventListener("dragstart", () => { state.draggingId = id; });
+      });
+
+      el.board.querySelectorAll(".lane").forEach(lane => {
+        lane.addEventListener("dragover", e => e.preventDefault());
+        lane.addEventListener("drop", e => {
+          e.preventDefault();
+          if (!state.draggingId) return;
+          const toStage = lane.dataset.stage;
+          transitionItem(state.draggingId, toStage, `Dragged to ${toStage}`);
+          state.draggingId = null;
+        });
+      });
+    }
+
+    function renderKpis() {
+      const total = state.items.length;
+      const pending = state.items.filter(i => ["Intake", "Legal Review", "Risk Committee"].includes(i.stage)).length;
+      const approved = state.items.filter(i => i.stage === "Approved").length;
+      const highRisk = state.items.filter(i => ["High", "Critical"].includes(i.risk)).length;
+      const avgValue = Math.round(state.items.reduce((s, i) => s + i.value, 0) / total);
+
+      const cards = [
+        ["Open Workflow", pending, "Items not yet finalized"],
+        ["Approved", approved, "Cleared legal deviations"],
+        ["High/Critical", highRisk, "Requires tighter controls"],
+        ["Avg deal value", `€${avgValue.toLocaleString()}`, "Across all deviations"]
+      ];
+
+      el.kpiGrid.innerHTML = cards.map(([label, value, note]) => `
+        <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+          <p class="text-xs text-slate-500 mt-1">${note}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderDetail() {
+      const item = state.items.find(i => i.id === state.selectedId);
+      if (!item) {
+        el.detailPane.classList.add("hidden");
+        el.detailHint.classList.remove("hidden");
+        return;
+      }
+
+      el.detailHint.classList.add("hidden");
+      el.detailPane.classList.remove("hidden");
+      el.detailTitle.textContent = `${item.contract} (#${item.id})`;
+      el.detailMeta.textContent = `${item.vendor} · ${item.owner} · ${item.region} · ${item.clause} · ${item.stage}`;
+
+      const policy = policyResult(item);
+      const tone = policy.blocked ? "border-rose-800 bg-rose-950/40 text-rose-100" : "border-emerald-800 bg-emerald-950/30 text-emerald-100";
+      el.policyBox.className = `rounded border p-2 text-xs ${tone}`;
+      el.policyBox.innerHTML = `
+        <p class="font-medium mb-1">Policy validation ${policy.blocked ? "blocked" : "passed"}</p>
+        <ul class="space-y-1 list-disc list-inside">${policy.checks.map(c => `<li>${c.ok ? "✅" : "⛔"} ${c.text}</li>`).join("")}</ul>
+      `;
+
+      el.auditList.innerHTML = item.audit.slice().reverse().map(a => `
+        <li class="border border-slate-800 rounded px-2 py-1 bg-slate-950/70">${a.at} · <span class="text-slate-300">${a.actor}</span> · ${a.action}</li>
+      `).join("");
+
+      const role = state.role;
+      const canAnalyst = role === "Legal Ops Analyst";
+      const canCounsel = role === "Counsel";
+      const canCommittee = role === "Risk Committee";
+
+      el.toLegalBtn.disabled = !canAnalyst || item.stage !== "Intake";
+      el.toCommitteeBtn.disabled = !(canCounsel || canAnalyst) || !["Legal Review", "Intake"].includes(item.stage);
+      el.approveBtn.disabled = !(canCounsel || canCommittee) || ["Approved", "Rejected"].includes(item.stage) || policy.blocked;
+      el.rejectBtn.disabled = !(canCounsel || canCommittee) || ["Approved", "Rejected"].includes(item.stage);
+
+      [el.toLegalBtn, el.toCommitteeBtn, el.approveBtn, el.rejectBtn].forEach(btn => {
+        btn.classList.toggle("opacity-40", btn.disabled);
+        btn.classList.toggle("cursor-not-allowed", btn.disabled);
+      });
+    }
+
+    function transitionItem(id, toStage, action) {
+      const item = state.items.find(i => i.id === id);
+      if (!item || item.stage === toStage) return;
+      item.stage = toStage;
+      item.audit.push({ at: new Date().toISOString().slice(0, 16).replace("T", " "), actor: state.role, action });
+      renderAll();
+    }
+
+    function exportCsv() {
+      const rows = [
+        ["id", "contract", "vendor", "owner", "region", "risk", "value", "clause", "stage", "submittedAt"],
+        ...visibleItems().map(i => [i.id, i.contract, i.vendor, i.owner, i.region, i.risk, i.value, i.clause, i.stage, i.submittedAt])
+      ];
+      const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "clause-deviation-review.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function createItem(e) {
+      e.preventDefault();
+      el.formError.classList.add("hidden");
+
+      const payload = {
+        contract: el.fContract.value.trim(),
+        vendor: el.fVendor.value.trim(),
+        owner: el.fOwner.value.trim(),
+        region: el.fRegion.value,
+        risk: el.fRisk.value,
+        value: Number(el.fValue.value),
+        clause: el.fClause.value,
+        reason: el.fReason.value.trim()
+      };
+
+      if (!payload.contract || payload.contract.length < 4 || !payload.vendor || !payload.owner || !payload.region || !payload.value || !payload.clause || payload.reason.length < 20) {
+        el.formError.textContent = "Please complete all fields. Reason must be at least 20 characters.";
+        el.formError.classList.remove("hidden");
+        return;
+      }
+
+      const id = Math.max(...state.items.map(i => i.id)) + 1;
+      state.items.unshift({
+        id,
+        ...payload,
+        stage: "Intake",
+        submittedAt: new Date().toISOString().slice(0, 10),
+        audit: [{ at: new Date().toISOString().slice(0, 16).replace("T", " "), actor: state.role, action: "Created intake" }]
+      });
+      el.form.reset();
+      state.selectedId = id;
+      renderAll();
+    }
+
+    function renderAll() {
+      renderKpis();
+      renderBoard();
+      renderDetail();
+    }
+
+    el.roleSelect.addEventListener("change", () => {
+      state.role = el.roleSelect.value;
+      renderDetail();
+    });
+    el.searchInput.addEventListener("input", renderBoard);
+    el.regionFilter.addEventListener("change", renderBoard);
+    el.sortBy.addEventListener("change", renderBoard);
+    el.exportBtn.addEventListener("click", exportCsv);
+    el.form.addEventListener("submit", createItem);
+
+    el.toLegalBtn.addEventListener("click", () => {
+      if (state.selectedId) transitionItem(state.selectedId, "Legal Review", "Submitted to Legal Review");
+    });
+    el.toCommitteeBtn.addEventListener("click", () => {
+      if (state.selectedId) transitionItem(state.selectedId, "Risk Committee", "Escalated to Risk Committee");
+    });
+    el.approveBtn.addEventListener("click", () => {
+      if (state.selectedId) transitionItem(state.selectedId, "Approved", "Approved");
+    });
+    el.rejectBtn.addEventListener("click", () => {
+      if (state.selectedId) transitionItem(state.selectedId, "Rejected", "Rejected");
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
