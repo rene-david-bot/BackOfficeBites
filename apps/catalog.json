@@ -3034,5 +3034,28 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-06-02",
+    "day": 133,
+    "slug": "2026-06-02-goods-receipt-dispute-timeline-hub",
+    "name": "Goods Receipt Dispute Timeline Hub",
+    "description": "Supply-chain timeline for goods receipt disputes with policy validation, finance approvals, audit trail, and CSV export.",
+    "category": "Supply Chain",
+    "pattern": "Timeline",
+    "tags": [
+      "supply chain",
+      "goods receipt",
+      "timeline",
+      "dispute management",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]

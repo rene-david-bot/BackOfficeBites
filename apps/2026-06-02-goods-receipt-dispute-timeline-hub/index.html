@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goods Receipt Dispute Timeline Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <a href="../../index.html" class="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2">BackOfficeBites 🍔</a>
+
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Goods Receipt Dispute Timeline Hub</h1>
+        <p class="text-slate-400">Supply-chain timeline for intake mismatches, carrier reviews, finance approvals, and auditable closure.</p>
+      </div>
+      <div class="flex items-end gap-2">
+        <label class="text-xs text-slate-300">Role
+          <select id="roleSelect" class="block mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option>Dock Supervisor</option>
+            <option>QA Lead</option>
+            <option>Finance Controller</option>
+          </select>
+        </label>
+        <button id="exportBtn" class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Export CSV</button>
+      </div>
+    </div>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3" id="kpiGrid"></section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+        <label class="text-xs text-slate-300 md:col-span-2">Search
+          <input id="searchInput" type="search" placeholder="PO, supplier, SKU, owner" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" />
+        </label>
+        <label class="text-xs text-slate-300">Site
+          <select id="siteFilter" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option value="">All sites</option>
+            <option>Leipzig DC</option>
+            <option>Dresden Crossdock</option>
+            <option>Hamburg Port Hub</option>
+          </select>
+        </label>
+        <label class="text-xs text-slate-300">Sort
+          <select id="sortBy" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+            <option value="newest">Newest intake</option>
+            <option value="value">Variance value (high to low)</option>
+            <option value="severity">Severity (high to low)</option>
+          </select>
+        </label>
+      </div>
+      <p id="timelineCount" class="text-xs text-slate-400"></p>
+      <div id="timeline" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3"></div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+        <div>
+          <h2 class="font-semibold">Dispute detail</h2>
+          <p id="detailHint" class="text-xs text-slate-400">Select a case to inspect policy gates and progress the workflow.</p>
+        </div>
+        <div id="detailPane" class="hidden space-y-3">
+          <div>
+            <h3 id="detailTitle" class="font-semibold"></h3>
+            <p id="detailMeta" class="text-xs text-slate-400"></p>
+          </div>
+          <div id="policyBox" class="rounded border p-2 text-xs"></div>
+          <div class="flex flex-wrap gap-2">
+            <button id="toInvestigationBtn" class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-xs">Send to Investigation</button>
+            <button id="toCarrierBtn" class="px-3 py-2 rounded bg-violet-600 hover:bg-violet-500 text-xs">Send to Carrier Review</button>
+            <button id="toFinanceBtn" class="px-3 py-2 rounded bg-amber-600 hover:bg-amber-500 text-xs">Send to Finance Approval</button>
+            <button id="closeBtn" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-xs">Close Case</button>
+            <button id="reopenBtn" class="px-3 py-2 rounded bg-rose-600 hover:bg-rose-500 text-xs">Reopen Previous Step</button>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Audit trail</p>
+            <ul id="auditList" class="space-y-1 text-xs max-h-44 overflow-auto pr-1"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 space-y-3">
+        <h2 class="font-semibold">Log new dispute</h2>
+        <form id="intakeForm" class="space-y-2" novalidate>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="text-xs text-slate-300 block">PO Number
+              <input id="fPo" required minlength="5" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="PO-480193" />
+            </label>
+            <label class="text-xs text-slate-300 block">Supplier
+              <input id="fSupplier" required minlength="2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="NordTransit GmbH" />
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="text-xs text-slate-300 block">Site
+              <select id="fSite" required class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+                <option value="">Choose…</option>
+                <option>Leipzig DC</option>
+                <option>Dresden Crossdock</option>
+                <option>Hamburg Port Hub</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-300 block">Owner
+              <input id="fOwner" required minlength="2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Lea W." />
+            </label>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="text-xs text-slate-300 block">SKU Count Delta
+              <input id="fDelta" required type="number" min="1" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="28" />
+            </label>
+            <label class="text-xs text-slate-300 block">Variance (€)
+              <input id="fVariance" required type="number" min="100" step="100" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="12400" />
+            </label>
+            <label class="text-xs text-slate-300 block">Severity
+              <select id="fSeverity" required class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm">
+                <option>Low</option>
+                <option selected>Medium</option>
+                <option>High</option>
+                <option>Critical</option>
+              </select>
+            </label>
+          </div>
+          <label class="text-xs text-slate-300 block">Dispute reason
+            <textarea id="fReason" required minlength="20" rows="3" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-sm" placeholder="Explain mismatch details, evidence, and immediate containment"></textarea>
+          </label>
+          <p id="formError" class="hidden text-xs text-rose-400"></p>
+          <button class="w-full bg-indigo-600 hover:bg-indigo-500 rounded px-3 py-2 text-sm font-medium">Create Dispute Case</button>
+        </form>
+      </section>
+    </section>
+  </div>
+
+  <script>
+    const stageOrder = ["Received", "Investigation", "Carrier Review", "Finance Approval", "Closed"];
+    const stageTone = {
+      "Received": "border-slate-700",
+      "Investigation": "border-blue-700/70",
+      "Carrier Review": "border-violet-700/70",
+      "Finance Approval": "border-amber-700/70",
+      "Closed": "border-emerald-700/70"
+    };
+    const severityWeight = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+    const state = {
+      role: "Dock Supervisor",
+      selectedId: null,
+      items: [
+        {
+          id: 8101,
+          po: "PO-480021",
+          supplier: "NordTransit GmbH",
+          site: "Leipzig DC",
+          owner: "Lea W.",
+          skuDelta: 34,
+          variance: 18600,
+          severity: "High",
+          reason: "Inbound pallet count differs from ASN by 34 units on frozen goods lane with broken seal evidence.",
+          stage: "Investigation",
+          createdAt: "2026-06-01",
+          audit: [
+            { at: "2026-06-01 07:32", actor: "Lea W.", action: "Created dispute" },
+            { at: "2026-06-01 07:48", actor: "Dock Supervisor", action: "Sent to Investigation" }
+          ]
+        },
+        {
+          id: 8102,
+          po: "PO-480052",
+          supplier: "Baltic Freight AG",
+          site: "Hamburg Port Hub",
+          owner: "Mira T.",
+          skuDelta: 12,
+          variance: 4200,
+          severity: "Medium",
+          reason: "Damaged outer cartons reduced accepted quantity and carrier photo proof has been uploaded.",
+          stage: "Carrier Review",
+          createdAt: "2026-05-31",
+          audit: [
+            { at: "2026-05-31 13:10", actor: "Mira T.", action: "Created dispute" },
+            { at: "2026-05-31 14:02", actor: "QA Lead", action: "Sent to Carrier Review" }
+          ]
+        },
+        {
+          id: 8103,
+          po: "PO-480087",
+          supplier: "Alpine Components",
+          site: "Dresden Crossdock",
+          owner: "Jonas K.",
+          skuDelta: 61,
+          variance: 28700,
+          severity: "Critical",
+          reason: "High-value electronics lot mismatch above tolerance, requires finance sign-off before closure.",
+          stage: "Finance Approval",
+          createdAt: "2026-05-30",
+          audit: [
+            { at: "2026-05-30 09:21", actor: "Jonas K.", action: "Created dispute" },
+            { at: "2026-05-30 10:15", actor: "QA Lead", action: "Sent to Carrier Review" },
+            { at: "2026-05-30 12:05", actor: "QA Lead", action: "Sent to Finance Approval" }
+          ]
+        },
+        {
+          id: 8104,
+          po: "PO-480004",
+          supplier: "RheinWare Logistics",
+          site: "Leipzig DC",
+          owner: "Sara P.",
+          skuDelta: 5,
+          variance: 1200,
+          severity: "Low",
+          reason: "Two cartons were relabeled after intake and reconciled with scan logs.",
+          stage: "Closed",
+          createdAt: "2026-05-29",
+          audit: [
+            { at: "2026-05-29 07:11", actor: "Sara P.", action: "Created dispute" },
+            { at: "2026-05-29 08:00", actor: "Dock Supervisor", action: "Sent to Investigation" },
+            { at: "2026-05-29 09:01", actor: "QA Lead", action: "Sent to Carrier Review" },
+            { at: "2026-05-29 10:20", actor: "Finance Controller", action: "Closed case" }
+          ]
+        }
+      ]
+    };
+
+    const el = {
+      roleSelect: document.getElementById("roleSelect"),
+      exportBtn: document.getElementById("exportBtn"),
+      kpiGrid: document.getElementById("kpiGrid"),
+      searchInput: document.getElementById("searchInput"),
+      siteFilter: document.getElementById("siteFilter"),
+      sortBy: document.getElementById("sortBy"),
+      timelineCount: document.getElementById("timelineCount"),
+      timeline: document.getElementById("timeline"),
+      detailHint: document.getElementById("detailHint"),
+      detailPane: document.getElementById("detailPane"),
+      detailTitle: document.getElementById("detailTitle"),
+      detailMeta: document.getElementById("detailMeta"),
+      policyBox: document.getElementById("policyBox"),
+      auditList: document.getElementById("auditList"),
+      toInvestigationBtn: document.getElementById("toInvestigationBtn"),
+      toCarrierBtn: document.getElementById("toCarrierBtn"),
+      toFinanceBtn: document.getElementById("toFinanceBtn"),
+      closeBtn: document.getElementById("closeBtn"),
+      reopenBtn: document.getElementById("reopenBtn"),
+      intakeForm: document.getElementById("intakeForm"),
+      formError: document.getElementById("formError"),
+      fPo: document.getElementById("fPo"),
+      fSupplier: document.getElementById("fSupplier"),
+      fSite: document.getElementById("fSite"),
+      fOwner: document.getElementById("fOwner"),
+      fDelta: document.getElementById("fDelta"),
+      fVariance: document.getElementById("fVariance"),
+      fSeverity: document.getElementById("fSeverity"),
+      fReason: document.getElementById("fReason")
+    };
+
+    function policyResult(item) {
+      const checks = [];
+      checks.push({ ok: item.reason.trim().length >= 20, text: "Reason includes enough detail (20+ chars)" });
+      checks.push({ ok: item.skuDelta > 0, text: "SKU delta is captured" });
+      checks.push({ ok: !(item.variance >= 20000 && item.stage === "Closed" && !item.audit.some(a => a.action.includes("Finance Approval"))), text: "Cases above €20k must pass Finance Approval before closure" });
+      checks.push({ ok: !(item.severity === "Critical" && item.stage === "Closed" && !item.audit.some(a => a.action.includes("Carrier Review"))), text: "Critical disputes require Carrier Review before closure" });
+      const blocked = checks.some(c => !c.ok);
+      return { checks, blocked };
+    }
+
+    function visibleItems() {
+      const query = el.searchInput.value.trim().toLowerCase();
+      const site = el.siteFilter.value;
+
+      const items = state.items.filter(item => {
+        const hay = [item.po, item.supplier, item.site, item.owner, item.reason].join(" ").toLowerCase();
+        if (query && !hay.includes(query)) return false;
+        if (site && item.site !== site) return false;
+        return true;
+      });
+
+      const sortBy = el.sortBy.value;
+      items.sort((a, b) => {
+        if (sortBy === "value") return b.variance - a.variance;
+        if (sortBy === "severity") return severityWeight[b.severity] - severityWeight[a.severity];
+        return b.createdAt.localeCompare(a.createdAt);
+      });
+
+      return items;
+    }
+
+    function renderKpis() {
+      const openItems = state.items.filter(i => i.stage !== "Closed");
+      const critical = openItems.filter(i => ["High", "Critical"].includes(i.severity)).length;
+      const financeQueue = state.items.filter(i => i.stage === "Finance Approval").length;
+      const exposure = openItems.reduce((sum, i) => sum + i.variance, 0);
+      const avgDelta = openItems.length ? Math.round(openItems.reduce((sum, i) => sum + i.skuDelta, 0) / openItems.length) : 0;
+
+      const cards = [
+        ["Open disputes", openItems.length, "Currently active"],
+        ["High/Critical", critical, "Priority incidents"],
+        ["Finance queue", financeQueue, "Awaiting sign-off"],
+        ["Open exposure", `€${exposure.toLocaleString()}`, `Avg delta ${avgDelta} SKU`]
+      ];
+
+      el.kpiGrid.innerHTML = cards.map(([label, value, note]) => `
+        <article class="bg-slate-900/70 border border-slate-800 rounded-xl p-3">
+          <p class="text-xs text-slate-400">${label}</p>
+          <p class="text-2xl font-bold mt-1">${value}</p>
+          <p class="text-xs text-slate-500 mt-1">${note}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderTimeline() {
+      const items = visibleItems();
+      el.timelineCount.textContent = `${items.length} cases shown · Timeline state is fully auditable`;
+
+      el.timeline.innerHTML = stageOrder.map(stage => {
+        const inStage = items.filter(i => i.stage === stage);
+        const cards = inStage.map(item => {
+          const sevTone = item.severity === "Critical" ? "text-rose-300" : item.severity === "High" ? "text-amber-300" : "text-slate-300";
+          return `
+            <button data-id="${item.id}" class="case-card w-full text-left bg-slate-950 border border-slate-700 rounded-lg p-2 space-y-1 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <div class="flex items-start justify-between gap-2">
+                <p class="font-medium text-sm leading-tight">${item.po}</p>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800">#${item.id}</span>
+              </div>
+              <p class="text-xs text-slate-400">${item.supplier}</p>
+              <p class="text-xs text-slate-500">${item.site}</p>
+              <div class="flex items-center justify-between text-xs">
+                <span class="${sevTone}">${item.severity}</span>
+                <span class="text-slate-300">€${item.variance.toLocaleString()}</span>
+              </div>
+            </button>
+          `;
+        }).join("");
+
+        return `
+          <section class="bg-slate-950/80 border ${stageTone[stage]} rounded-xl p-2 min-h-64">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-medium text-sm">${stage}</h3>
+              <span class="text-[10px] text-slate-400">${inStage.length}</span>
+            </div>
+            <div class="space-y-2">${cards || `<p class='text-xs text-slate-500'>No cases</p>`}</div>
+          </section>
+        `;
+      }).join("");
+
+      el.timeline.querySelectorAll(".case-card").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedId = Number(card.dataset.id);
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const item = state.items.find(i => i.id === state.selectedId);
+      if (!item) {
+        el.detailPane.classList.add("hidden");
+        el.detailHint.classList.remove("hidden");
+        return;
+      }
+
+      el.detailHint.classList.add("hidden");
+      el.detailPane.classList.remove("hidden");
+      el.detailTitle.textContent = `${item.po} · ${item.supplier}`;
+      el.detailMeta.textContent = `${item.site} · ${item.owner} · ${item.severity} · ${item.stage} · Δ ${item.skuDelta} SKU · €${item.variance.toLocaleString()}`;
+
+      const policy = policyResult(item);
+      const tone = policy.blocked ? "border-rose-800 bg-rose-950/40 text-rose-100" : "border-emerald-800 bg-emerald-950/30 text-emerald-100";
+      el.policyBox.className = `rounded border p-2 text-xs ${tone}`;
+      el.policyBox.innerHTML = `
+        <p class="font-medium mb-1">Policy validation ${policy.blocked ? "blocked" : "passed"}</p>
+        <ul class="space-y-1 list-disc list-inside">${policy.checks.map(c => `<li>${c.ok ? "✅" : "⛔"} ${c.text}</li>`).join("")}</ul>
+      `;
+
+      el.auditList.innerHTML = item.audit.slice().reverse().map(a => `
+        <li class="border border-slate-800 rounded px-2 py-1 bg-slate-950/70">${a.at} · <span class="text-slate-300">${a.actor}</span> · ${a.action}</li>
+      `).join("");
+
+      const role = state.role;
+      const isDock = role === "Dock Supervisor";
+      const isQa = role === "QA Lead";
+      const isFinance = role === "Finance Controller";
+
+      el.toInvestigationBtn.disabled = !(isDock || isQa) || item.stage !== "Received";
+      el.toCarrierBtn.disabled = !isQa || !["Investigation", "Received"].includes(item.stage);
+      el.toFinanceBtn.disabled = !(isQa || isDock) || !["Carrier Review", "Investigation"].includes(item.stage);
+      el.closeBtn.disabled = !(isFinance || isQa) || item.stage === "Closed" || policy.blocked;
+      el.reopenBtn.disabled = !(isQa || isFinance) || item.stage === "Received";
+
+      [el.toInvestigationBtn, el.toCarrierBtn, el.toFinanceBtn, el.closeBtn, el.reopenBtn].forEach(btn => {
+        btn.classList.toggle("opacity-40", btn.disabled);
+        btn.classList.toggle("cursor-not-allowed", btn.disabled);
+      });
+    }
+
+    function transitionItem(id, stage, action) {
+      const item = state.items.find(i => i.id === id);
+      if (!item || item.stage === stage) return;
+      item.stage = stage;
+      item.audit.push({ at: new Date().toISOString().slice(0, 16).replace("T", " "), actor: state.role, action });
+      renderAll();
+    }
+
+    function closeCase(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      const policy = policyResult({ ...item, stage: "Closed" });
+      if (policy.blocked) return;
+      transitionItem(id, "Closed", "Closed case");
+    }
+
+    function reopenStep(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      const idx = stageOrder.indexOf(item.stage);
+      if (idx <= 0) return;
+      transitionItem(id, stageOrder[idx - 1], "Reopened previous step");
+    }
+
+    function exportCsv() {
+      const rows = [
+        ["id", "po", "supplier", "site", "owner", "skuDelta", "variance", "severity", "stage", "createdAt"],
+        ...visibleItems().map(i => [i.id, i.po, i.supplier, i.site, i.owner, i.skuDelta, i.variance, i.severity, i.stage, i.createdAt])
+      ];
+      const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "goods-receipt-disputes.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function createIntake(e) {
+      e.preventDefault();
+      el.formError.classList.add("hidden");
+
+      const payload = {
+        po: el.fPo.value.trim(),
+        supplier: el.fSupplier.value.trim(),
+        site: el.fSite.value,
+        owner: el.fOwner.value.trim(),
+        skuDelta: Number(el.fDelta.value),
+        variance: Number(el.fVariance.value),
+        severity: el.fSeverity.value,
+        reason: el.fReason.value.trim()
+      };
+
+      if (!payload.po || payload.po.length < 5 || !payload.supplier || !payload.site || !payload.owner || !payload.skuDelta || !payload.variance || payload.reason.length < 20) {
+        el.formError.textContent = "Complete all fields. Reason needs at least 20 characters.";
+        el.formError.classList.remove("hidden");
+        return;
+      }
+
+      const id = Math.max(...state.items.map(i => i.id)) + 1;
+      state.items.unshift({
+        id,
+        ...payload,
+        stage: "Received",
+        createdAt: new Date().toISOString().slice(0, 10),
+        audit: [{ at: new Date().toISOString().slice(0, 16).replace("T", " "), actor: state.role, action: "Created dispute" }]
+      });
+
+      el.intakeForm.reset();
+      state.selectedId = id;
+      renderAll();
+    }
+
+    function renderAll() {
+      renderKpis();
+      renderTimeline();
+      renderDetail();
+    }
+
+    el.roleSelect.addEventListener("change", () => {
+      state.role = el.roleSelect.value;
+      renderDetail();
+    });
+
+    el.searchInput.addEventListener("input", renderTimeline);
+    el.siteFilter.addEventListener("change", renderTimeline);
+    el.sortBy.addEventListener("change", renderTimeline);
+
+    el.toInvestigationBtn.addEventListener("click", () => state.selectedId && transitionItem(state.selectedId, "Investigation", "Sent to Investigation"));
+    el.toCarrierBtn.addEventListener("click", () => state.selectedId && transitionItem(state.selectedId, "Carrier Review", "Sent to Carrier Review"));
+    el.toFinanceBtn.addEventListener("click", () => state.selectedId && transitionItem(state.selectedId, "Finance Approval", "Sent to Finance Approval"));
+    el.closeBtn.addEventListener("click", () => state.selectedId && closeCase(state.selectedId));
+    el.reopenBtn.addEventListener("click", () => state.selectedId && reopenStep(state.selectedId));
+
+    el.exportBtn.addEventListener("click", exportCsv);
+    el.intakeForm.addEventListener("submit", createIntake);
+
+    renderAll();
+  </script>
+</body>
+</html>
