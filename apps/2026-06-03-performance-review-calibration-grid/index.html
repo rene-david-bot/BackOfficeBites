@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Review Calibration Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+    <div class="mt-2 mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold">Performance Review Calibration Grid</h1>
+      <p class="text-slate-300 mt-2">HR calibration cockpit for score normalization, escalation handling, and audit-ready approvals.</p>
+    </div>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 mb-6">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Role</span>
+          <select id="roleFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option>Manager</option>
+            <option>HRBP</option>
+            <option>Director</option>
+          </select>
+        </label>
+        <label class="text-sm lg:col-span-2">
+          <span class="block mb-1 text-slate-300">Search</span>
+          <input id="searchInput" type="text" placeholder="Employee, manager, team" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Team</span>
+          <select id="teamFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></select>
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+            <option>Pending Manager</option>
+            <option>Pending HRBP</option>
+            <option>Pending Director</option>
+            <option>Approved</option>
+            <option>Escalated</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Sort</span>
+          <select id="sortFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="updated_desc">Latest update</option>
+            <option value="impact_desc">Comp impact</option>
+            <option value="proposed_desc">Proposed rating</option>
+            <option value="calibrated_desc">Calibrated rating</option>
+            <option value="name_asc">Employee A-Z</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="exportBtn" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Export CSV</button>
+        <p class="text-xs text-slate-400 self-center">Policy check: changes with rating gap ≥2 need written evidence. Final approvals with impact &gt; €18k need budget note.</p>
+      </div>
+    </section>
+
+    <section class="grid gap-4 sm:grid-cols-3 mb-6" id="kpiCards"></section>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <section class="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-800/80 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-3">Employee</th>
+                <th class="text-left px-3 py-3">Team</th>
+                <th class="text-left px-3 py-3">Proposed</th>
+                <th class="text-left px-3 py-3">Calibrated</th>
+                <th class="text-left px-3 py-3">Impact</th>
+                <th class="text-left px-3 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Selected Review</h2>
+          <div id="detailPane" class="text-sm text-slate-300">Pick a row to review details.</div>
+          <form id="actionForm" class="mt-4 space-y-3" novalidate>
+            <label class="block text-sm">
+              <span class="block mb-1">Calibrated rating (1-5)</span>
+              <input id="calibratedInput" type="number" min="1" max="5" step="1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+            </label>
+            <label class="block text-sm">
+              <span class="block mb-1">Justification / evidence</span>
+              <textarea id="justificationInput" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Evidence, calibration rationale, budget notes"></textarea>
+            </label>
+            <div class="flex flex-wrap gap-2" id="actionButtons"></div>
+            <p id="actionError" class="text-xs text-rose-300" aria-live="polite"></p>
+            <p id="actionSuccess" class="text-xs text-emerald-300" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Add Review Case</h2>
+          <form id="intakeForm" class="space-y-3 text-sm" novalidate>
+            <label class="block"><span class="block mb-1">Employee</span><input required name="employee" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            <label class="block"><span class="block mb-1">Team</span><input required name="team" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            <label class="block"><span class="block mb-1">Manager</span><input required name="manager" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="block"><span class="block mb-1">Proposed</span><input required name="proposed" type="number" min="1" max="5" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+              <label class="block"><span class="block mb-1">Comp impact (€)</span><input required name="impact" type="number" min="0" step="100" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            </div>
+            <label class="block"><span class="block mb-1">Promotion ready</span>
+              <select name="promotionReady" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </label>
+            <button class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500">Create case</button>
+            <p id="intakeError" class="text-xs text-rose-300" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Audit Trail</h2>
+          <ul id="auditList" class="space-y-2 text-xs text-slate-300 max-h-56 overflow-auto"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const state = {
+      role: 'Manager',
+      search: '',
+      team: 'all',
+      status: 'all',
+      sort: 'updated_desc',
+      selectedId: null,
+      records: [
+        { id: 1, employee: 'Nina Bauer', team: 'Platform Ops', manager: 'Samir Wolff', proposed: 5, calibrated: 4, compImpact: 22000, promotionReady: 'Yes', status: 'Pending Director', updatedAt: '2026-06-03T07:18:00Z', audit: [{ts:'2026-06-03T07:18:00Z',actor:'HRBP',action:'Submitted to Director',detail:'High-impact role, budget note attached.'}] },
+        { id: 2, employee: 'Leon Richter', team: 'Customer Success', manager: 'Mila Novak', proposed: 4, calibrated: 4, compImpact: 9000, promotionReady: 'No', status: 'Pending HRBP', updatedAt: '2026-06-03T06:50:00Z', audit: [{ts:'2026-06-03T06:50:00Z',actor:'Manager',action:'Submitted to HRBP',detail:'Consistent performance across FY26.'}] },
+        { id: 3, employee: 'Aylin Demir', team: 'Security Engineering', manager: 'Victor Lange', proposed: 3, calibrated: 5, compImpact: 19500, promotionReady: 'Yes', status: 'Escalated', updatedAt: '2026-06-03T06:32:00Z', audit: [{ts:'2026-06-03T06:32:00Z',actor:'HRBP',action:'Escalated',detail:'Large rating delta pending evidence review.'}] },
+        { id: 4, employee: 'Jonas Kraus', team: 'Platform Ops', manager: 'Samir Wolff', proposed: 4, calibrated: null, compImpact: 12000, promotionReady: 'No', status: 'Pending Manager', updatedAt: '2026-06-03T05:42:00Z', audit: [{ts:'2026-06-03T05:42:00Z',actor:'System',action:'Case Created',detail:'Imported from manager worksheet.'}] },
+        { id: 5, employee: 'Fatma Yildiz', team: 'Data Engineering', manager: 'Clara Weiss', proposed: 5, calibrated: 5, compImpact: 14500, promotionReady: 'Yes', status: 'Approved', updatedAt: '2026-06-03T04:10:00Z', audit: [{ts:'2026-06-03T04:10:00Z',actor:'Director',action:'Approved',detail:'Critical retention role, within budget band.'}] },
+        { id: 6, employee: 'Marta Schulz', team: 'Customer Success', manager: 'Mila Novak', proposed: 2, calibrated: 3, compImpact: 5000, promotionReady: 'No', status: 'Pending Director', updatedAt: '2026-06-03T07:01:00Z', audit: [{ts:'2026-06-03T07:01:00Z',actor:'HRBP',action:'Submitted to Director',detail:'Recovery trajectory documented.'}] }
+      ]
+    };
+
+    const roleFilter = document.getElementById('roleFilter');
+    const searchInput = document.getElementById('searchInput');
+    const teamFilter = document.getElementById('teamFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const gridBody = document.getElementById('gridBody');
+    const detailPane = document.getElementById('detailPane');
+    const actionButtons = document.getElementById('actionButtons');
+    const calibratedInput = document.getElementById('calibratedInput');
+    const justificationInput = document.getElementById('justificationInput');
+    const actionError = document.getElementById('actionError');
+    const actionSuccess = document.getElementById('actionSuccess');
+    const auditList = document.getElementById('auditList');
+    const kpiCards = document.getElementById('kpiCards');
+
+    function fmtCurrency(value) {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+    }
+
+    function fmtTs(ts) {
+      return new Date(ts).toLocaleString('en-GB', { hour12: false });
+    }
+
+    function statusClass(status) {
+      const map = {
+        'Pending Manager': 'bg-blue-500/20 text-blue-200',
+        'Pending HRBP': 'bg-indigo-500/20 text-indigo-200',
+        'Pending Director': 'bg-violet-500/20 text-violet-200',
+        'Approved': 'bg-emerald-500/20 text-emerald-200',
+        'Escalated': 'bg-rose-500/20 text-rose-200'
+      };
+      return map[status] || 'bg-slate-500/20 text-slate-200';
+    }
+
+    function ensureTeamOptions() {
+      const teams = [...new Set(state.records.map(r => r.team))].sort();
+      teamFilter.innerHTML = '<option value="all">All teams</option>' + teams.map(t => `<option>${t}</option>`).join('');
+      teamFilter.value = state.team;
+    }
+
+    function filteredRecords() {
+      const term = state.search.toLowerCase().trim();
+      let list = state.records.filter(r => {
+        const hay = `${r.employee} ${r.manager} ${r.team}`.toLowerCase();
+        const matchesSearch = !term || hay.includes(term);
+        const matchesTeam = state.team === 'all' || r.team === state.team;
+        const matchesStatus = state.status === 'all' || r.status === state.status;
+        return matchesSearch && matchesTeam && matchesStatus;
+      });
+
+      list = list.sort((a, b) => {
+        if (state.sort === 'impact_desc') return b.compImpact - a.compImpact;
+        if (state.sort === 'proposed_desc') return b.proposed - a.proposed;
+        if (state.sort === 'calibrated_desc') return (b.calibrated ?? 0) - (a.calibrated ?? 0);
+        if (state.sort === 'name_asc') return a.employee.localeCompare(b.employee);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+
+      return list;
+    }
+
+    function renderKpis() {
+      const all = state.records;
+      const pending = all.filter(r => r.status.startsWith('Pending')).length;
+      const escalated = all.filter(r => r.status === 'Escalated').length;
+      const approved = all.filter(r => r.status === 'Approved').length;
+      const cards = [
+        { label: 'Pending calibrations', value: pending, tone: 'text-indigo-200 border-indigo-500/30 bg-indigo-500/10' },
+        { label: 'Escalations', value: escalated, tone: 'text-rose-200 border-rose-500/30 bg-rose-500/10' },
+        { label: 'Approved', value: approved, tone: 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10' }
+      ];
+      kpiCards.innerHTML = cards.map(c => `
+        <div class="rounded-2xl border ${c.tone} p-4">
+          <p class="text-xs uppercase tracking-wide">${c.label}</p>
+          <p class="text-2xl font-bold mt-1">${c.value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid() {
+      const rows = filteredRecords();
+      if (!rows.length) {
+        gridBody.innerHTML = '<tr><td colspan="6" class="px-3 py-6 text-center text-slate-400">No matching reviews.</td></tr>';
+        return;
+      }
+
+      if (!state.selectedId || !rows.some(r => r.id === state.selectedId)) {
+        state.selectedId = rows[0].id;
+      }
+
+      gridBody.innerHTML = rows.map(r => {
+        const selected = r.id === state.selectedId;
+        return `
+          <tr tabindex="0" data-id="${r.id}" class="cursor-pointer border-t border-slate-800 ${selected ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}">
+            <td class="px-3 py-3">
+              <div class="font-medium">${r.employee}</div>
+              <div class="text-xs text-slate-400">Mgr: ${r.manager}</div>
+            </td>
+            <td class="px-3 py-3">${r.team}</td>
+            <td class="px-3 py-3">${r.proposed}</td>
+            <td class="px-3 py-3">${r.calibrated ?? '—'}</td>
+            <td class="px-3 py-3">${fmtCurrency(r.compImpact)}</td>
+            <td class="px-3 py-3"><span class="px-2 py-1 rounded-full text-xs ${statusClass(r.status)}">${r.status}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      gridBody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => {
+          state.selectedId = Number(row.dataset.id);
+          renderAll();
+        });
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = Number(row.dataset.id);
+            renderAll();
+          }
+        });
+      });
+    }
+
+    function selectedRecord() {
+      return state.records.find(r => r.id === state.selectedId) || null;
+    }
+
+    function allowedActions(record) {
+      const role = state.role;
+      return {
+        submit_hrbp: role === 'Manager' && record.status === 'Pending Manager',
+        submit_director: role === 'HRBP' && record.status === 'Pending HRBP',
+        approve: role === 'Director' && record.status === 'Pending Director',
+        escalate: (role === 'HRBP' || role === 'Director') && record.status.startsWith('Pending')
+      };
+    }
+
+    function validateTransition(record, action, calibrated, justification) {
+      const errors = [];
+      if (action !== 'escalate') {
+        if (!Number.isInteger(calibrated) || calibrated < 1 || calibrated > 5) {
+          errors.push('Calibrated rating must be an integer from 1 to 5.');
+        }
+      }
+      if (action === 'escalate' && justification.length < 20) {
+        errors.push('Escalations require at least 20 characters of context.');
+      }
+      if (Number.isInteger(calibrated) && Math.abs(record.proposed - calibrated) >= 2 && justification.length < 30) {
+        errors.push('Rating deltas of 2+ require clear written evidence (30+ chars).');
+      }
+      if (action === 'approve' && record.compImpact > 18000 && !/budget|finance|comp/i.test(justification)) {
+        errors.push('Approvals over €18k must include a budget or finance note.');
+      }
+      if (action === 'approve' && record.promotionReady === 'Yes' && Number.isInteger(calibrated) && calibrated < 4) {
+        errors.push('Promotion-ready cases below 4 must be escalated, not approved.');
+      }
+      return errors;
+    }
+
+    function pushAudit(record, action, detail) {
+      record.audit.unshift({ ts: new Date().toISOString(), actor: state.role, action, detail });
+      record.updatedAt = new Date().toISOString();
+    }
+
+    function renderDetail() {
+      const record = selectedRecord();
+      actionError.textContent = '';
+      actionSuccess.textContent = '';
+
+      if (!record) {
+        detailPane.textContent = 'Pick a row to review details.';
+        actionButtons.innerHTML = '';
+        auditList.innerHTML = '';
+        return;
+      }
+
+      calibratedInput.value = Number.isInteger(record.calibrated) ? record.calibrated : '';
+      detailPane.innerHTML = `
+        <div class="space-y-1">
+          <p><span class="text-slate-400">Employee:</span> ${record.employee}</p>
+          <p><span class="text-slate-400">Manager:</span> ${record.manager}</p>
+          <p><span class="text-slate-400">Proposed vs calibrated:</span> ${record.proposed} / ${record.calibrated ?? '—'}</p>
+          <p><span class="text-slate-400">Comp impact:</span> ${fmtCurrency(record.compImpact)}</p>
+          <p><span class="text-slate-400">Promotion ready:</span> ${record.promotionReady}</p>
+          <p><span class="text-slate-400">Last update:</span> ${fmtTs(record.updatedAt)}</p>
+        </div>
+      `;
+
+      const can = allowedActions(record);
+      const controls = [
+        { key: 'submit_hrbp', label: 'Submit to HRBP', tone: 'bg-blue-600 hover:bg-blue-500' },
+        { key: 'submit_director', label: 'Submit to Director', tone: 'bg-indigo-600 hover:bg-indigo-500' },
+        { key: 'approve', label: 'Approve', tone: 'bg-emerald-600 hover:bg-emerald-500' },
+        { key: 'escalate', label: 'Escalate', tone: 'bg-rose-600 hover:bg-rose-500' }
+      ];
+
+      actionButtons.innerHTML = controls.map(c => `
+        <button type="button" data-action="${c.key}" ${can[c.key] ? '' : 'disabled'} class="px-3 py-2 rounded-lg text-xs font-medium ${can[c.key] ? c.tone : 'bg-slate-700 text-slate-400 cursor-not-allowed'}">${c.label}</button>
+      `).join('');
+
+      actionButtons.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          const calibrated = Number(calibratedInput.value);
+          const justification = justificationInput.value.trim();
+          const errors = validateTransition(record, action, calibrated, justification);
+          if (errors.length) {
+            actionError.textContent = errors.join(' ');
+            actionSuccess.textContent = '';
+            return;
+          }
+
+          if (action !== 'escalate') record.calibrated = calibrated;
+          if (action === 'submit_hrbp') {
+            record.status = 'Pending HRBP';
+            pushAudit(record, 'Submitted to HRBP', justification || 'No additional note');
+          }
+          if (action === 'submit_director') {
+            record.status = 'Pending Director';
+            pushAudit(record, 'Submitted to Director', justification || 'No additional note');
+          }
+          if (action === 'approve') {
+            record.status = 'Approved';
+            pushAudit(record, 'Approved', justification || 'Approved without comment');
+          }
+          if (action === 'escalate') {
+            record.status = 'Escalated';
+            pushAudit(record, 'Escalated', justification);
+          }
+
+          actionError.textContent = '';
+          actionSuccess.textContent = `Updated ${record.employee} to ${record.status}.`;
+          justificationInput.value = '';
+          renderAll();
+        });
+      });
+
+      auditList.innerHTML = record.audit.map(a => `
+        <li class="border border-slate-800 rounded-lg p-2">
+          <p class="text-slate-200">${a.action}</p>
+          <p class="text-slate-400">${fmtTs(a.ts)} · ${a.actor}</p>
+          <p>${a.detail}</p>
+        </li>
+      `).join('');
+    }
+
+    document.getElementById('intakeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const employee = (form.get('employee') || '').toString().trim();
+      const team = (form.get('team') || '').toString().trim();
+      const manager = (form.get('manager') || '').toString().trim();
+      const proposed = Number(form.get('proposed'));
+      const impact = Number(form.get('impact'));
+      const promotionReady = (form.get('promotionReady') || 'No').toString();
+      const intakeError = document.getElementById('intakeError');
+      intakeError.textContent = '';
+
+      const errs = [];
+      if (!employee || !team || !manager) errs.push('Employee, team, and manager are required.');
+      if (!Number.isInteger(proposed) || proposed < 1 || proposed > 5) errs.push('Proposed rating must be 1-5.');
+      if (!Number.isFinite(impact) || impact < 0) errs.push('Comp impact must be 0 or more.');
+      if (errs.length) {
+        intakeError.textContent = errs.join(' ');
+        return;
+      }
+
+      const id = Math.max(...state.records.map(r => r.id)) + 1;
+      const now = new Date().toISOString();
+      state.records.unshift({
+        id,
+        employee,
+        team,
+        manager,
+        proposed,
+        calibrated: null,
+        compImpact: impact,
+        promotionReady,
+        status: 'Pending Manager',
+        updatedAt: now,
+        audit: [{ ts: now, actor: state.role, action: 'Case Created', detail: 'Created from intake form.' }]
+      });
+      state.selectedId = id;
+      e.target.reset();
+      ensureTeamOptions();
+      renderAll();
+    });
+
+    function exportCsv() {
+      const rows = filteredRecords();
+      const header = ['id','employee','team','manager','proposed','calibrated','compImpact','promotionReady','status','updatedAt'];
+      const csv = [header.join(',')].concat(rows.map(r => header.map(k => {
+        const value = r[k] ?? '';
+        const text = String(value).replace(/"/g, '""');
+        return /[",\n]/.test(text) ? `"${text}"` : text;
+      }).join(','))).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'performance-review-calibration-grid.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+    roleFilter.addEventListener('change', (e) => { state.role = e.target.value; renderDetail(); });
+    searchInput.addEventListener('input', (e) => { state.search = e.target.value; renderAll(); });
+    teamFilter.addEventListener('change', (e) => { state.team = e.target.value; renderAll(); });
+    statusFilter.addEventListener('change', (e) => { state.status = e.target.value; renderAll(); });
+    sortFilter.addEventListener('change', (e) => { state.sort = e.target.value; renderAll(); });
+
+    function renderAll() {
+      renderKpis();
+      renderGrid();
+      renderDetail();
+    }
+
+    ensureTeamOptions();
+    renderAll();
+  </script>
+</body>
+</html>

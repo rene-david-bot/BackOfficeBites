@@ -3057,5 +3057,28 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-06-03",
+    "day": 134,
+    "slug": "2026-06-03-performance-review-calibration-grid",
+    "name": "Performance Review Calibration Grid",
+    "description": "HR data-grid for performance calibration with policy checks, approvals, audit trail, and CSV export.",
+    "category": "HR",
+    "pattern": "Data Grid",
+    "tags": [
+      "hr",
+      "performance reviews",
+      "data grid",
+      "calibration",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]
