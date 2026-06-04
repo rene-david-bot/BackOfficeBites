@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Request Policy Wizard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <a href="../../index.html" class="text-sm text-amber-300 hover:text-amber-200 underline underline-offset-4">BackOfficeBites 🍔</a>
+
+    <section class="mt-2 mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold">Access Request Policy Wizard</h1>
+      <p class="text-slate-300 mt-2">IT Ops wizard for privileged access requests with policy validation, staged approvals, and audit-ready tracking.</p>
+    </section>
+
+    <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 mb-6">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <label class="text-sm lg:col-span-2">
+          <span class="block mb-1 text-slate-300">Search</span>
+          <input id="searchInput" type="text" placeholder="Requester, system, ticket" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" />
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Role view</span>
+          <select id="roleFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option>Requester</option>
+            <option>Manager</option>
+            <option>Security</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Status</span>
+          <select id="statusFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="all">All</option>
+            <option>Draft</option>
+            <option>Pending Manager</option>
+            <option>Pending Security</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+          </select>
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">System</span>
+          <select id="systemFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></select>
+        </label>
+        <label class="text-sm">
+          <span class="block mb-1 text-slate-300">Sort</span>
+          <select id="sortFilter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+            <option value="updated_desc">Latest update</option>
+            <option value="risk_desc">Risk score</option>
+            <option value="owner_asc">Requester A-Z</option>
+          </select>
+        </label>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="exportBtn" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium">Export CSV</button>
+        <p class="text-xs text-slate-400 self-center">Policy: prod access requires MFA + rollback plan, finance systems require SoD statement, high-risk requests need Security approval.</p>
+      </div>
+    </section>
+
+    <section class="grid gap-4 sm:grid-cols-4 mb-6" id="kpis"></section>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <section class="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-800/80 text-slate-300">
+              <tr>
+                <th class="text-left px-3 py-3">Request</th>
+                <th class="text-left px-3 py-3">System</th>
+                <th class="text-left px-3 py-3">Privilege</th>
+                <th class="text-left px-3 py-3">Risk</th>
+                <th class="text-left px-3 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Request Wizard</h2>
+          <div class="mb-2 text-xs text-slate-400">Step <span id="stepLabel">1</span> of 4</div>
+          <div class="h-1.5 bg-slate-800 rounded mb-4"><div id="stepBar" class="h-1.5 bg-indigo-500 rounded" style="width:25%"></div></div>
+          <form id="wizardForm" class="space-y-3 text-sm" novalidate>
+            <div id="step1" class="step-pane space-y-3">
+              <label class="block"><span class="block mb-1">Requester</span><input name="requester" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+              <label class="block"><span class="block mb-1">Team</span><input name="team" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+              <label class="block"><span class="block mb-1">Ticket ID</span><input name="ticket" placeholder="INC-10422" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            </div>
+            <div id="step2" class="step-pane space-y-3 hidden">
+              <label class="block"><span class="block mb-1">System</span>
+                <select name="system" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                  <option>SAP S/4HANA</option>
+                  <option>Salesforce</option>
+                  <option>Azure Subscription Prod-EU</option>
+                  <option>Snowflake Finance</option>
+                </select>
+              </label>
+              <label class="block"><span class="block mb-1">Privilege Level</span>
+                <select name="privilege" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Read</option>
+                  <option>Power User</option>
+                  <option>Admin</option>
+                </select>
+              </label>
+              <label class="block"><span class="block mb-1">Environment</span>
+                <select name="environment" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+                  <option>Test</option>
+                  <option>Prod</option>
+                </select>
+              </label>
+            </div>
+            <div id="step3" class="step-pane space-y-3 hidden">
+              <label class="block"><span class="block mb-1">Business justification</span><textarea name="justification" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Explain why elevated access is needed"></textarea></label>
+              <label class="flex items-center gap-2"><input type="checkbox" name="mfa" class="h-4 w-4" /><span>MFA enforced for this user</span></label>
+              <label class="flex items-center gap-2"><input type="checkbox" name="sod" class="h-4 w-4" /><span>Segregation-of-duties conflict reviewed</span></label>
+              <label class="block"><span class="block mb-1">Rollback plan</span><input name="rollback" placeholder="Revoke role after closure / expiry date" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" /></label>
+            </div>
+            <div id="step4" class="step-pane space-y-2 hidden">
+              <div id="reviewBox" class="text-xs bg-slate-800/70 border border-slate-700 rounded-lg p-3 space-y-1"></div>
+            </div>
+
+            <div class="flex justify-between pt-1">
+              <button id="prevBtn" type="button" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs" disabled>Back</button>
+              <div class="space-x-2">
+                <button id="nextBtn" type="button" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs">Next</button>
+                <button id="createBtn" type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs hidden">Create request</button>
+              </div>
+            </div>
+            <p id="wizardError" class="text-xs text-rose-300" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Selected Request</h2>
+          <div id="detailPane" class="text-sm text-slate-300">Select a request row.</div>
+          <label class="block text-sm mt-3"><span class="block mb-1">Decision note</span><textarea id="decisionNote" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Required for reject/escalation decisions"></textarea></label>
+          <div id="actionButtons" class="mt-3 flex flex-wrap gap-2"></div>
+          <p id="actionError" class="text-xs text-rose-300 mt-2" aria-live="polite"></p>
+          <p id="actionSuccess" class="text-xs text-emerald-300 mt-2" aria-live="polite"></p>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+          <h2 class="font-semibold text-lg mb-3">Audit Trail</h2>
+          <ul id="auditList" class="space-y-2 text-xs text-slate-300 max-h-56 overflow-auto"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const state = {
+      role: 'Requester',
+      search: '',
+      status: 'all',
+      system: 'all',
+      sort: 'updated_desc',
+      selectedId: null,
+      step: 1,
+      records: [
+        {
+          id: 1,
+          requester: 'Lea Hoffmann',
+          team: 'Finance Ops',
+          ticket: 'INC-10422',
+          system: 'Snowflake Finance',
+          privilege: 'Power User',
+          environment: 'Prod',
+          risk: 78,
+          mfa: true,
+          sod: true,
+          rollback: 'Auto-expire after 5 days',
+          justification: 'Month-end close automation needs restricted write permissions.',
+          status: 'Pending Security',
+          updatedAt: '2026-06-04T07:10:00Z',
+          audit: [{ ts: '2026-06-04T07:10:00Z', actor: 'Manager', action: 'Approved', detail: 'Operationally required for month-end close.' }]
+        },
+        {
+          id: 2,
+          requester: 'Tom Becker',
+          team: 'CRM',
+          ticket: 'INC-10435',
+          system: 'Salesforce',
+          privilege: 'Admin',
+          environment: 'Test',
+          risk: 42,
+          mfa: true,
+          sod: true,
+          rollback: 'Remove role after regression test',
+          justification: 'Sandbox role migration and validation for release 26.6.',
+          status: 'Pending Manager',
+          updatedAt: '2026-06-04T06:46:00Z',
+          audit: [{ ts: '2026-06-04T06:46:00Z', actor: 'System', action: 'Submitted', detail: 'Requester submitted wizard form.' }]
+        },
+        {
+          id: 3,
+          requester: 'Nora Kaya',
+          team: 'Cloud Platform',
+          ticket: 'INC-10418',
+          system: 'Azure Subscription Prod-EU',
+          privilege: 'Admin',
+          environment: 'Prod',
+          risk: 91,
+          mfa: true,
+          sod: false,
+          rollback: 'Break-glass role revoked after incident',
+          justification: 'Need temporary subscription admin to restore production API gateway.',
+          status: 'Rejected',
+          updatedAt: '2026-06-04T05:58:00Z',
+          audit: [{ ts: '2026-06-04T05:58:00Z', actor: 'Security', action: 'Rejected', detail: 'Missing SoD statement and insufficient rollback detail.' }]
+        },
+        {
+          id: 4,
+          requester: 'Arda Kilic',
+          team: 'ERP Support',
+          ticket: 'INC-10409',
+          system: 'SAP S/4HANA',
+          privilege: 'Read',
+          environment: 'Prod',
+          risk: 24,
+          mfa: true,
+          sod: true,
+          rollback: 'Access removed after incident closure',
+          justification: 'Root-cause analysis for blocked purchase orders.',
+          status: 'Approved',
+          updatedAt: '2026-06-04T05:15:00Z',
+          audit: [{ ts: '2026-06-04T05:15:00Z', actor: 'Security', action: 'Approved', detail: 'Low-risk read access approved.' }]
+        },
+        {
+          id: 5,
+          requester: 'Mina Wolf',
+          team: 'Identity Ops',
+          ticket: 'INC-10440',
+          system: 'Azure Subscription Prod-EU',
+          privilege: 'Power User',
+          environment: 'Prod',
+          risk: 66,
+          mfa: false,
+          sod: true,
+          rollback: 'Manual removal next CAB window',
+          justification: 'Need elevated rights to rotate managed identities.',
+          status: 'Draft',
+          updatedAt: '2026-06-04T07:22:00Z',
+          audit: [{ ts: '2026-06-04T07:22:00Z', actor: 'Requester', action: 'Saved as draft', detail: 'Awaiting MFA enrollment.' }]
+        }
+      ]
+    };
+
+    const searchInput = document.getElementById('searchInput');
+    const roleFilter = document.getElementById('roleFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const systemFilter = document.getElementById('systemFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const gridBody = document.getElementById('gridBody');
+    const kpis = document.getElementById('kpis');
+    const detailPane = document.getElementById('detailPane');
+    const actionButtons = document.getElementById('actionButtons');
+    const actionError = document.getElementById('actionError');
+    const actionSuccess = document.getElementById('actionSuccess');
+    const auditList = document.getElementById('auditList');
+    const decisionNote = document.getElementById('decisionNote');
+
+    const wizardForm = document.getElementById('wizardForm');
+    const wizardError = document.getElementById('wizardError');
+    const stepLabel = document.getElementById('stepLabel');
+    const stepBar = document.getElementById('stepBar');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const createBtn = document.getElementById('createBtn');
+
+    function fmtTs(ts) {
+      return new Date(ts).toLocaleString('en-GB', { hour12: false });
+    }
+
+    function statusTone(status) {
+      return {
+        'Draft': 'bg-slate-500/20 text-slate-200',
+        'Pending Manager': 'bg-blue-500/20 text-blue-200',
+        'Pending Security': 'bg-violet-500/20 text-violet-200',
+        'Approved': 'bg-emerald-500/20 text-emerald-200',
+        'Rejected': 'bg-rose-500/20 text-rose-200'
+      }[status] || 'bg-slate-500/20 text-slate-200';
+    }
+
+    function ensureSystemOptions() {
+      const systems = [...new Set(state.records.map(r => r.system))].sort();
+      systemFilter.innerHTML = '<option value="all">All systems</option>' + systems.map(s => `<option>${s}</option>`).join('');
+      systemFilter.value = state.system;
+    }
+
+    function getFilteredRecords() {
+      const term = state.search.trim().toLowerCase();
+      let rows = state.records.filter(r => {
+        const hay = `${r.requester} ${r.system} ${r.ticket} ${r.team}`.toLowerCase();
+        const okSearch = !term || hay.includes(term);
+        const okStatus = state.status === 'all' || r.status === state.status;
+        const okSystem = state.system === 'all' || r.system === state.system;
+        return okSearch && okStatus && okSystem;
+      });
+
+      rows.sort((a, b) => {
+        if (state.sort === 'risk_desc') return b.risk - a.risk;
+        if (state.sort === 'owner_asc') return a.requester.localeCompare(b.requester);
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+
+      return rows;
+    }
+
+    function renderKpis() {
+      const all = state.records;
+      const pending = all.filter(r => r.status.startsWith('Pending')).length;
+      const approved = all.filter(r => r.status === 'Approved').length;
+      const rejected = all.filter(r => r.status === 'Rejected').length;
+      const highRisk = all.filter(r => r.risk >= 70).length;
+      const cards = [
+        {label: 'Pending', value: pending, tone: 'text-indigo-200 border-indigo-500/30 bg-indigo-500/10'},
+        {label: 'High Risk (70+)', value: highRisk, tone: 'text-amber-200 border-amber-500/30 bg-amber-500/10'},
+        {label: 'Approved', value: approved, tone: 'text-emerald-200 border-emerald-500/30 bg-emerald-500/10'},
+        {label: 'Rejected', value: rejected, tone: 'text-rose-200 border-rose-500/30 bg-rose-500/10'}
+      ];
+      kpis.innerHTML = cards.map(c => `
+        <div class="rounded-2xl border ${c.tone} p-4">
+          <p class="text-xs uppercase tracking-wide">${c.label}</p>
+          <p class="text-2xl font-bold mt-1">${c.value}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid() {
+      const rows = getFilteredRecords();
+      if (!rows.length) {
+        gridBody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-slate-400">No matching requests.</td></tr>';
+        return;
+      }
+
+      if (!state.selectedId || !rows.some(r => r.id === state.selectedId)) {
+        state.selectedId = rows[0].id;
+      }
+
+      gridBody.innerHTML = rows.map(r => {
+        const selected = r.id === state.selectedId;
+        return `
+          <tr tabindex="0" data-id="${r.id}" class="cursor-pointer border-t border-slate-800 ${selected ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}">
+            <td class="px-3 py-3">
+              <div class="font-medium">${r.requester}</div>
+              <div class="text-xs text-slate-400">${r.ticket} · ${r.team}</div>
+            </td>
+            <td class="px-3 py-3">${r.system}</td>
+            <td class="px-3 py-3">${r.privilege} (${r.environment})</td>
+            <td class="px-3 py-3">${r.risk}</td>
+            <td class="px-3 py-3"><span class="px-2 py-1 rounded-full text-xs ${statusTone(r.status)}">${r.status}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      gridBody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', () => { state.selectedId = Number(row.dataset.id); renderDetail(); renderGrid(); });
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            state.selectedId = Number(row.dataset.id);
+            renderDetail();
+            renderGrid();
+          }
+        });
+      });
+    }
+
+    function getSelected() {
+      return state.records.find(r => r.id === state.selectedId) || null;
+    }
+
+    function allowedActions(record) {
+      return {
+        submit: state.role === 'Requester' && record.status === 'Draft',
+        managerApprove: state.role === 'Manager' && record.status === 'Pending Manager',
+        managerReject: state.role === 'Manager' && record.status === 'Pending Manager',
+        securityApprove: state.role === 'Security' && record.status === 'Pending Security',
+        securityReject: state.role === 'Security' && record.status === 'Pending Security'
+      };
+    }
+
+    function pushAudit(record, actor, action, detail) {
+      record.audit.unshift({ ts: new Date().toISOString(), actor, action, detail });
+      record.updatedAt = new Date().toISOString();
+    }
+
+    function policyErrors(record, action, note) {
+      const errors = [];
+      const justificationLen = (record.justification || '').trim().length;
+      if (justificationLen < 24) errors.push('Business justification must be at least 24 characters.');
+      if (record.environment === 'Prod' && !record.mfa) errors.push('Prod access requires MFA confirmation.');
+      if (/finance/i.test(record.system) && !record.sod) errors.push('Finance systems require SoD review confirmation.');
+      if (record.privilege === 'Admin' && (!record.rollback || record.rollback.trim().length < 10)) errors.push('Admin access needs a rollback plan.');
+      if ((action === 'managerReject' || action === 'securityReject') && note.trim().length < 12) errors.push('Rejections require a decision note (12+ chars).');
+      if (action === 'managerApprove' && record.risk >= 70) errors.push('High-risk requests must be escalated to Security, not approved directly.');
+      return errors;
+    }
+
+    function applyAction(action) {
+      actionError.textContent = '';
+      actionSuccess.textContent = '';
+      const record = getSelected();
+      if (!record) return;
+
+      const note = decisionNote.value || '';
+      const errors = policyErrors(record, action, note);
+      if (errors.length) {
+        actionError.textContent = errors.join(' ');
+        return;
+      }
+
+      if (action === 'submit') {
+        record.status = 'Pending Manager';
+        pushAudit(record, 'Requester', 'Submitted', 'Submitted for manager approval.');
+      }
+      if (action === 'managerApprove') {
+        record.status = 'Pending Security';
+        pushAudit(record, 'Manager', 'Approved', note.trim() || 'Manager approved and forwarded to Security.');
+      }
+      if (action === 'managerReject') {
+        record.status = 'Rejected';
+        pushAudit(record, 'Manager', 'Rejected', note.trim());
+      }
+      if (action === 'securityApprove') {
+        record.status = 'Approved';
+        pushAudit(record, 'Security', 'Approved', note.trim() || 'Security approved with controls in place.');
+      }
+      if (action === 'securityReject') {
+        record.status = 'Rejected';
+        pushAudit(record, 'Security', 'Rejected', note.trim());
+      }
+
+      decisionNote.value = '';
+      actionSuccess.textContent = `Request ${record.ticket} updated to ${record.status}.`;
+      renderAll();
+    }
+
+    function renderDetail() {
+      const record = getSelected();
+      actionError.textContent = '';
+      actionSuccess.textContent = '';
+      if (!record) {
+        detailPane.textContent = 'Select a request row.';
+        actionButtons.innerHTML = '';
+        auditList.innerHTML = '';
+        return;
+      }
+
+      detailPane.innerHTML = `
+        <div class="space-y-1">
+          <p><span class="text-slate-400">Requester:</span> ${record.requester}</p>
+          <p><span class="text-slate-400">Ticket:</span> ${record.ticket}</p>
+          <p><span class="text-slate-400">System:</span> ${record.system}</p>
+          <p><span class="text-slate-400">Privilege:</span> ${record.privilege} (${record.environment})</p>
+          <p><span class="text-slate-400">Risk score:</span> ${record.risk}</p>
+          <p><span class="text-slate-400">Last update:</span> ${fmtTs(record.updatedAt)}</p>
+        </div>
+      `;
+
+      const can = allowedActions(record);
+      const controls = [
+        { key: 'submit', label: 'Submit', tone: 'bg-indigo-600 hover:bg-indigo-500' },
+        { key: 'managerApprove', label: 'Manager approve', tone: 'bg-blue-600 hover:bg-blue-500' },
+        { key: 'managerReject', label: 'Manager reject', tone: 'bg-rose-600 hover:bg-rose-500' },
+        { key: 'securityApprove', label: 'Security approve', tone: 'bg-emerald-600 hover:bg-emerald-500' },
+        { key: 'securityReject', label: 'Security reject', tone: 'bg-rose-700 hover:bg-rose-600' }
+      ];
+
+      actionButtons.innerHTML = controls.map(c => `
+        <button type="button" data-action="${c.key}" ${can[c.key] ? '' : 'disabled'} class="px-3 py-2 rounded-lg text-xs font-medium ${can[c.key] ? c.tone : 'bg-slate-700 text-slate-400 cursor-not-allowed'}">${c.label}</button>
+      `).join('');
+
+      actionButtons.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => applyAction(btn.dataset.action));
+      });
+
+      auditList.innerHTML = record.audit.map(a => `
+        <li class="border border-slate-800 rounded-lg p-2">
+          <p class="text-slate-200">${a.action}</p>
+          <p class="text-slate-400">${fmtTs(a.ts)} · ${a.actor}</p>
+          <p>${a.detail}</p>
+        </li>
+      `).join('');
+    }
+
+    function updateWizardUi() {
+      document.querySelectorAll('.step-pane').forEach((pane, idx) => {
+        pane.classList.toggle('hidden', idx + 1 !== state.step);
+      });
+      stepLabel.textContent = String(state.step);
+      stepBar.style.width = `${state.step * 25}%`;
+      prevBtn.disabled = state.step === 1;
+      nextBtn.classList.toggle('hidden', state.step === 4);
+      createBtn.classList.toggle('hidden', state.step !== 4);
+      if (state.step === 4) {
+        const fd = new FormData(wizardForm);
+        document.getElementById('reviewBox').innerHTML = `
+          <p><span class="text-slate-400">Requester:</span> ${fd.get('requester') || '—'}</p>
+          <p><span class="text-slate-400">Ticket:</span> ${fd.get('ticket') || '—'}</p>
+          <p><span class="text-slate-400">System:</span> ${fd.get('system') || '—'}</p>
+          <p><span class="text-slate-400">Privilege:</span> ${fd.get('privilege') || '—'} (${fd.get('environment') || '—'})</p>
+          <p><span class="text-slate-400">MFA:</span> ${fd.get('mfa') ? 'Yes' : 'No'} · <span class="text-slate-400">SoD:</span> ${fd.get('sod') ? 'Yes' : 'No'}</p>
+        `;
+      }
+    }
+
+    function validateWizardStep() {
+      const fd = new FormData(wizardForm);
+      const errs = [];
+      if (state.step === 1) {
+        if (!fd.get('requester')?.toString().trim()) errs.push('Requester is required.');
+        if (!fd.get('team')?.toString().trim()) errs.push('Team is required.');
+        if (!fd.get('ticket')?.toString().trim()) errs.push('Ticket ID is required.');
+      }
+      if (state.step === 3) {
+        const justification = fd.get('justification')?.toString().trim() || '';
+        if (justification.length < 24) errs.push('Provide business justification with at least 24 characters.');
+      }
+      wizardError.textContent = errs.join(' ');
+      return errs.length === 0;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      wizardError.textContent = '';
+      state.step = Math.max(1, state.step - 1);
+      updateWizardUi();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (!validateWizardStep()) return;
+      state.step = Math.min(4, state.step + 1);
+      updateWizardUi();
+    });
+
+    wizardForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(wizardForm);
+      const record = {
+        id: Math.max(0, ...state.records.map(r => r.id)) + 1,
+        requester: fd.get('requester').toString().trim(),
+        team: fd.get('team').toString().trim(),
+        ticket: fd.get('ticket').toString().trim(),
+        system: fd.get('system').toString(),
+        privilege: fd.get('privilege').toString(),
+        environment: fd.get('environment').toString(),
+        mfa: Boolean(fd.get('mfa')),
+        sod: Boolean(fd.get('sod')),
+        rollback: fd.get('rollback').toString().trim(),
+        justification: fd.get('justification').toString().trim(),
+        risk: 20,
+        status: 'Draft',
+        updatedAt: new Date().toISOString(),
+        audit: [{ ts: new Date().toISOString(), actor: 'Requester', action: 'Saved as draft', detail: 'Created via access request wizard.' }]
+      };
+
+      if (record.privilege === 'Admin') record.risk += 28;
+      if (record.environment === 'Prod') record.risk += 24;
+      if (/finance|sap/i.test(record.system)) record.risk += 16;
+      if (!record.mfa) record.risk += 12;
+      if (!record.sod) record.risk += 10;
+      record.risk = Math.min(99, record.risk);
+
+      const errs = policyErrors(record, 'submit', '');
+      if (errs.length) {
+        wizardError.textContent = errs.join(' ');
+        return;
+      }
+
+      state.records.unshift(record);
+      state.selectedId = record.id;
+      wizardForm.reset();
+      state.step = 1;
+      wizardError.textContent = 'Draft created successfully.';
+      ensureSystemOptions();
+      renderAll();
+      updateWizardUi();
+    });
+
+    function exportCsv() {
+      const rows = getFilteredRecords();
+      const header = ['id','requester','team','ticket','system','privilege','environment','risk','mfa','sod','status','updatedAt'];
+      const csv = [header.join(',')].concat(rows.map(r => header.map(k => {
+        const text = String(r[k] ?? '').replace(/"/g, '""');
+        return /[",\n]/.test(text) ? `"${text}"` : text;
+      }).join(','))).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'access-request-policy-wizard.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', exportCsv);
+    searchInput.addEventListener('input', (e) => { state.search = e.target.value; renderAll(); });
+    roleFilter.addEventListener('change', (e) => { state.role = e.target.value; renderDetail(); });
+    statusFilter.addEventListener('change', (e) => { state.status = e.target.value; renderAll(); });
+    systemFilter.addEventListener('change', (e) => { state.system = e.target.value; renderAll(); });
+    sortFilter.addEventListener('change', (e) => { state.sort = e.target.value; renderAll(); });
+
+    function renderAll() {
+      renderKpis();
+      renderGrid();
+      renderDetail();
+    }
+
+    ensureSystemOptions();
+    renderAll();
+    updateWizardUi();
+  </script>
+</body>
+</html>

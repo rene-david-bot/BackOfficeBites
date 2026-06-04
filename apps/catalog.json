@@ -3080,5 +3080,28 @@
       "csv export"
     ],
     "thumb": "thumb.png"
+  },
+  {
+    "date": "2026-06-04",
+    "day": 135,
+    "slug": "2026-06-04-access-request-policy-wizard",
+    "name": "Access Request Policy Wizard",
+    "description": "IT Ops wizard for privileged access requests with policy validation, staged approvals, audit trail, and CSV export.",
+    "category": "IT Ops",
+    "pattern": "Wizard",
+    "tags": [
+      "it ops",
+      "access request",
+      "wizard",
+      "approval workflow",
+      "policy validation",
+      "audit trail",
+      "role-based views",
+      "search",
+      "filter",
+      "sort",
+      "csv export"
+    ],
+    "thumb": "thumb.png"
   }
 ]
